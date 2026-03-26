@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+
+  products  Product[]
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String @unique
+  category  String?
+  createdAt DateTime @default(now())
+
+  user       User        @relation(fields: [userId], references: [id])
+  reviews    Review[]
+  sales      Sales[]
+  predictions Prediction[]
+  insights   Insight[]
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  productId   String
+  reviewText  String
+  rating      Int
+  sentiment   String?
+  reviewDate  DateTime
+
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Sales {
+  id        String   @id @default(uuid())
+  productId String
+  date      DateTime
+  quantity  Int
+
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Prediction {
+  id              String   @id @default(uuid())
+  productId       String
+  predictedSales  Int
+  predictionDate  DateTime
+  modelVersion    String?
+
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Insight {
+  id          String   @id @default(uuid())
+  productId   String
+  insightText String
+  type        String?
+  createdAt   DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+}
