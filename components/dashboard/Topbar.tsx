@@ -3,6 +3,7 @@
 import { Bell, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
 export default function Topbar() {
   return (
@@ -17,10 +18,12 @@ export default function Topbar() {
 
       {/* Right */}
       <div className="flex items-center gap-4">
-        <Button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">
-          <Upload size={16} />
-          Upload Dataset
-        </Button>
+        <Link href="/dashboard/upload">
+          <Button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">
+            <Upload size={16} />
+            Upload Dataset
+          </Button>
+        </Link>
 
         <button className="p-2 hover:bg-gray-100 rounded-full">
           <Bell size={18} />
