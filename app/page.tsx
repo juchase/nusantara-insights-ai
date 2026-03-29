@@ -1,15 +1,22 @@
-import Link from "next/link";
+import Navbar from "@/components/landing/Navbar";
+import Hero from "@/components/landing/Hero";
+import Features from "@/components/landing/Features";
+import ProblemSolution from "@/components/landing/ProblemSolution";
+import Steps from "@/components/landing/Steps";
+import FadeIn from "@/components/animation/FadeIn";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div>
-      <h1>Landing Page</h1>
-      <p>Welcome to Nusantara Insights AI</p>
-
-      <div className="flex items-center justify-center gap-4">
-        <Link href="/login">Sign In</Link>
-        <Link href="/register">Sign Up</Link>
-      </div>
+    <div className="bg-[#faf8ff]">
+      <Navbar />
+      <Hero />
+      <FadeIn>
+        <ProblemSolution />
+      </FadeIn>
+      <FadeIn>
+        <Features />
+      </FadeIn>
+      <Steps />
     </div>
   );
 }
