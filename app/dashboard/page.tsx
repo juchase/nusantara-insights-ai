@@ -2,91 +2,64 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+import Topbar from "@/components/dashboard/Topbar";
+import InsightCard from "@/components/dashboard/InsightCard";
+import StatsCard from "@/components/dashboard/StatsCard";
+import ComplaintsCard from "@/components/dashboard/ComplaintsCard";
+import KeywordMap from "@/components/dashboard/KeywordMap";
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("/api/auth/me");
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData.user);
-        } else {
+        const res = await fetch("/api/auth/me");
+
+        if (!res.ok) {
           router.push("/login");
+          return;
         }
-      } catch (error) {
+
+        const data = await res.json();
+        setUser(data.user);
+      } catch {
         router.push("/login");
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     checkAuth();
   }, [router]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-10">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
-                Nusantara Insights AI
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-700">Welcome, {user?.name}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <>
+      <Topbar />
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Dashboard
-              </h2>
-              <p className="text-gray-600 mb-2">Welcome to your dashboard!</p>
-              <p className="text-gray-500">You are successfully logged in.</p>
-            </div>
+      <div className="space-y-8">
+        <InsightCard />
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatsCard title="Total Reviews" value="12,842" />
+          <StatsCard title="Avg Sentiment" value="4.2" />
+          <StatsCard title="Health Score" value="88" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="md:col-span-5">
+            <ComplaintsCard />
+          </div>
+
+          <div className="md:col-span-7">
+            <KeywordMap />
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }
