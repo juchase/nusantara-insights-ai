@@ -7,9 +7,11 @@ import InsightCard from "@/components/dashboard/InsightCard";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ComplaintsCard from "@/components/dashboard/ComplaintsCard";
 import KeywordMap from "@/components/dashboard/KeywordMap";
+import ChartSection from "@/components/dashboard/ChartSection";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
+  const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [stats, setStats] = useState({
@@ -65,6 +67,33 @@ export default function DashboardPage() {
           reviews.reduce((acc: number, r: any) => acc + (r.rating || 0), 0) /
           (reviews.length || 1);
 
+        const formatDate = (date: string) => {
+          const d = new Date(date);
+          return d.toLocaleDateString("id-ID", {
+            day: "2-digit",
+            month: "short",
+          });
+        };
+
+        const grouped: Record<string, number> = {};
+
+        reviews.forEach((r: any) => {
+          const date = formatDate(r.createdAt);
+
+          if (!grouped[date]) {
+            grouped[date] = 0;
+          }
+
+          grouped[date]++;
+        });
+
+        const chartFormatted = Object.keys(grouped).map((date) => ({
+          date,
+          total: grouped[date],
+        }));
+
+        setChartData(chartFormatted);
+
         setStats({
           totalReviews,
           totalProducts,
@@ -101,12 +130,23 @@ export default function DashboardPage() {
         </div>
 
         {/* Bottom Section */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-          <div className="md:col-span-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-8">
+            <ChartSection data={chartData} />
+          </div>
+
+          <div className="lg:col-span-4">
+            {/* nanti forecasting */}
+            <div className="bg-indigo-600 text-white p-6 rounded-2xl">
+              Forecast coming soon 🚀
+            </div>
+          </div>
+
+          <div className="lg:col-span-5">
             <ComplaintsCard />
           </div>
 
-          <div className="md:col-span-7">
+          <div className="lg:col-span-7">
             <KeywordMap />
           </div>
         </div>
