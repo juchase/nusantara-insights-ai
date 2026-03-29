@@ -12,7 +12,9 @@ import ChartSection from "@/components/dashboard/ChartSection";
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [topKeywords, setTopKeywords] = useState<[string, number][]>([]);
 
   const [stats, setStats] = useState({
     totalReviews: 0,
@@ -38,7 +40,7 @@ export default function DashboardPage() {
       } catch {
         router.push("/login");
       } finally {
-        setLoading(false);
+        setAuthLoading(false);
       }
     };
 
@@ -77,8 +79,71 @@ export default function DashboardPage() {
 
         const grouped: Record<string, number> = {};
 
+        const wordCount: Record<string, number> = {};
+
         reviews.forEach((r: any) => {
-          const date = formatDate(r.createdAt);
+          if (!r.reviewText) return;
+
+          const words = r.reviewText
+            .toLowerCase()
+            .replace(/[^\w\s]/g, "") // hapus simbol
+            .split(" ");
+
+          words.forEach((word: string) => {
+            if (word.length < 4) return;
+
+            // stopwords sederhana
+            const stopwords = [
+              "yang",
+              "dan",
+              "dari",
+              "untuk",
+              "dengan",
+              "ini",
+              "itu",
+              "saya",
+              "kamu",
+              "tidak",
+              "ada",
+              "karena",
+              "jadi",
+              "sudah",
+              "produk",
+              "barang",
+              "sangat",
+              "cukup",
+              "banget",
+              "sekali",
+              "sesuai",
+            ];
+            if (stopwords.includes(word)) return;
+
+            const negativeKeywords = [
+              "rusak",
+              "lama",
+              "buruk",
+              "jelek",
+              "telat",
+              "pecah",
+              "lambat",
+              "kurang",
+            ];
+
+            if (!negativeKeywords.includes(word)) return;
+
+            wordCount[word] = (wordCount[word] || 0) + 1;
+          });
+        });
+
+        // ambil top 5
+        const sorted = Object.entries(wordCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+
+        setTopKeywords(sorted);
+
+        reviews.forEach((r: any) => {
+          const date = formatDate(r.reviewDate || r.createdAt);
 
           if (!grouped[date]) {
             grouped[date] = 0;
@@ -87,10 +152,14 @@ export default function DashboardPage() {
           grouped[date]++;
         });
 
-        const chartFormatted = Object.keys(grouped).map((date) => ({
-          date,
-          total: grouped[date],
-        }));
+        const chartFormatted = Object.keys(grouped)
+          .map((date) => ({
+            date,
+            total: grouped[date],
+          }))
+          .sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+          );
 
         setChartData(chartFormatted);
 
@@ -101,13 +170,15 @@ export default function DashboardPage() {
         });
       } catch (err) {
         console.error(err);
+      } finally {
+        setDataLoading(false);
       }
     };
 
     fetchStats();
   }, []);
 
-  if (loading) return <div className="p-10">Loading...</div>;
+  if (authLoading || dataLoading) return <div className="p-10">Loading...</div>;
 
   return (
     <>
@@ -143,11 +214,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="lg:col-span-5">
-            <ComplaintsCard />
+            <ComplaintsCard data={topKeywords} />
           </div>
 
           <div className="lg:col-span-7">
-            <KeywordMap />
+            <KeywordMap data={topKeywords} />
           </div>
         </div>
       </div>

@@ -3,9 +3,16 @@ import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
+  const formData = await req.formData();
+  const file = formData.get("file") as File;
 
-  const parsed = Papa.parse(body, {
+  if (!file) {
+    return NextResponse.json({ error: "No file" }, { status: 400 });
+  }
+
+  const csvText = await file.text();
+
+  const parsed = Papa.parse(csvText, {
     header: true,
   });
 

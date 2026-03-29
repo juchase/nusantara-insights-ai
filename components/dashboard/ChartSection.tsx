@@ -17,7 +17,7 @@ export default function ChartSection({ data }: { data: any[] }) {
         <h3 className="font-semibold text-lg mb-4">Sentiment Timeline</h3>
 
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" aspect={2}>
             <BarChart data={data}>
               <XAxis dataKey="date" />
               <YAxis />
