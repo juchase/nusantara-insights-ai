@@ -9,10 +9,10 @@ export default function Topbar() {
   return (
     <header className="fixed top-0 right-0 left-64 bg-white/80 backdrop-blur border-b px-8 py-4 flex justify-between items-center z-40">
       {/* Search */}
-      <div className="flex items-center bg-gray-100 px-4 py-2 rounded-full w-96">
+      <div className="flex items-center px-4 py-2 rounded-full w-96">
         <Input
           placeholder="Search datasets, reports..."
-          className="border-none bg-transparent focus-visible:ring-0"
+          className="border-none bg-gray-100 focus-visible:ring-0"
         />
       </div>
 

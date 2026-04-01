@@ -1,3 +1,5 @@
+import { generateInsightAI } from "./ai-client";
+
 export function calculateSentiment(reviews: any[]) {
   let positive = 0,
     negative = 0,
@@ -72,27 +74,4 @@ export function generateChartData(reviews: any[]) {
   });
 
   return Object.values(grouped);
-}
-
-export function generateInsight(sentiment: any, keywords: any[]) {
-  if (!keywords.length) return "Belum ada insight";
-
-  const top = keywords[0][0];
-
-  if (top === "pengiriman") {
-    return "Keluhan terbesar ada pada pengiriman. Disarankan memperbaiki logistik.";
-  }
-
-  if (top === "kemasan") {
-    return "Banyak keluhan terkait kemasan. Disarankan meningkatkan packaging.";
-  }
-
-  const total = sentiment.positive + sentiment.neutral + sentiment.negative;
-
-  const rate = sentiment.negative / (total || 1);
-
-  if (rate > 0.3) return `Banyak keluhan terkait "${top}". Segera perbaiki.`;
-  if (rate > 0.15) return `Ada beberapa keluhan tentang "${top}".`;
-
-  return `Mayoritas pelanggan puas.`;
 }

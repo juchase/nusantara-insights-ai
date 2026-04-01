@@ -12,7 +12,6 @@ import {
   calculateSentiment,
   extractKeywords,
   generateChartData,
-  generateInsight,
   calculateAvgRating,
 } from "@/lib/analytics";
 import { generateInsightAI } from "@/lib/ai-client";

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
-import { analyzeSentiment } from "@/lib/ai-client";
+import { analyzeSentiment, generateInsightAI } from "@/lib/ai-client";
+import { calculateSentiment, extractKeywords } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -32,13 +33,15 @@ export async function POST(req: NextRequest) {
   let success = 0;
   let skipped = 0;
 
+  const collectedReviews: any[] = [];
+
   for (const item of data) {
     if (!item.product || !item.review) {
       skipped++;
       continue;
     }
 
-    const productName = item.product || item.Product;
+    const productId = item.product || item.Product;
     const reviewText = item.review || item.Review;
     const rating = Number(item.rating || item.Rating);
     const dateValue = item.date || item.Date;
@@ -49,22 +52,30 @@ export async function POST(req: NextRequest) {
     if (isNaN(reviewDate.getTime())) continue;
 
     const product = await prisma.product.upsert({
-      where: { name: productName },
+      where: { name: productId },
       update: {},
       create: {
-        name: productName,
+        name: productId,
         userId: user.id,
       },
     });
 
     const sentimentRes = await analyzeSentiment(reviewText);
 
+    collectedReviews.push({
+      productId: product.id,
+      reviewText,
+      sentiment: sentimentRes.sentiment,
+      rating,
+      reviewDate,
+    });
+
     await prisma.review.create({
       data: {
-        product: { connect: { id: product.id } },
-        reviewText: reviewText,
-        rating: rating,
-        sentiment: sentimentRes.sentiment,
+        productId: product.id,
+        reviewText,
+        rating,
+        sentiment: sentimentRes.sentiment, // 🔥 AI masuk sini
         reviewDate: reviewDate,
       },
     });
@@ -79,5 +90,22 @@ export async function POST(req: NextRequest) {
     success++;
   }
 
-  return NextResponse.json({ message: "Dataset uploaded", success, skipped });
+  const keywords = extractKeywords(collectedReviews);
+  const sentiment = calculateSentiment(collectedReviews);
+
+  const insightRes = await generateInsightAI(sentiment, keywords);
+
+  await prisma.insight.create({
+    data: {
+      productId: collectedReviews[0]?.productId,
+      insightText: insightRes.insight,
+    },
+  });
+
+  return NextResponse.json({
+    message: "Dataset uploaded",
+    success,
+    skipped,
+    collectedReviews,
+  });
 }
