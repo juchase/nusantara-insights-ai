@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
+import { analyzeSentiment } from "@/lib/ai-client";
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -56,11 +57,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const sentimentRes = await analyzeSentiment(reviewText);
+
     await prisma.review.create({
       data: {
         product: { connect: { id: product.id } },
         reviewText: reviewText,
         rating: rating,
+        sentiment: sentimentRes.sentiment,
         reviewDate: reviewDate,
       },
     });

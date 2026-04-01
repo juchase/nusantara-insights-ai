@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function InsightCard() {
+export default function InsightCard({ text }: { text: string }) {
   return (
     <Card className="rounded-2xl border-green-200 bg-green-50">
       <CardContent className="p-6 flex gap-3">
@@ -12,11 +12,7 @@ export default function InsightCard() {
             AI SMART INSIGHT
           </p>
 
-          <p className="text-lg">
-            Sentimen negatif meningkat{" "}
-            <span className="text-indigo-600 font-bold">23%</span> pada aspek
-            kemasan.
-          </p>
+          <p className="text-lg">{text}</p>
         </div>
       </CardContent>
     </Card>
