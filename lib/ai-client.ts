@@ -9,3 +9,21 @@ export async function analyzeSentiment(text: string) {
 
   return res.json();
 }
+
+export async function generateInsightAI(
+  sentiment: any,
+  keywords: [string, number][],
+) {
+  const res = await fetch("http://localhost:8000/generate-insight", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sentiment,
+      keywords,
+    }),
+  });
+
+  return res.json();
+}

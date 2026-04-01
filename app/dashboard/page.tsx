@@ -15,6 +15,7 @@ import {
   generateInsight,
   calculateAvgRating,
 } from "@/lib/analytics";
+import { generateInsightAI } from "@/lib/ai-client";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -69,7 +70,8 @@ export default function DashboardPage() {
         const sentiment = calculateSentiment(reviews);
         const keywords = extractKeywords(reviews);
         const chart = generateChartData(reviews);
-        const insight = generateInsight(sentiment, keywords);
+        const insightRes = await generateInsightAI(sentiment, keywords);
+        const insight = insightRes.insight;
 
         setSentimentStats(sentiment);
         setTopKeywords(keywords);
