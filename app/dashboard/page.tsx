@@ -121,11 +121,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="lg:col-span-5">
-            <ComplaintsCard data={topKeywords} />
+            <ComplaintsCard data={topKeywords.slice(0, 5)} />
           </div>
 
           <div className="lg:col-span-7">
-            <KeywordMap data={topKeywords} />
+            <KeywordMap data={topKeywords.slice(0, 5)} />
           </div>
         </div>
       </div>
