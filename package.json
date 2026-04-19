@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20.19.39",
+    "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -40,10 +40,6 @@
     "eslint-config-next": "16.2.1",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
-  },
-  "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "typescript": "^5"
   }
 }
