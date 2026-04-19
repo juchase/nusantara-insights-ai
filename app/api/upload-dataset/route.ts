@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
-import { extractAspect } from "@/lib/aspect-extractor";
-
-const AI_URL = "http://127.0.0.1:8000";
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
@@ -17,14 +14,10 @@ export async function POST(req: NextRequest) {
 
   const parsed = Papa.parse(csvText, {
     header: true,
-    skipEmptyLines: true,
   });
 
   const data = parsed.data as any[];
 
-  console.log("📊 TOTAL DATA:", data.length);
-
-  // 🔥 DEMO USER
   const user = await prisma.user.upsert({
     where: { email: "demo@gmail.com" },
     update: {},
@@ -35,180 +28,52 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const BATCH_SIZE = 50;
-  const CONCURRENT_LIMIT = 5;
-
   let success = 0;
   let skipped = 0;
 
-  const normalize = (obj: any) => {
-    const newObj: any = {};
-    for (const key in obj) {
-      newObj[key.toLowerCase()] = obj[key];
+  for (const item of data) {
+    if (!item.product || !item.review) {
+      skipped++;
+      continue;
     }
-    return newObj;
-  };
 
-  for (let i = 0; i < data.length; i += BATCH_SIZE) {
-    const batch = data.slice(i, i + BATCH_SIZE);
+    const productName = item.product || item.Product;
+    const reviewText = item.review || item.Review;
+    const rating = Number(item.rating || item.Rating);
+    const dateValue = item.date || item.Date;
 
-    console.log(`🚀 Batch ${i / BATCH_SIZE + 1}`);
+    const reviewDate = new Date(dateValue);
 
-    for (let j = 0; j < batch.length; j += CONCURRENT_LIMIT) {
-      const chunk = batch.slice(j, j + CONCURRENT_LIMIT);
+    if (!rating || isNaN(rating)) continue;
+    if (isNaN(reviewDate.getTime())) continue;
 
-      const results = await Promise.all(
-        chunk.map(async (item, index) => {
-          try {
-            const normalized = normalize(item);
+    const product = await prisma.product.upsert({
+      where: { name: productName },
+      update: {},
+      create: {
+        name: productName,
+        userId: user.id,
+      },
+    });
 
-            const productName = normalized.product || "General Product";
-            const reviewText = normalized.reviewtext || normalized.review;
+    await prisma.review.create({
+      data: {
+        product: { connect: { id: product.id } },
+        reviewText: reviewText,
+        rating: rating,
+        reviewDate: reviewDate,
+      },
+    });
 
-            if (!reviewText) return null;
-
-            const rating = Number(normalized.rating || 3);
-
-            let reviewDate;
-
-            if (normalized.date) {
-              reviewDate = new Date(normalized.date);
-            } else {
-              // 🔥 fallback timeline biar chart hidup
-              const base = new Date();
-              base.setDate(base.getDate() - index);
-              reviewDate = base;
-            }
-
-            if (isNaN(reviewDate.getTime())) return null;
-
-            // 🔥 UPSERT PRODUCT (FIX UNIQUE ERROR)
-            const product = await prisma.product.upsert({
-              where: { name: productName },
-              update: {},
-              create: {
-                name: productName,
-                userId: user.id,
-              },
-            });
-
-            // 🤖 AI CALL (SAFE)
-            const aspect = extractAspect(reviewText);
-            let sentiment = "neutral";
-
-            try {
-              const aiRes = await fetch(`${AI_URL}/analyze`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: reviewText }),
-              });
-
-              if (aiRes.ok) {
-                const aiData = await aiRes.json();
-                sentiment = aiData?.sentiment || "neutral";
-              }
-            } catch (err) {
-              console.log("⚠️ AI fallback:", reviewText);
-            }
-
-            // 💾 SAVE REVIEW
-            await prisma.review.create({
-              data: {
-                productId: product.id,
-                reviewText,
-                rating,
-                reviewDate,
-                sentiment,
-                aspect,
-              },
-            });
-
-            // 📊 DASHBOARD SUMMARY
-            await prisma.dashboardSummary.upsert({
-              where: { id: "main" },
-              update: {
-                totalReviews: { increment: 1 },
-                totalRating: { increment: rating },
-                ...(sentiment === "positive" && {
-                  positiveCount: { increment: 1 },
-                }),
-                ...(sentiment === "neutral" && {
-                  neutralCount: { increment: 1 },
-                }),
-                ...(sentiment === "negative" && {
-                  negativeCount: { increment: 1 },
-                }),
-              },
-              create: {
-                id: "main",
-                totalReviews: 1,
-                totalRating: rating,
-                avgRating: rating,
-                positiveCount: sentiment === "positive" ? 1 : 0,
-                neutralCount: sentiment === "neutral" ? 1 : 0,
-                negativeCount: sentiment === "negative" ? 1 : 0,
-              },
-            });
-
-            // 📊 DAILY SUMMARY
-            const dateOnly = new Date(reviewDate);
-            dateOnly.setHours(0, 0, 0, 0);
-
-            await prisma.dailyReviewSummary.upsert({
-              where: { date: dateOnly },
-              update: { total: { increment: 1 } },
-              create: { date: dateOnly, total: 1 },
-            });
-
-            // 🧠 SMART COMPLAINT (FULL TEXT)
-            if (sentiment === "negative") {
-              const text = reviewText.toLowerCase();
-
-              // 🔥 filter biar tidak semua masuk
-              const negativeIndicators = [
-                "tidak",
-                "rusak",
-                "lama",
-                "buruk",
-                "kecewa",
-                "lambat",
-              ];
-
-              const isComplaint = negativeIndicators.some((w) =>
-                text.includes(w),
-              );
-
-              if (isComplaint) {
-                const cleanText = text
-                  .replace(/[^\w\s]/g, "")
-                  .replace(/\s+/g, " ")
-                  .trim();
-
-                if (sentiment === "negative") {
-                  await prisma.keywordSummary.upsert({
-                    where: { word: aspect },
-                    update: { count: { increment: 1 } },
-                    create: { word: aspect, count: 1 },
-                  });
-                }
-              }
-            }
-            return true;
-          } catch (err) {
-            console.error("❌ ERROR:", err);
-            return null;
-          }
-        }),
-      );
-
-      success += results.filter(Boolean).length;
-      skipped += results.length - results.filter(Boolean).length;
-    }
+    await prisma.sales.create({
+      data: {
+        product: { connect: { id: product.id } },
+        date: reviewDate,
+        quantity: Number(item.sales || 0),
+      },
+    });
+    success++;
   }
 
-  return NextResponse.json({
-    message: "Upload selesai",
-    success,
-    skipped,
-  });
+  return NextResponse.json({ message: "Dataset uploaded", success, skipped });
 }
