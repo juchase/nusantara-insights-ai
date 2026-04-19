@@ -37,6 +37,7 @@ model Review {
   reviewText  String
   rating      Int
   sentiment   String?
+  aspect      String   @default("lainnya")
   reviewDate  DateTime
 
   product Product @relation(fields: [productId], references: [id])
@@ -69,4 +70,30 @@ model Insight {
   createdAt   DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
+}
+
+model DashboardSummary {
+  id              String   @id @default("main")
+  totalReviews    Int
+  positiveCount   Int
+  neutralCount    Int
+  negativeCount   Int
+  totalRating     Float
+  avgRating       Float
+  updatedAt       DateTime @updatedAt
+}
+
+model DailyReviewSummary {
+  id        String   @id @default(uuid())
+  date      DateTime
+  total     Int
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+}
+
+model KeywordSummary {
+  id    String @id @default(uuid())
+  word  String @unique
+  count Int
 }

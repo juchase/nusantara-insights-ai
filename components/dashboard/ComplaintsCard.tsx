@@ -1,5 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 
+const labelMap: Record<string, string> = {
+  pengiriman: "Pengiriman",
+  kemasan: "Kemasan",
+  produk: "Produk",
+  pelayanan: "Pelayanan",
+  lainnya: "Lainnya",
+};
+
 export default function ComplaintsCard({ data }: { data: [string, number][] }) {
   return (
     <Card className="rounded-2xl">
@@ -13,6 +21,7 @@ export default function ComplaintsCard({ data }: { data: [string, number][] }) {
           >
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-red-500 rounded-full" />
+              <span>{labelMap[i]}</span>
               <span className="text-sm font-medium capitalize">{word}</span>
             </div>
 
