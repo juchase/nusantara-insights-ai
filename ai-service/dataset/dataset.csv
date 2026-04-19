@@ -1,0 +1,23 @@
+reviewText,sentiment
+produk sangat bagus dan berkualitas,positive
+barang sesuai deskripsi dan memuaskan,positive
+pengiriman cepat dan aman,positive
+kemasan rapi dan tidak rusak,positive
+sangat puas dengan produk ini,positive
+kualitas produk sangat baik,positive
+pelayanan sangat ramah,positive
+
+pengiriman sangat lama,negative
+barang tidak sesuai deskripsi,negative
+kemasan rusak saat diterima,negative
+produk tidak berfungsi,negative
+pelayanan sangat buruk,negative
+kecewa dengan kualitas produk,negative
+respon penjual sangat lambat,negative
+
+biasa saja,neutral
+standar saja tidak istimewa,neutral
+lumayan untuk harga segini,neutral
+tidak terlalu bagus tapi tidak buruk,neutral
+cukup memuaskan,neutral
+tidak ada yang spesial,neutral
