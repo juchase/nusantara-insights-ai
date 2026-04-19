@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
+import { extractAspect } from "@/lib/aspect-extractor";
 
 const AI_URL = "http://127.0.0.1:8000";
 
@@ -92,6 +93,7 @@ export async function POST(req: NextRequest) {
             });
 
             // 🤖 AI CALL (SAFE)
+            const aspect = extractAspect(reviewText);
             let sentiment = "neutral";
 
             try {
@@ -117,6 +119,7 @@ export async function POST(req: NextRequest) {
                 rating,
                 reviewDate,
                 sentiment,
+                aspect,
               },
             });
 
@@ -181,11 +184,13 @@ export async function POST(req: NextRequest) {
                   .replace(/\s+/g, " ")
                   .trim();
 
-                await prisma.keywordSummary.upsert({
-                  where: { word: cleanText },
-                  update: { count: { increment: 1 } },
-                  create: { word: cleanText, count: 1 },
-                });
+                if (sentiment === "negative") {
+                  await prisma.keywordSummary.upsert({
+                    where: { word: aspect },
+                    update: { count: { increment: 1 } },
+                    create: { word: aspect, count: 1 },
+                  });
+                }
               }
             }
             return true;

@@ -37,6 +37,7 @@ model Review {
   reviewText  String
   rating      Int
   sentiment   String?
+  aspect      String   @default("lainnya")
   reviewDate  DateTime
 
   product Product @relation(fields: [productId], references: [id])
