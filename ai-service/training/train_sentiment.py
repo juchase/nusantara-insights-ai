@@ -6,6 +6,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from app.utils.preprocess import clean_text
 
 # 📥 Load dataset
@@ -48,7 +51,7 @@ print("\n📊 Classification Report:\n")
 print(classification_report(y_test, y_pred))
 
 # 💾 Save
-joblib.dump(model, "model/model.pkl")
-joblib.dump(vectorizer, "model/vectorizer.pkl")
+joblib.dump(model, "models/sentiment_model.pkl")
+joblib.dump(vectorizer, "models/sentiment_vectorizer.pkl")
 
 print("\n✅ Model trained & saved!")

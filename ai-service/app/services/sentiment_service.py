@@ -1,8 +1,8 @@
 import joblib
 from app.utils.preprocess import clean_text
 
-model = joblib.load("model/model.pkl")
-vectorizer = joblib.load("model/vectorizer.pkl")
+model = joblib.load("models/sentiment_model.pkl")
+vectorizer = joblib.load("models/sentiment_vectorizer.pkl")
 
 
 def predict_sentiment(text: str) -> str:
