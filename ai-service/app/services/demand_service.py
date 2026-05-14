@@ -1,25 +1,85 @@
+from app.utils.db import SessionLocal
+from sqlalchemy import text
 import joblib
 import numpy as np
 from datetime import datetime, timedelta
+import uuid
+from app.config.model_paths import DEMAND_MODEL_PATH
 
-model = joblib.load("models/demand_model.pkl")
+model = joblib.load(DEMAND_MODEL_PATH)
 
-def predict_demand(data: dict):
-    sales = data["sales"]
 
-    X = np.arange(1, len(sales)+1).reshape(-1, 1)
-    model.fit(X, sales)
+def predict_and_save(product_id: str):
+    db = SessionLocal()
 
-    future_days = np.arange(len(sales)+1, len(sales)+8).reshape(-1,1)
-    predictions = model.predict(future_days)
+    try:
+        print(" START PREDICTION:", product_id)
+        print("🚀 START PREDICTION:", product_id)
 
-    today = datetime.today()
+        # 1. ambil sales dari DB
+        result = db.execute(text("""
+            SELECT "quantity"
+            FROM "Sales"
+            WHERE "productId" = :product_id
+            ORDER BY "date" ASC
+        """), {"product_id": product_id}).fetchall()
 
-    result = []
-    for i, pred in enumerate(predictions):
-        result.append({
-            "date": (today + timedelta(days=i+1)).strftime("%Y-%m-%d"),
-            "predictedSales": int(pred)
-        })
+        sales = [row[0] for row in result]
 
-    return { "predictions": result }
+        print("📊 SALES DATA:", sales)
+
+        # validasi minimal data
+        if len(sales) < 3:
+            print("⚠ USING DUMMY SALES")
+
+            sales = [100, 120, 130, 140, 150]
+
+        # 2. hapus prediction lama
+        db.execute(text("""
+            DELETE FROM "Prediction"
+            WHERE "productId" = :product_id
+        """), {"product_id": product_id})
+
+        # 3. training model
+        X = np.arange(1, len(sales) + 1).reshape(-1, 1)
+        model.fit(X, sales)
+
+        future_days = np.arange(len(sales) + 1, len(sales) + 8).reshape(-1, 1)
+        predictions = model.predict(future_days)
+
+        print(" PREDICTIONS:", predictions)
+
+        # 4. insert ke DB
+        for i, pred in enumerate(predictions):
+            date = datetime.today() + timedelta(days=i + 1)
+
+            db.execute(text("""
+                INSERT INTO "Prediction"
+                ("id", "productId", "predictedSales", "predictionDate", "modelVersion")
+                VALUES (:id, :product_id, :sales, :prediction_date, 'v1-linear')
+            """), {
+                "id": str(uuid.uuid4()),
+                "product_id": product_id,
+                "sales": int(pred),
+                "prediction_date": date
+            })
+
+            print(f" INSERTED: {int(pred)} on {date}")
+
+        # 5. commit
+        db.commit()
+        print(" COMMIT SUCCESS")
+        print("✅ COMMIT SUCCESS")
+
+        return {
+            "status": "success",
+            "totalInserted": len(predictions)
+        }
+
+    except Exception as e:
+        db.rollback()
+        print("🔥 ERROR:", e)
+        return {"error": str(e)}
+
+    finally:
+        db.close()

@@ -1,6 +1,10 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 import joblib
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from app.config.model_paths import DEMAND_MODEL_PATH
 
 data = {
     "day": [1,2,3,4,5,6,7],
@@ -15,6 +19,6 @@ y = df["sales"]
 model = LinearRegression()
 model.fit(X, y)
 
-joblib.dump(model, "models/demand_model.pkl")
+joblib.dump(model, DEMAND_MODEL_PATH)
 
 print("Demand model trained")

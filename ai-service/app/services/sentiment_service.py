@@ -1,14 +1,15 @@
 import joblib
 from app.utils.preprocess import clean_text
+from app.config.model_paths import SENTIMENT_MODEL_PATH, SENTIMENT_VECTORIZER_PATH
 
-model = joblib.load("models/sentiment_model.pkl")
-vectorizer = joblib.load("models/sentiment_vectorizer.pkl")
+model = joblib.load(SENTIMENT_MODEL_PATH)
+vectorizer = joblib.load(SENTIMENT_VECTORIZER_PATH)
 
 
 def predict_sentiment(text: str) -> str:
     clean = clean_text(text)
 
-    # 🔥 RULE LAYER
+    # RULE LAYER
 
     if "tidak_ada_masalah" in clean:
         return "positive"

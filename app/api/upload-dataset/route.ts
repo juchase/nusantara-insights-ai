@@ -83,14 +83,30 @@ export async function POST(req: NextRequest) {
             if (isNaN(reviewDate.getTime())) return null;
 
             // 🔥 UPSERT PRODUCT (FIX UNIQUE ERROR)
-            const product = await prisma.product.upsert({
+            let product = await prisma.product.findFirst({
               where: { name: productName },
-              update: {},
-              create: {
-                name: productName,
-                userId: user.id,
-              },
             });
+
+            if (!product) {
+              try {
+                product = await prisma.product.create({
+                  data: {
+                    name: productName,
+                    userId: user.id,
+                  },
+                });
+              } catch (err: any) {
+                // 🔥 kalau race condition terjadi, ambil lagi
+                product = await prisma.product.findFirst({
+                  where: { name: productName },
+                });
+              }
+            }
+
+            if (!product) {
+              console.error("❌ Product not found after upsert");
+              return null;
+            }
 
             // 🤖 AI CALL (SAFE)
             const aspect = extractAspect(reviewText);
@@ -193,6 +209,28 @@ export async function POST(req: NextRequest) {
                 }
               }
             }
+
+            const salesValue = Number(normalized.sales);
+            const salesDate = normalized.date
+              ? new Date(normalized.date)
+              : reviewDate; // fallback pakai reviewDate
+
+            if (!isNaN(salesValue) && !isNaN(salesDate.getTime())) {
+              await prisma.sales.create({
+                data: {
+                  productId: product.id,
+                  date: salesDate,
+                  quantity: salesValue,
+                },
+              });
+            }
+
+            console.log("📊 SALES:", {
+              product: productName,
+              sales: salesValue,
+              date: salesDate,
+            });
+
             return true;
           } catch (err) {
             console.error("❌ ERROR:", err);
