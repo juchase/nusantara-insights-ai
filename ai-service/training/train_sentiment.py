@@ -6,12 +6,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from app.utils.preprocess import clean_text
+from app.config.model_paths import SENTIMENT_MODEL_PATH, SENTIMENT_VECTORIZER_PATH
 
-# 📥 Load dataset
+# Load dataset
 df = pd.read_csv("dataset/dataset.csv")
 
-# 🔍 Validasi kolom
+# Validasi kolom
 if "reviewText" not in df.columns or "sentiment" not in df.columns:
     raise ValueError("Dataset harus punya kolom: reviewText & sentiment")
 
@@ -41,14 +45,14 @@ X_test = vectorizer.transform(X_test_text)
 model = LogisticRegression(max_iter=1000)
 model.fit(X_train, y_train)
 
-# 📊 Evaluasi
+# Evaluasi
 y_pred = model.predict(X_test)
 
-print("\n📊 Classification Report:\n")
+print("\n Classification Report:\n")
 print(classification_report(y_test, y_pred))
 
-# 💾 Save
-joblib.dump(model, "model/model.pkl")
-joblib.dump(vectorizer, "model/vectorizer.pkl")
+# Save
+joblib.dump(model, SENTIMENT_MODEL_PATH)
+joblib.dump(vectorizer, SENTIMENT_VECTORIZER_PATH)
 
-print("\n✅ Model trained & saved!")
+print("\n Model trained & saved!")
