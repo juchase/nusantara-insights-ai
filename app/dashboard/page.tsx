@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Topbar from "@/components/dashboard/Topbar";
-import InsightCard from "@/components/dashboard/InsightCard";
 import StatsCard from "@/components/dashboard/StatsCard";
 import ComplaintsCard from "@/components/dashboard/ComplaintsCard";
 import KeywordMap from "@/components/dashboard/KeywordMap";
@@ -11,6 +10,7 @@ import ChartSection from "@/components/dashboard/ChartSection";
 import ForecastChart from "@/components/dashboard/ForecastChart";
 import { mergeForecastData } from "@/lib/mergeForecastData";
 import InsightPanel from "@/components/dashboard/InsightPanel";
+import { InsightResponse } from "@/types/insight";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [productId, setProductId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState("");
-  const [insight, setInsight] = useState(null);
+  const [insight, setInsight] = useState<InsightResponse | null>(null);
 
   const [stats, setStats] = useState({
     totalReviews: 0,
@@ -134,17 +134,21 @@ export default function DashboardPage() {
   }, [productId]);
 
   useEffect(() => {
-    async function loadDashboard() {
+    async function fetchInsight() {
       const res = await fetch(
         `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,
       );
 
       const data = await res.json();
 
+      console.log(data);
+
       setInsight(data);
     }
 
-    loadDashboard();
+    if (selectedProduct) {
+      fetchInsight();
+    }
   }, [selectedProduct]);
 
   function calculateGrowth(data: any[]) {
@@ -182,7 +186,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="space-y-8">
-        <InsightPanel insight={insight?.final_insight ?? ""} />
+        <InsightPanel insight={insight} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard

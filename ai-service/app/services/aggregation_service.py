@@ -18,8 +18,22 @@ def aggregate_product_metrics(product_id, db):
         AND "productId" = :product_id
     """)
 
+    neutral_query = text("""
+        SELECT COUNT(*)
+        FROM "Review"
+        WHERE sentiment = 'neutral'
+        AND "productId" = :product_id
+    """)
+
     positive = db.execute(
         positive_query,
+        {
+            "product_id": product_id
+        }
+    ).scalar()
+
+    neutral = db.execute(
+        neutral_query,
         {
             "product_id": product_id
         }
@@ -32,7 +46,7 @@ def aggregate_product_metrics(product_id, db):
         }
     ).scalar()
 
-    total = positive + negative
+    total = positive + negative + neutral
 
     positive_percentage = (
         positive / total * 100
@@ -42,20 +56,38 @@ def aggregate_product_metrics(product_id, db):
         negative / total * 100
     ) if total > 0 else 0
 
+    neutral_percentage = (
+        neutral / total * 100
+    ) if total > 0 else 0
+
+    growth_percentage = 15
+
+    top_keyword = "pengiriman"
+
+    forecast_trend = "up"
+
     print("POSITIVE:", positive)
     print("NEGATIVE:", negative)
+    print("NEUTRAL:", neutral)
 
     return {
 
         "positive_sentiment":
             round(positive_percentage, 2),
 
+        "neutral_sentiment":
+            round(neutral_percentage, 2),
+
         "negative_sentiment":
             round(negative_percentage, 2),
 
-        "growth_percentage": 15,
+        "positive_percentage": positive_percentage,
+        "neutral_percentage": neutral_percentage,
+        "negative_percentage": negative_percentage,
 
-        "top_keyword": "pengiriman",
+        "growth_percentage": growth_percentage,
 
-        "forecast_trend": "up"
+        "top_keyword": top_keyword,
+
+        "forecast_trend": forecast_trend
     }
