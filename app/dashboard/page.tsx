@@ -10,6 +10,7 @@ import KeywordMap from "@/components/dashboard/KeywordMap";
 import ChartSection from "@/components/dashboard/ChartSection";
 import ForecastChart from "@/components/dashboard/ForecastChart";
 import { mergeForecastData } from "@/lib/mergeForecastData";
+import InsightPanel from "@/components/dashboard/InsightPanel";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
@@ -21,6 +22,8 @@ export default function DashboardPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [products, setProducts] = useState<any[]>([]);
   const [productId, setProductId] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [insight, setInsight] = useState(null);
 
   const [stats, setStats] = useState({
     totalReviews: 0,
@@ -130,6 +133,20 @@ export default function DashboardPage() {
     fetchForecast();
   }, [productId]);
 
+  useEffect(() => {
+    async function loadDashboard() {
+      const res = await fetch(
+        `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,
+      );
+
+      const data = await res.json();
+
+      setInsight(data);
+    }
+
+    loadDashboard();
+  }, [selectedProduct]);
+
   function calculateGrowth(data: any[]) {
     const actual = data.filter((d) => d.actual).map((d) => d.actual);
     const predicted = data.filter((d) => d.predicted).map((d) => d.predicted);
@@ -152,8 +169,8 @@ export default function DashboardPage() {
         <label className="text-sm font-medium">Select Product:</label>
 
         <select
-          value={productId || ""}
-          onChange={(e) => setProductId(e.target.value)}
+          value={selectedProduct}
+          onChange={(e) => setSelectedProduct(e.target.value)}
           className="border rounded-lg px-3 py-2"
         >
           {products.map((p) => (
@@ -165,7 +182,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="space-y-8">
-        <InsightCard />
+        <InsightPanel insight={insight?.final_insight ?? ""} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatsCard

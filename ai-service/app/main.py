@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import sentiment, demand
+from app.routes import sentiment, demand, insight
 
 app = FastAPI()
 
@@ -18,3 +18,4 @@ app.add_middleware(
 
 app.include_router(sentiment.router)
 app.include_router(demand.router)
+app.include_router(insight.router)

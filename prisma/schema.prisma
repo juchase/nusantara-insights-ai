@@ -63,13 +63,22 @@ model Prediction {
 }
 
 model Insight {
-  id          String   @id @default(uuid())
-  productId   String
-  insightText String
-  type        String?
-  createdAt   DateTime @default(now())
+  id              String   @id @default(cuid())
+  productId       String
+  insightText     String
+  severity        String
+  createdAt       DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
+}
+
+model AiLog {
+  id            String   @id @default(uuid())
+  productId     String
+  prompt        String
+  llmResponse   String
+  status        String
+  createdAt     DateTime @default(now())
 }
 
 model DashboardSummary {
