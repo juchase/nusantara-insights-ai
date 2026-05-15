@@ -54,7 +54,7 @@ def generate_insight(
     summary = (
         f"Produk menunjukkan pertumbuhan "
         f"{growth}% dengan sentimen positif "
-        f"sebesar {positive}%."
+        f"sebesar {round(positive)}%."
     )
 
     # 6. RESPONSE

@@ -25,6 +25,22 @@ def aggregate_product_metrics(product_id, db):
         AND "productId" = :product_id
     """)
 
+    keyword_query = text("""
+        SELECT word
+        FROM "KeywordSummary"
+        WHERE "productId" = :product_id
+        ORDER BY count DESC
+        LIMIT 1
+    """)
+
+    prediction_query = text("""
+        SELECT "predictedSales"
+        FROM "Prediction"
+        WHERE "productId" = :product_id
+        ORDER BY "predictionDate" DESC
+        LIMIT 2
+    """)
+
     positive = db.execute(
         positive_query,
         {
@@ -46,6 +62,20 @@ def aggregate_product_metrics(product_id, db):
         }
     ).scalar()
 
+    top_keyword = db.execute(
+        keyword_query,
+        {
+            "product_id": product_id
+        }
+    ).scalar()
+
+    predictions = db.execute(
+        prediction_query,
+        {
+            "product_id": product_id
+        }
+    ).fetchall()
+
     total = positive + negative + neutral
 
     positive_percentage = (
@@ -60,11 +90,29 @@ def aggregate_product_metrics(product_id, db):
         neutral / total * 100
     ) if total > 0 else 0
 
-    growth_percentage = 15
+    if not top_keyword:
+        top_keyword = "tidak diketahui"
 
-    top_keyword = "pengiriman"
+    growth_percentage = 0
 
-    forecast_trend = "up"
+    if len(predictions) >= 2:
+
+        latest = predictions[0][0]
+        previous = predictions[1][0]
+
+        if previous > 0:
+            growth_percentage = (
+                (latest - previous)
+                / previous
+            ) * 100
+
+    forecast_trend = "stable"
+
+    if growth_percentage > 5:
+        forecast_trend = "up"
+
+    elif growth_percentage < -5:
+            forecast_trend = "down"
 
     print("POSITIVE:", positive)
     print("NEGATIVE:", negative)
@@ -81,11 +129,17 @@ def aggregate_product_metrics(product_id, db):
         "negative_sentiment":
             round(negative_percentage, 2),
 
-        "positive_percentage": positive_percentage,
-        "neutral_percentage": neutral_percentage,
-        "negative_percentage": negative_percentage,
+        "positive_percentage":
+            round(positive_percentage, 2),
 
-        "growth_percentage": growth_percentage,
+        "neutral_percentage":
+            round(neutral_percentage, 2),
+
+        "negative_percentage":
+            round(negative_percentage, 2),
+
+        "growth_percentage":
+            round(growth_percentage, 2),
 
         "top_keyword": top_keyword,
 

@@ -134,6 +134,12 @@ export default function DashboardPage() {
   }, [productId]);
 
   useEffect(() => {
+    if (products.length > 0 && !selectedProduct) {
+      setSelectedProduct(products[0].id);
+    }
+  }, [products]);
+
+  useEffect(() => {
     async function fetchInsight() {
       const res = await fetch(
         `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,

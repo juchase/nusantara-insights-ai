@@ -14,31 +14,32 @@ model User {
   password  String
   createdAt DateTime @default(now())
 
-  products  Product[]
+  products Product[]
 }
 
 model Product {
   id        String   @id @default(uuid())
   userId    String
-  name      String @unique
+  name      String   @unique
   category  String?
   createdAt DateTime @default(now())
 
-  user       User        @relation(fields: [userId], references: [id])
-  reviews    Review[]
-  sales      Sales[]
-  predictions Prediction[]
-  insights   Insight[]
+  user           User             @relation(fields: [userId], references: [id])
+  reviews        Review[]
+  sales          Sales[]
+  predictions    Prediction[]
+  insights       Insight[]
+  KeywordSummary KeywordSummary[]
 }
 
 model Review {
-  id          String   @id @default(uuid())
-  productId   String
-  reviewText  String
-  rating      Int
-  sentiment   String?
-  aspect      String   @default("lainnya")
-  reviewDate  DateTime
+  id         String   @id @default(uuid())
+  productId  String
+  reviewText String
+  rating     Int
+  sentiment  String?
+  aspect     String   @default("lainnya")
+  reviewDate DateTime
 
   product Product @relation(fields: [productId], references: [id])
 }
@@ -53,43 +54,43 @@ model Sales {
 }
 
 model Prediction {
-  id              String   @id @default(uuid())
-  productId       String
-  predictedSales  Int
-  predictionDate  DateTime
-  modelVersion    String?
+  id             String   @id @default(uuid())
+  productId      String
+  predictedSales Int
+  predictionDate DateTime
+  modelVersion   String?
 
   product Product @relation(fields: [productId], references: [id])
 }
 
 model Insight {
-  id              String   @id @default(cuid())
-  productId       String
-  insightText     String
-  severity        String
-  createdAt       DateTime @default(now())
+  id          String   @id @default(cuid())
+  productId   String
+  insightText String
+  severity    String
+  createdAt   DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
 }
 
 model AiLog {
-  id            String   @id @default(uuid())
-  productId     String
-  prompt        String
-  llmResponse   String
-  status        String
-  createdAt     DateTime @default(now())
+  id          String   @id @default(uuid())
+  productId   String
+  prompt      String
+  llmResponse String
+  status      String
+  createdAt   DateTime @default(now())
 }
 
 model DashboardSummary {
-  id              String   @id @default("main")
-  totalReviews    Int
-  positiveCount   Int
-  neutralCount    Int
-  negativeCount   Int
-  totalRating     Float
-  avgRating       Float
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default("main")
+  totalReviews  Int
+  positiveCount Int
+  neutralCount  Int
+  negativeCount Int
+  totalRating   Float
+  avgRating     Float
+  updatedAt     DateTime @updatedAt
 }
 
 model DailyReviewSummary {
@@ -102,7 +103,12 @@ model DailyReviewSummary {
 }
 
 model KeywordSummary {
-  id    String @id @default(uuid())
-  word  String @unique
+  id String @id @default(uuid())
+
+  productId String
+
+  word  String
   count Int
+
+  product Product @relation(fields: [productId], references: [id])
 }
