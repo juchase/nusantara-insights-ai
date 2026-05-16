@@ -1,85 +1,64 @@
 from sqlalchemy import text
 
 def aggregate_product_metrics(product_id, db):
-    positive_query = text("""
-        SELECT COUNT(*)
-        FROM "Review"
+
+    positive = db.execute(text("""
+        SELECT COUNT(*) FROM "Review"
         WHERE sentiment = 'positive'
-        AND "productId" = :product_id
-    """)
+        AND "productId" = :pid
+    """), {"pid": product_id}).scalar() or 0
 
-    negative_query = text("""
-        SELECT COUNT(*)
-        FROM "Review"
+    negative = db.execute(text("""
+        SELECT COUNT(*) FROM "Review"
         WHERE sentiment = 'negative'
-        AND "productId" = :product_id
-    """)
+        AND "productId" = :pid
+    """), {"pid": product_id}).scalar() or 0
 
-    neutral_query = text("""
-        SELECT COUNT(*)
-        FROM "Review"
+    neutral = db.execute(text("""
+        SELECT COUNT(*) FROM "Review"
         WHERE sentiment = 'neutral'
-        AND "productId" = :product_id
-    """)
+        AND "productId" = :pid
+    """), {"pid": product_id}).scalar() or 0
 
-    keyword_query=text("""
-        SELECT word
-        FROM "KeywordSummary"
-        WHERE "productId" = :product_id
+    # KeywordSummary tidak punya productId — ambil global
+    top_keyword = db.execute(text("""
+        SELECT word FROM "KeywordSummary"
         ORDER BY count DESC
         LIMIT 1
-    """)
-    
-    prediction_query=text("""
-        SELECT "predictedSales"
-        FROM "Prediction"
-        WHERE "productId" = :product_id
+    """)).scalar()
+
+    predictions = db.execute(text("""
+        SELECT "predictedSales" FROM "Prediction"
+        WHERE "productId" = :pid
         ORDER BY "predictionDate" DESC
         LIMIT 2
-    """)
-
-    positive = db.execute(positive_query, {"product_id": product_id}).scalar()
-
-    negative = db.execute(negative_query, {"product_id": product_id}).scalar()
-
-    neutral = db.execute(neutral_query, {"product_id": product_id}).scalar()
-    
-    top_keyword = db.execute(keyword_query, {"product_id": product_id}).scalar()
-    
-    predictions = db.execute(prediction_query, {"product_id": product_id}).fetchall()
+    """), {"pid": product_id}).fetchall()
 
     total = positive + negative + neutral
 
-    positive_percentage = (positive / total * 100) if total > 0 else 0
+    pos_pct  = round((positive / total * 100), 1) if total > 0 else 0
+    neg_pct  = round((negative / total * 100), 1) if total > 0 else 0
+    neu_pct  = round((neutral  / total * 100), 1) if total > 0 else 0
 
-    negative_percentage = (negative / total * 100) if total > 0 else 0
-
-    neutral_percentage = (neutral / total * 100) if total > 0 else 0
-    
-    growth_percentage = 0
-
+    growth_pct = 0.0
     if len(predictions) >= 2:
-        latest = predictions[0][0]
-        previous = predictions[1][0]
+        latest, previous = predictions[0][0], predictions[1][0]
         if previous > 0:
-            growth_percentage = ((latest - previous) / previous) * 100
+            growth_pct = round(((latest - previous) / previous) * 100, 1)
 
-    forecast_trend = "stable"
-    
-    if growth_percentage > 5:
-        forecast_trend = "up"
+    if growth_pct > 5:
+        trend = "up"
+    elif growth_pct < -5:
+        trend = "down"
+    else:
+        trend = "stable"
 
-    elif growth_percentage < -5:
-        forecast_trend = "down"
-    
     return {
-        "positive_percentage": round(positive_percentage, 2),
-        "negative_percentage": round(negative_percentage, 2),
-        "neutral_percentage": round(neutral_percentage, 2),
-
-        "growth_percentage": round(growth_percentage, 2),
-
-        "top_keyword": top_keyword or "Tidak diketahui",
-        
-        "forecast_trend": forecast_trend
+        "positive_percentage": pos_pct,
+        "negative_percentage": neg_pct,
+        "neutral_percentage":  neu_pct,
+        "total_reviews":       total,
+        "growth_percentage":   growth_pct,
+        "top_keyword":         top_keyword or "umum",
+        "forecast_trend":      trend,
     }
