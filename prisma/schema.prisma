@@ -64,11 +64,18 @@ model Prediction {
 }
 
 model Insight {
-  id          String   @id @default(cuid())
-  productId   String
-  insightText String
-  severity    String
-  createdAt   DateTime @default(now())
+  id String @id @default(uuid())
+
+  productId String
+
+  summary     String
+  healthScore Int
+
+  insights        Json
+  recommendations Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   product Product @relation(fields: [productId], references: [id])
 }
@@ -111,4 +118,6 @@ model KeywordSummary {
   count Int
 
   product Product @relation(fields: [productId], references: [id])
+
+  @@unique([productId, word])
 }

@@ -1,22 +1,21 @@
-def build_prompt(data, rules):
+def build_prompt(
+    positive,
+    negative,
+    trend,
+    keyword
+):
 
-    prompt = f"""
-Tugas Anda hanya merapikan insight bisnis.
+    return f"""
+Anda adalah AI Business Analyst.
 
-JANGAN membuat analisis baru.
-JANGAN menambahkan data baru.
-JANGAN membuat pembukaan.
+Buat insight bisnis singkat berdasarkan data berikut:
 
-Gunakan informasi berikut saja.
-
-Insight:
-{chr(10).join(['- ' + i for i in rules['insights']])}
-
-Rekomendasi:
-{chr(10).join(['- ' + r for r in rules['recommendations']])}
+- Sentimen positif: {positive:.0f}%
+- Sentimen negatif: {negative:.0f}%
+- Trend permintaan: {trend}
+- Keluhan utama: {keyword}
 
 Tulis maksimal 2 kalimat.
-Gunakan Bahasa Indonesia profesional dan singkat.
+Gunakan Bahasa Indonesia profesional.
+Jangan gunakan bullet point.
 """
-
-    return prompt

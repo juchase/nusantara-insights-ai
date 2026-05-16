@@ -202,9 +202,24 @@ export async function POST(req: NextRequest) {
 
                 if (sentiment === "negative") {
                   await prisma.keywordSummary.upsert({
-                    where: { word: aspect },
-                    update: { count: { increment: 1 } },
-                    create: { word: aspect, count: 1 },
+                    where: {
+                      productId_word: {
+                        productId: product.id,
+                        word: aspect,
+                      },
+                    },
+
+                    update: {
+                      count: {
+                        increment: 1,
+                      },
+                    },
+
+                    create: {
+                      productId: product.id,
+                      word: aspect,
+                      count: 1,
+                    },
                   });
                 }
               }

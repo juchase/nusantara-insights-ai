@@ -1,9 +1,6 @@
 from sqlalchemy import text
 
 def aggregate_product_metrics(product_id, db):
-
-    print("DB SESSION:", db)
-
     positive_query = text("""
         SELECT COUNT(*)
         FROM "Review"
@@ -25,15 +22,15 @@ def aggregate_product_metrics(product_id, db):
         AND "productId" = :product_id
     """)
 
-    keyword_query = text("""
+    keyword_query=text("""
         SELECT word
         FROM "KeywordSummary"
         WHERE "productId" = :product_id
         ORDER BY count DESC
         LIMIT 1
     """)
-
-    prediction_query = text("""
+    
+    prediction_query=text("""
         SELECT "predictedSales"
         FROM "Prediction"
         WHERE "productId" = :product_id
@@ -41,107 +38,48 @@ def aggregate_product_metrics(product_id, db):
         LIMIT 2
     """)
 
-    positive = db.execute(
-        positive_query,
-        {
-            "product_id": product_id
-        }
-    ).scalar()
+    positive = db.execute(positive_query, {"product_id": product_id}).scalar()
 
-    neutral = db.execute(
-        neutral_query,
-        {
-            "product_id": product_id
-        }
-    ).scalar()
+    negative = db.execute(negative_query, {"product_id": product_id}).scalar()
 
-    negative = db.execute(
-        negative_query,
-        {
-            "product_id": product_id
-        }
-    ).scalar()
-
-    top_keyword = db.execute(
-        keyword_query,
-        {
-            "product_id": product_id
-        }
-    ).scalar()
-
-    predictions = db.execute(
-        prediction_query,
-        {
-            "product_id": product_id
-        }
-    ).fetchall()
+    neutral = db.execute(neutral_query, {"product_id": product_id}).scalar()
+    
+    top_keyword = db.execute(keyword_query, {"product_id": product_id}).scalar()
+    
+    predictions = db.execute(prediction_query, {"product_id": product_id}).fetchall()
 
     total = positive + negative + neutral
 
-    positive_percentage = (
-        positive / total * 100
-    ) if total > 0 else 0
+    positive_percentage = (positive / total * 100) if total > 0 else 0
 
-    negative_percentage = (
-        negative / total * 100
-    ) if total > 0 else 0
+    negative_percentage = (negative / total * 100) if total > 0 else 0
 
-    neutral_percentage = (
-        neutral / total * 100
-    ) if total > 0 else 0
-
-    if not top_keyword:
-        top_keyword = "tidak diketahui"
-
+    neutral_percentage = (neutral / total * 100) if total > 0 else 0
+    
     growth_percentage = 0
 
     if len(predictions) >= 2:
-
         latest = predictions[0][0]
         previous = predictions[1][0]
-
         if previous > 0:
-            growth_percentage = (
-                (latest - previous)
-                / previous
-            ) * 100
+            growth_percentage = ((latest - previous) / previous) * 100
 
     forecast_trend = "stable"
-
+    
     if growth_percentage > 5:
         forecast_trend = "up"
 
     elif growth_percentage < -5:
-            forecast_trend = "down"
-
-    print("POSITIVE:", positive)
-    print("NEGATIVE:", negative)
-    print("NEUTRAL:", neutral)
-
+        forecast_trend = "down"
+    
     return {
+        "positive_percentage": round(positive_percentage, 2),
+        "negative_percentage": round(negative_percentage, 2),
+        "neutral_percentage": round(neutral_percentage, 2),
 
-        "positive_sentiment":
-            round(positive_percentage, 2),
+        "growth_percentage": round(growth_percentage, 2),
 
-        "neutral_sentiment":
-            round(neutral_percentage, 2),
-
-        "negative_sentiment":
-            round(negative_percentage, 2),
-
-        "positive_percentage":
-            round(positive_percentage, 2),
-
-        "neutral_percentage":
-            round(neutral_percentage, 2),
-
-        "negative_percentage":
-            round(negative_percentage, 2),
-
-        "growth_percentage":
-            round(growth_percentage, 2),
-
-        "top_keyword": top_keyword,
-
+        "top_keyword": top_keyword or "Tidak diketahui",
+        
         "forecast_trend": forecast_trend
     }

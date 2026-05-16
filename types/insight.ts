@@ -6,7 +6,6 @@ export interface InsightItem {
 }
 
 export interface InsightResponse {
-  final_insight: string;
   summary: string;
   health_score: number;
   insights: InsightItem[];

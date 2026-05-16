@@ -2,25 +2,28 @@ import requests
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
+
 def generate_natural_insight(prompt):
 
     payload = {
-        "model": "phi3:mini",
+        "model": "qwen2:0.5b",
         "prompt": prompt,
         "stream": False,
         "options": {
-    "temperature": 0.2,
-    "num_predict": 80
-}
+            "temperature": 0.1,
+            "num_predict": 60,
+        }
     }
 
     response = requests.post(
         OLLAMA_URL,
         json=payload,
-        timeout=120
+        timeout=60
     )
 
     data = response.json()
+
+    print(data)
 
     return data["response"].strip()
 
@@ -31,13 +34,13 @@ def safe_generate(prompt, fallback_text):
 
         result = generate_natural_insight(prompt)
 
+        print("LLM RESULT:", result)
+
         if not result:
             return fallback_text
 
         return result
 
-    except Exception as e:
-
-        print("LLM ERROR:", e)
+    except Exception:
 
         return fallback_text
