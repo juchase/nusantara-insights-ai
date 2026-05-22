@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-<<<<<<< ours
-=======
+
 import { ChevronDown, Radio, Sparkles } from "lucide-react";
 import { InsightResponse } from "@/types/insight";
->>>>>>> theirs
 
 import Topbar from "@/components/dashboard/Topbar";
 import StatsCard from "@/components/dashboard/StatsCard";
@@ -18,8 +16,6 @@ import InsightPanel from "@/components/dashboard/InsightPanel";
 
 import { mergeForecastData } from "@/lib/mergeForecastData";
 
-<<<<<<< ours
-=======
 type Product = {
   id: string;
   name: string;
@@ -49,23 +45,14 @@ type DashboardAnalyticsResponse = {
   };
 };
 
->>>>>>> theirs
 export default function DashboardPage() {
   // =============================
   // STATES
   // =============================
 
-<<<<<<< ours
   const [user, setUser] = useState<any>(null);
-
-  const [chartData, setChartData] = useState<any[]>([]);
-
-  const [forecastData, setForecastData] = useState<any[]>([]);
-=======
   const [chartData, setChartData] = useState<SentimentTimelinePoint[]>([]);
-
   const [forecastData, setForecastData] = useState<ForecastPoint[]>([]);
->>>>>>> theirs
 
   const [growth, setGrowth] = useState(0);
 
@@ -75,29 +62,18 @@ export default function DashboardPage() {
 
   const [dataLoading, setDataLoading] = useState(true);
 
-<<<<<<< ours
-  const [products, setProducts] = useState<any[]>([]);
-=======
   const [products, setProducts] = useState<Product[]>([]);
->>>>>>> theirs
 
   // SINGLE SOURCE OF TRUTH
   const [selectedProduct, setSelectedProduct] = useState<string>("");
 
   // INSIGHT
-<<<<<<< ours
-  const [insight, setInsight] = useState<any>(null);
-
-  const [insightLoading, setInsightLoading] = useState(false);
-
-=======
   const [insight, setInsight] = useState<InsightResponse | null>(null);
 
   const [insightLoading, setInsightLoading] = useState(false);
 
   const [confidence, setConfidence] = useState(0);
 
->>>>>>> theirs
   // STATS
   const [stats, setStats] = useState({
     totalReviews: 0,
@@ -125,13 +101,10 @@ export default function DashboardPage() {
           return router.push("/login");
         }
 
-<<<<<<< ours
         const data = await res.json();
 
         setUser(data.user);
-=======
         await res.json();
->>>>>>> theirs
       } catch {
         router.push("/login");
       } finally {
@@ -151,11 +124,7 @@ export default function DashboardPage() {
       try {
         const res = await fetch("/api/products");
 
-<<<<<<< ours
-        const data = await res.json();
-=======
         const data = (await res.json()) as Product[];
->>>>>>> theirs
 
         setProducts(data);
 
@@ -180,11 +149,7 @@ export default function DashboardPage() {
       try {
         const res = await fetch("/api/dashboard-analytics");
 
-<<<<<<< ours
-        const data = await res.json();
-=======
         const data = (await res.json()) as DashboardAnalyticsResponse;
->>>>>>> theirs
 
         setTopKeywords(data.topKeywords || []);
 
@@ -223,11 +188,6 @@ export default function DashboardPage() {
     const fetchForecast = async () => {
       try {
         // TRIGGER AI
-<<<<<<< ours
-        await fetch(`http://localhost:8000/predict-demand/${selectedProduct}`, {
-          method: "POST",
-        });
-=======
         const predictRes = await fetch(
           `http://localhost:8000/predict-demand/${selectedProduct}`,
           {
@@ -241,21 +201,16 @@ export default function DashboardPage() {
 
         // delay kecil agar DB selesai commit
         await new Promise((resolve) => setTimeout(resolve, 300));
->>>>>>> theirs
 
         // FETCH FROM DB
         const res = await fetch(`/api/predictions/${selectedProduct}`);
 
         const result = await res.json();
 
-<<<<<<< ours
-        const merged = mergeForecastData(result.sales, result.predictions);
-=======
         const merged = mergeForecastData(
           result.sales,
           result.predictions,
         ) as ForecastPoint[];
->>>>>>> theirs
 
         setForecastData(merged);
 
@@ -283,11 +238,7 @@ export default function DashboardPage() {
           `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,
         );
 
-<<<<<<< ours
-        const data = await res.json();
-=======
         const data = (await res.json()) as InsightResponse;
->>>>>>> theirs
 
         setInsight(data);
       } catch (err) {
@@ -304,11 +255,7 @@ export default function DashboardPage() {
   // GROWTH
   // =============================
 
-<<<<<<< ours
-  function calculateGrowth(data: any[]) {
-=======
   function calculateGrowth(data: ForecastPoint[]) {
->>>>>>> theirs
     const actual = data.filter((d) => d.actual).map((d) => d.actual);
 
     const predicted = data.filter((d) => d.predicted).map((d) => d.predicted);
@@ -329,25 +276,7 @@ export default function DashboardPage() {
   // =============================
 
   if (authLoading || dataLoading) {
-<<<<<<< ours
     return <div className="p-10">Loading...</div>;
-=======
-    return (
-      <div className="space-y-6">
-        <Topbar />
-
-        <div className="animate-pulse space-y-6">
-          <div className="h-36 rounded-3xl bg-white shadow-sm ring-1 ring-slate-200" />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="h-32 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200" />
-            <div className="h-32 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200" />
-            <div className="h-32 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200" />
-          </div>
-          <div className="h-80 rounded-3xl bg-white shadow-sm ring-1 ring-slate-200" />
-        </div>
-      </div>
-    );
->>>>>>> theirs
   }
 
   // =============================
@@ -355,74 +284,6 @@ export default function DashboardPage() {
   // =============================
 
   return (
-<<<<<<< ours
-    <>
-      <Topbar />
-
-      <div className="space-y-8">
-        {/* PRODUCT SELECT */}
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Select Product:</label>
-
-          <select
-            value={selectedProduct}
-            onChange={(e) => setSelectedProduct(e.target.value)}
-            className="border rounded-lg px-3 py-2"
-          >
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* INSIGHT */}
-        <InsightPanel insight={insight} loading={insightLoading} />
-
-        {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatsCard
-            title="Total Reviews"
-            value={stats.totalReviews.toString()}
-          />
-
-          <StatsCard
-            title="Positive Sentiment"
-            value={`${stats.sentimentStats.positive}%`}
-          />
-
-          <StatsCard
-            title="Total Products"
-            value={stats.totalProducts.toString()}
-          />
-        </div>
-
-        {/* DASHBOARD GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* CHART */}
-          <div className="lg:col-span-8">
-            <ChartSection data={chartData} />
-          </div>
-
-          {/* FORECAST */}
-          <div className="lg:col-span-4">
-            <ForecastChart data={forecastData} growth={growth} />
-          </div>
-
-          {/* COMPLAINTS */}
-          <div className="lg:col-span-5">
-            <ComplaintsCard data={topKeywords.slice(0, 5)} />
-          </div>
-
-          {/* KEYWORD MAP */}
-          <div className="lg:col-span-7">
-            <KeywordMap data={topKeywords.slice(0, 5)} />
-          </div>
-        </div>
-      </div>
-    </>
-=======
     <div className="space-y-8">
       <Topbar />
 
@@ -548,6 +409,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
->>>>>>> theirs
   );
 }
