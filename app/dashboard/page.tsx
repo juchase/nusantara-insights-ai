@@ -13,6 +13,7 @@ import KeywordMap from "@/components/dashboard/KeywordMap";
 import ChartSection from "@/components/dashboard/ChartSection";
 import ForecastChart from "@/components/dashboard/ForecastChart";
 import InsightPanel from "@/components/dashboard/InsightPanel";
+import InsightCard from "@/components/dashboard/InsightCard";
 
 import { mergeForecastData } from "@/lib/mergeForecastData";
 
@@ -265,10 +266,16 @@ export default function DashboardPage() {
     }
 
     const lastActual = actual[actual.length - 1];
+    const safeLastActual = lastActual ?? 0;
 
-    const avgPred = predicted.reduce((a, b) => a + b, 0) / predicted.length;
+    const totalPredicted = (predicted ?? []).reduce(
+      (a, b) => (a ?? 0) + (b ?? 0),
+      0,
+    );
 
-    return Number((((avgPred - lastActual) / lastActual) * 100).toFixed(1));
+    return Number(
+      (((totalPredicted ?? 0) - safeLastActual) / safeLastActual) * 100,
+    ).toFixed(1);
   }
 
   // =============================
@@ -276,7 +283,14 @@ export default function DashboardPage() {
   // =============================
 
   if (authLoading || dataLoading) {
-    return <div className="p-10">Loading...</div>;
+    return (
+      <>
+        <Topbar />
+        <div className="space-y-8 min-h-screen flex items-center justify-center">
+          <div className="text-center">Loading...</div>
+        </div>
+      </>
+    );
   }
 
   // =============================
@@ -288,43 +302,20 @@ export default function DashboardPage() {
       <Topbar />
 
       <div className="space-y-8">
-        {/* PRODUCT SELECT */}
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Select Product:</label>
-
-          <select
-            value={selectedProduct}
-            onChange={(e) => setSelectedProduct(e.target.value)}
-            className="border rounded-lg px-3 py-2"
-          >
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* INSIGHT */}
-        <InsightPanel insight={insight} loading={insightLoading} />
+        <InsightCard
+          insight={insight}
+          products={products}
+          selectedProduct={selectedProduct}
+          onProductChange={setSelectedProduct}
+          loading={insightLoading}
+        />
 
-        {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatsCard
-            title="Total Reviews"
-            value={stats.totalReviews.toString()}
-          />
-
-          <StatsCard
-            title="Positive Sentiment"
-            value={`${stats.sentimentStats.positive}%`}
-          />
-
-          <StatsCard
-            title="Total Products"
-            value={stats.totalProducts.toString()}
-          />
-        </div>
+        <InsightPanel
+          insight={insight}
+          stats={stats}
+          loading={insightLoading}
+        />
 
         {/* DASHBOARD GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

@@ -1,24 +1,126 @@
+"use client";
+
+import { InsightResponse } from "@/types/insight";
 import { Sparkles } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 
-export default function InsightCard() {
-  return (
-    <Card className="rounded-2xl border-green-200 bg-green-50">
-      <CardContent className="p-6 flex gap-3">
-        <Sparkles className="text-green-500 mt-1" />
+interface Props {
+  insight: InsightResponse | null;
+  products: { id: string; name: string }[];
+  selectedProduct: string;
+  onProductChange: (value: string) => void;
+  loading: boolean;
+}
 
-        <div>
-          <p className="text-xs font-bold text-green-600 uppercase mb-1">
-            AI SMART INSIGHT
-          </p>
-
-          <p className="text-lg">
-            Sentimen negatif meningkat{" "}
-            <span className="text-indigo-600 font-bold">23%</span> pada aspek
-            kemasan.
-          </p>
+export default function InsightPanel({
+  insight,
+  products,
+  selectedProduct,
+  onProductChange,
+  loading,
+}: Props) {
+  if (loading) {
+    return (
+      <div
+        className="overflow-hidden rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 shadow-sm shadow-emerald-100/70 mt-8"
+        style={{ borderRadius: 28, padding: 24 }}
+      >
+        <div className="flex items-center gap-4">
+          <div className="grid size-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <Sparkles size={22} className="animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-800">
+              AI Smart Auto-Insight
+            </p>
+            <div className="h-5 w-80 max-w-full animate-pulse rounded-full bg-emerald-200/80" />
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    );
+  }
+
+  if (!insight) {
+    return (
+      <div
+        className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mt-8"
+        style={{ borderRadius: 28, padding: 24 }}
+      >
+        <div className="flex items-center gap-4">
+          <div className="grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-500">
+            <Sparkles size={22} />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">
+              AI Smart Auto-Insight
+            </p>
+            <p className="mt-1 text-slate-600">AI insight not available.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="overflow-hidden rounded-3xl border border-emerald-200 bg-linear-to-br from-emerald-50 via-white to-white p-6 shadow-sm shadow-emerald-100/70 mt-8"
+      style={{
+        borderRadius: 28,
+        padding: 28,
+        background:
+          "linear-gradient(135deg, rgba(236,253,245,0.9) 0%, #ffffff 60%, #ffffff 100%)",
+        boxShadow: "0 14px 32px rgba(16, 185, 129, 0.08)",
+      }}
+    >
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: "minmax(0, 1fr) 240px" }}
+      >
+        <div className="flex gap-4">
+          <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
+            <Sparkles size={24} />
+          </div>
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-800">
+              AI Smart Auto-Insight
+            </p>
+            <p className="mt-2 max-w-4xl text-lg leading-8 text-slate-950">
+              {insight.summary}
+            </p>
+          </div>
+        </div>
+
+        {/* PRODUCT SELECT */}
+        <div
+          className="
+            flex flex-col items-start gap-3
+            w-[240px]
+            rounded-2xl
+            border border-white/60
+          bg-white/80
+            backdrop-blur
+            p-4
+            shadow-sm"
+        >
+          <label className="text-sm font-medium">Select Product:</label>
+
+          <select
+            value={selectedProduct}
+            onChange={(e) => onProductChange(e.target.value)}
+            className="border rounded-lg px-3 py-2 w-full text-md"
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+          <label className="text-sm font-medium">
+            Auto Generate Insight for Selected Product
+          </label>
+        </div>
+      </div>
+    </div>
   );
 }
