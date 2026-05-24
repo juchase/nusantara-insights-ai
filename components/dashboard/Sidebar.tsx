@@ -1,91 +1,229 @@
 "use client";
-
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Sparkles,
-  BarChart3,
+  Upload,
+  Package,
+  Star,
+  TrendingUp,
+  Brain,
   Settings,
-  LogOut,
-  HelpCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
-export default function Sidebar() {
-  const router = useRouter();
+const NAV = [
+  {
+    section: "Menu Utama",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard/upload", label: "Upload Data", icon: Upload },
+      { href: "/dashboard/products", label: "Produk", icon: Package },
+      { href: "/dashboard/reviews", label: "Ulasan", icon: Star },
+    ],
+  },
+  {
+    section: "Analitik",
+    items: [
+      { href: "/dashboard/forecast", label: "Forecast", icon: TrendingUp },
+      { href: "/dashboard/insight", label: "AI Insight", icon: Brain },
+    ],
+  },
+  {
+    section: "Lainnya",
+    items: [
+      { href: "/dashboard/settings", label: "Pengaturan", icon: Settings },
+    ],
+  },
+];
 
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  };
+export default function Sidebar({ collapsed }: { collapsed: boolean }) {
+  const pathname = usePathname();
+  const w = collapsed ? 64 : 232;
 
   return (
-    <aside className="fixed left-0 top-0 z-50 hidden h-screen w-64 flex-col border-r border-indigo-100 bg-[#eef0ff] p-5 shadow-sm backdrop-blur-xl lg:flex">
+    <aside
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: w,
+        background: "#fff",
+        borderRight: "1px solid #e5e7eb",
+        zIndex: 30,
+        display: "flex",
+        flexDirection: "column",
+        transition: "width 0.22s cubic-bezier(.4,0,.2,1)",
+        overflow: "hidden",
+      }}
+    >
       {/* Logo */}
-      <div className="mb-8 px-2 pt-2">
-        <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-sm">
+      <div
+        style={{
+          height: 64,
+          padding: collapsed ? "0 16px" : "0 20px",
+          borderBottom: "1px solid #f3f4f6",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexShrink: 0,
+          overflow: "hidden",
+        }}
+      >
+        {/* Icon */}
+        <div
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            flexShrink: 0,
+            background: "linear-gradient(135deg, #4f46e5, #06b6d4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            fontWeight: 500,
+            color: "#fff",
+          }}
+        >
           NI
         </div>
-        <h1 className="text-lg font-bold tracking-tight text-slate-950">
-          NusantaraInsight
-        </h1>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
-          AI Intelligence
-        </p>
+
+        {/* Text — hilang saat collapsed */}
+        <div
+          style={{
+            opacity: collapsed ? 0 : 1,
+            transform: collapsed ? "translateX(-8px)" : "translateX(0)",
+            transition: "opacity 0.18s, transform 0.18s",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        >
+          <p style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>
+            NusantaraInsight
+          </p>
+          <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>
+            AI Business Intelligence
+          </p>
+        </div>
       </div>
 
-      {/* Menu */}
-      <nav className="flex-1 space-y-1.5">
-        <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 font-semibold text-indigo-700 shadow-sm">
-          <LayoutDashboard size={18} />
-          Executive Summary
-        </div>
+      {/* Nav */}
+      <nav
+        style={{
+          flex: 1,
+          padding: "10px 8px",
+          display: "flex",
+          flexDirection: "column",
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
+      >
+        {NAV.map(({ section, items }) => (
+          <div key={section}>
+            {/* Section label — hilang saat collapsed */}
+            <p
+              style={{
+                fontSize: 10,
+                color: "#9ca3af",
+                fontWeight: 500,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                padding: "10px 8px 4px",
+                opacity: collapsed ? 0 : 1,
+                transition: "opacity 0.15s",
+                whiteSpace: "nowrap",
+                height: collapsed ? 0 : "auto",
+                overflow: "hidden",
+              }}
+            >
+              {section}
+            </p>
 
-        <div className="flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-slate-500 transition hover:bg-white/70 hover:text-slate-900">
-          <BarChart3 size={18} />
-          Data Explorer
-        </div>
+            {items.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  title={collapsed ? label : undefined}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: collapsed ? "10px 0" : "8px 10px",
+                    justifyContent: collapsed ? "center" : "flex-start",
+                    borderRadius: 7,
+                    fontSize: 12.5,
+                    color: active ? "#4f46e5" : "#4b5563",
+                    background: active ? "#eef2ff" : "transparent",
+                    fontWeight: active ? 500 : 400,
+                    textDecoration: "none",
+                    marginBottom: 2,
+                    transition: "background 0.12s, color 0.12s, padding 0.22s",
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <Icon size={16} style={{ flexShrink: 0 }} />
 
-        <div className="flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-slate-500 transition hover:bg-white/70 hover:text-slate-900">
-          <Sparkles size={18} />
-          AI Insights
-        </div>
-
-        <div className="flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-slate-500 transition hover:bg-white/70 hover:text-slate-900">
-          <Settings size={18} />
-          Settings
-        </div>
+                  {/* Label — hilang saat collapsed */}
+                  <span
+                    style={{
+                      opacity: collapsed ? 0 : 1,
+                      maxWidth: collapsed ? 0 : 160,
+                      transition: "opacity 0.15s, max-width 0.22s",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      {/* Bottom Section */}
-      <div className="space-y-3 border-t border-slate-200 py-6">
-        <div className="rounded-2xl border border-indigo-100 bg-indigo-50/80 p-4 text-xs">
-          <p className="mb-1 font-bold text-indigo-700">PRO PLAN ACTIVE</p>
-          <p className="mb-3 leading-relaxed text-indigo-600/80">
-            Realtime AI analytics ready for thesis demo.
+      {/* Footer */}
+      {!collapsed && (
+        <div
+          style={{
+            margin: "8px 10px 12px",
+            padding: "11px 12px",
+            background: "#f9fafb",
+            borderRadius: 8,
+            border: "1px solid #f3f4f6",
+            opacity: collapsed ? 0 : 1,
+            transition: "opacity 0.15s",
+          }}
+        >
+          <p style={{ fontSize: 11, color: "#6b7280" }}>Sprint 6</p>
+          <p style={{ fontSize: 12, fontWeight: 500, color: "#111827" }}>
+            Hybrid AI Architecture
           </p>
-          <Button className="h-8 w-full rounded-full bg-indigo-600 text-xs text-white hover:bg-indigo-700">
-            Upgrade
-          </Button>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              marginTop: 5,
+              fontSize: 10,
+              color: "#3B6D11",
+            }}
+          >
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "#1D9E75",
+              }}
+            />
+            Rule Engine + LLM Active
+          </div>
         </div>
-
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2 text-sm text-slate-500 hover:text-slate-900"
-        >
-          <HelpCircle size={16} />
-          Help Center
-        </Button>
-
-        <Button
-          onClick={handleLogout}
-          variant="ghost"
-          className="w-full justify-start gap-2 text-sm text-slate-500 hover:text-red-600"
-        >
-          <LogOut size={16} />
-          Logout
-        </Button>
-      </div>
+      )}
     </aside>
   );
 }

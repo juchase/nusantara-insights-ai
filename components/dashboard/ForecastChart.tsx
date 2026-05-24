@@ -1,3 +1,5 @@
+"use client";
+
 type ForecastPoint = {
   date: string;
   actual?: number | null;
@@ -5,11 +7,40 @@ type ForecastPoint = {
   confidence?: number;
 };
 
-function getDemandAlert(growth: number) {
-  if (growth > 20) return "High demand increase expected";
-  if (growth > 10) return "Moderate growth expected";
-  if (growth < -10) return "Demand may decrease";
-  return "Stable demand predicted";
+function getDemandAlert(growth: number): {
+  text: string;
+  color: string;
+  bg: string;
+} {
+  if (growth > 20)
+    return {
+      text: "Permintaan diprediksi meningkat signifikan",
+      color: "#5DCAA5",
+      bg: "rgba(29,158,117,0.2)",
+    };
+  if (growth > 5)
+    return {
+      text: "Pertumbuhan permintaan moderat",
+      color: "#5DCAA5",
+      bg: "rgba(29,158,117,0.2)",
+    };
+  if (growth < -10)
+    return {
+      text: "Permintaan diprediksi menurun",
+      color: "#E24B4A",
+      bg: "rgba(226,75,74,0.2)",
+    };
+  return {
+    text: "Permintaan diprediksi stabil",
+    color: "#AFA9EC",
+    bg: "rgba(127,119,221,0.2)",
+  };
+}
+
+function getAccuracyLabel(confidence: number): { text: string; color: string } {
+  if (confidence >= 80) return { text: "Akurasi Tinggi", color: "#5DCAA5" };
+  if (confidence >= 60) return { text: "Akurasi Sedang", color: "#EF9F27" };
+  return { text: "Akurasi Rendah", color: "#E24B4A" };
 }
 
 export default function ForecastChart({
@@ -21,82 +52,215 @@ export default function ForecastChart({
   growth: number;
   confidence: number;
 }) {
-  const latestActual = [...data].reverse().find((item) => item.actual)?.actual;
-  const avgPredicted =
-    data
-      .filter((item) => item.predicted)
-      .reduce((total, item) => total + (item.predicted || 0), 0) /
-    Math.max(data.filter((item) => item.predicted).length, 1);
+  const latestActual = [...data].reverse().find((d) => d.actual)?.actual;
+
+  const predictedValues = data
+    .filter((d) => d.predicted)
+    .map((d) => d.predicted ?? 0);
+  const avgPredicted = predictedValues.length
+    ? predictedValues.reduce((a, b) => a + b, 0) / predictedValues.length
+    : 0;
+
+  const alert = getDemandAlert(growth);
+  const accuracy = getAccuracyLabel(confidence);
+
+  const growthDisplay = growth > 0 ? `+${growth}%` : `${growth}%`;
+  const growthColor =
+    growth > 0 ? "#5DCAA5" : growth < 0 ? "#E24B4A" : "#AFA9EC";
 
   return (
     <div
-      className="flex h-full flex-col justify-between rounded-3xl bg-indigo-600 p-8 text-white shadow-xl shadow-indigo-200"
       style={{
         minHeight: 420,
-        borderRadius: 24,
-        background:
-          "linear-gradient(145deg, #4338ca 0%, #4f46e5 45%, #5b5bf0 100%)",
-        boxShadow: "0 22px 38px rgba(79, 70, 229, 0.26)",
+        borderRadius: 20,
+        background: "#1a1a2e",
+        padding: 28,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        color: "#fff",
       }}
     >
-      <div className="space-y-6">
+      {/* TOP SECTION */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* Title */}
         <div>
-          <h2 className="text-2xl font-bold">Demand Forecast</h2>
-          <p className="mt-2 text-sm text-white/75">
-            Predicted demand based on historical sales trend
+          <p style={{ fontSize: 15, fontWeight: 500, color: "#fff" }}>
+            Prediksi Permintaan
+          </p>
+          <p
+            style={{
+              fontSize: 12,
+              color: "rgba(255,255,255,0.5)",
+              marginTop: 4,
+            }}
+          >
+            Berdasarkan tren penjualan historis
           </p>
         </div>
 
         {/* Growth */}
         <div>
-          <p className="text-sm opacity-80">Predicted growth</p>
-          <h1 className="mt-2 text-6xl font-bold tracking-tight">
-            {growth > 0 ? "+" : ""}
-            {growth}%
-          </h1>
-          <p className="mt-3 text-sm font-medium">{getDemandAlert(growth)}</p>
-        </div>
-
-        <div className="mt-4 bg-white/10 rounded-xl p-3">
-          <p className="text-sm text-gray-300">Forecast Reliability</p>
-
-          <h3 className="text-2xl font-bold">{confidence.toFixed(1)}%</h3>
-
-          <p className="text-xs text-gray-400 mt-1">
-            {confidence >= 80
-              ? "🟢 High Accuracy"
-              : confidence >= 60
-                ? "🟡 Moderate Accuracy"
-                : "🔴 Low Accuracy"}
+          <p
+            style={{
+              fontSize: 11,
+              color: "rgba(255,255,255,0.5)",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              marginBottom: 6,
+            }}
+          >
+            Prediksi Pertumbuhan
           </p>
+          <p
+            style={{
+              fontSize: 44,
+              fontWeight: 500,
+              color: growthColor,
+              lineHeight: 1,
+            }}
+          >
+            {growthDisplay}
+          </p>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              marginTop: 8,
+              padding: "4px 10px",
+              borderRadius: 20,
+              background: alert.bg,
+            }}
+          >
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: alert.color,
+              }}
+            />
+            <span style={{ fontSize: 11, color: alert.color, fontWeight: 500 }}>
+              {alert.text}
+            </span>
+          </div>
         </div>
 
-        <div
-          className="grid grid-cols-2 gap-3"
-          style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
-        >
-          <div className="rounded-2xl bg-white/10 p-4 backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.16em] text-white/60">
-              Last actual sales
+        {/* Reliability */}
+        {confidence > 0 && (
+          <div
+            style={{
+              background: "rgba(255,255,255,0.07)",
+              borderRadius: 12,
+              padding: "12px 14px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                color: "rgba(255,255,255,0.5)",
+                marginBottom: 4,
+              }}
+            >
+              Tingkat Kepercayaan Model
             </p>
-            <p className="mt-2 text-2xl font-semibold">
-              {latestActual ? latestActual.toLocaleString() : "-"}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+                {confidence.toFixed(1)}%
+              </span>
+              <span
+                style={{ fontSize: 11, color: accuracy.color, fontWeight: 500 }}
+              >
+                {accuracy.text}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Stats grid */}
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
+        >
+          <div
+            style={{
+              background: "rgba(255,255,255,0.07)",
+              borderRadius: 12,
+              padding: "12px 14px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.45)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                marginBottom: 6,
+              }}
+            >
+              Penjualan Terakhir
+            </p>
+            <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+              {latestActual ? latestActual.toLocaleString("id-ID") : "—"}
+            </p>
+            <p
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.35)",
+                marginTop: 2,
+              }}
+            >
+              unit terjual
             </p>
           </div>
 
-          <div className="rounded-2xl bg-white/10 p-4 backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.16em] text-white/60">
-              Avg predicted demand
+          <div
+            style={{
+              background: "rgba(255,255,255,0.07)",
+              borderRadius: 12,
+              padding: "12px 14px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.45)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                marginBottom: 6,
+              }}
+            >
+              Rata-rata Prediksi
             </p>
-            <p className="mt-2 text-2xl font-semibold">
-              {avgPredicted ? Math.round(avgPredicted).toLocaleString() : "-"}
+            <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+              {avgPredicted
+                ? Math.round(avgPredicted).toLocaleString("id-ID")
+                : "—"}
+            </p>
+            <p
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.35)",
+                marginTop: 2,
+              }}
+            >
+              unit/hari
             </p>
           </div>
         </div>
       </div>
 
-      <p className="text-xs leading-5 opacity-70">
-        Based on historical sales trend using Linear Regression
+      {/* FOOTER */}
+      <p
+        style={{
+          fontSize: 11,
+          color: "rgba(255,255,255,0.35)",
+          marginTop: 16,
+          lineHeight: 1.5,
+        }}
+      >
+        Prediksi menggunakan Linear Regression berdasarkan data historis
+        penjualan produk ini
       </p>
     </div>
   );

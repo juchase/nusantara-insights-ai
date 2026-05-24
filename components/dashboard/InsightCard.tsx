@@ -1,7 +1,9 @@
+// components/dashboard/InsightCard.tsx
+
 "use client";
 
 import { InsightResponse } from "@/types/insight";
-import { Sparkles } from "lucide-react";
+import { Cpu, Sparkles } from "lucide-react";
 
 interface Props {
   insight: InsightResponse | null;
@@ -11,115 +13,168 @@ interface Props {
   loading: boolean;
 }
 
-export default function InsightPanel({
+export default function InsightCard({
   insight,
   products,
   selectedProduct,
   onProductChange,
   loading,
 }: Props) {
-  if (loading) {
-    return (
-      <div
-        className="overflow-hidden rounded-3xl border border-emerald-200 bg-emerald-50/80 p-6 shadow-sm shadow-emerald-100/70 mt-8"
-        style={{ borderRadius: 28, padding: 24 }}
-      >
-        <div className="flex items-center gap-4">
-          <div className="grid size-12 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
-            <Sparkles size={22} className="animate-pulse" />
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-800">
-              AI Smart Auto-Insight
-            </p>
-            <div className="h-5 w-80 max-w-full animate-pulse rounded-full bg-emerald-200/80" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!insight) {
-    return (
-      <div
-        className="overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mt-8"
-        style={{ borderRadius: 28, padding: 24 }}
-      >
-        <div className="flex items-center gap-4">
-          <div className="grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-500">
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">
-              AI Smart Auto-Insight
-            </p>
-            <p className="mt-1 text-slate-600">AI insight not available.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const healthColor = (label: string) => {
+    if (label === "Sangat Baik" || label === "Baik")
+      return { background: "rgba(29,158,117,0.25)", color: "#5DCAA5" };
+    if (label === "Perlu Perhatian")
+      return { background: "rgba(239,159,39,0.25)", color: "#EF9F27" };
+    return { background: "rgba(226,75,74,0.25)", color: "#E24B4A" };
+  };
 
   return (
-    <div
-      className="overflow-hidden rounded-3xl border border-emerald-200 bg-linear-to-br from-emerald-50 via-white to-white p-6 shadow-sm shadow-emerald-100/70 mt-8"
-      style={{
-        borderRadius: 28,
-        padding: 28,
-        background:
-          "linear-gradient(135deg, rgba(236,253,245,0.9) 0%, #ffffff 60%, #ffffff 100%)",
-        boxShadow: "0 14px 32px rgba(16, 185, 129, 0.08)",
-      }}
-    >
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: "minmax(0, 1fr) 240px" }}
-      >
-        <div className="flex gap-4">
-          <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700">
-            <Sparkles size={24} />
-          </div>
+    <div className="rounded-2xl p-6 mt-6" style={{ background: "#1a1a2e" }}>
+      <div className="flex items-start gap-4">
+        {/* Icon */}
+        <div
+          className="rounded-lg flex items-center justify-center shrink-0"
+          style={{ width: 36, height: 36, background: "rgba(127,119,221,0.3)" }}
+        >
+          <Sparkles size={18} style={{ color: "#AFA9EC" }} />
+        </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-800">
-              AI Smart Auto-Insight
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <p
+            style={{
+              fontSize: 10,
+              color: "#7F77DD",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              fontWeight: 500,
+              marginBottom: 6,
+            }}
+          >
+            AI Smart Auto-Insight
+          </p>
+
+          {loading ? (
+            <div
+              style={{
+                height: 16,
+                width: 320,
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: 8,
+              }}
+              className="animate-pulse"
+            />
+          ) : (
+            <p style={{ fontSize: 13, color: "#e8e8f0", lineHeight: 1.6 }}>
+              {insight?.summary ?? "Insight tidak tersedia."}
             </p>
-            <p className="mt-2 max-w-4xl text-lg leading-8 text-slate-950">
-              {insight.summary}
-            </p>
+          )}
+
+          <div className="flex items-center gap-3 mt-3">
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 500,
+                padding: "3px 10px",
+                borderRadius: 20,
+                background: "rgba(83,74,183,0.3)",
+                color: "#AFA9EC",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Cpu size={11} /> Qwen2.5 Enhanced
+            </span>
+            {insight?.llm_used === false && (
+              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+                (Rule engine fallback)
+              </span>
+            )}
           </div>
         </div>
 
-        {/* PRODUCT SELECT */}
+        {/* Product selector */}
         <div
-          className="
-            flex flex-col items-start gap-3
-            w-[240px]
-            rounded-2xl
-            border border-white/60
-          bg-white/80
-            backdrop-blur
-            p-4
-            shadow-sm"
+          className="shrink-0"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "0.5px solid rgba(255,255,255,0.1)",
+            borderRadius: 10,
+            padding: "12px 14px",
+            minWidth: 200,
+          }}
         >
-          <label className="text-sm font-medium">Select Product:</label>
-
+          <p
+            style={{
+              fontSize: 10,
+              color: "rgba(255,255,255,0.4)",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              marginBottom: 6,
+            }}
+          >
+            Produk aktif
+          </p>
           <select
             value={selectedProduct}
             onChange={(e) => onProductChange(e.target.value)}
-            className="border rounded-lg px-3 py-2 w-full text-md"
+            style={{
+              width: "100%",
+              background: "rgba(255,255,255,0.08)",
+              border: "0.5px solid rgba(255,255,255,0.15)",
+              borderRadius: 8,
+              padding: "6px 10px",
+              color: "#fff",
+              fontSize: 13,
+              outline: "none",
+            }}
           >
             {products.map((p) => (
-              <option key={p.id} value={p.id}>
+              <option key={p.id} value={p.id} style={{ background: "#1a1a2e" }}>
                 {p.name}
               </option>
             ))}
           </select>
-
-          <label className="text-sm font-medium">
-            Auto Generate Insight for Selected Product
-          </label>
         </div>
+
+        {/* Health Score */}
+        {insight && (
+          <div className="shrink-0 text-right" style={{ minWidth: 80 }}>
+            <p
+              style={{
+                fontSize: 32,
+                fontWeight: 500,
+                color: "#fff",
+                lineHeight: 1,
+              }}
+            >
+              {insight.health_score}/100
+            </p>
+            <p
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.5)",
+                marginTop: 2,
+              }}
+            >
+              HEALTH SCORE
+            </p>
+            <span
+              style={{
+                ...healthColor(insight.health_label ?? ""),
+                fontSize: 10,
+                fontWeight: 500,
+                padding: "3px 10px",
+                borderRadius: 20,
+                display: "inline-block",
+                marginTop: 6,
+              }}
+            >
+              {insight.health_label ?? "—"}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

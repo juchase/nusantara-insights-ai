@@ -1,16 +1,31 @@
+"use client";
+import { useState } from "react";
 import Sidebar from "@/components/dashboard/Sidebar";
+import Topbar from "@/components/dashboard/Topbar";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen bg-[#f7f6ff] text-slate-950">
-      <Sidebar />
+  const [collapsed, setCollapsed] = useState(false);
 
-      <div className="min-h-screen lg:ml-64">
-        <main className="mx-auto w-full max-w-[1440px] px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+  return (
+    <div style={{ minHeight: "100vh", background: "#f7f6ff", display: "flex" }}>
+      <Sidebar collapsed={collapsed} />
+
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          marginLeft: collapsed ? 64 : 232,
+          transition: "margin-left 0.22s cubic-bezier(.4,0,.2,1)",
+        }}
+      >
+        <Topbar onMenuClick={() => setCollapsed((p) => !p)} />
+        <main
+          style={{ maxWidth: 1440, margin: "0 auto", padding: "0 32px 40px" }}
+        >
           {children}
         </main>
       </div>

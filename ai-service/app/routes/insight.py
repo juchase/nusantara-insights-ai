@@ -35,22 +35,22 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         trend=trend
     )
 
-    # Rule engine summary — fallback utama
     rule_summary = " ".join(raw_sentences[:2])
     top_rec      = recommendations[0] if recommendations else ""
 
-    # Build few-shot prompt
     prompt = build_prompt(
         raw_sentences=raw_sentences,
         top_recommendation=top_rec
     )
 
-    # LLM polish — dengan validator
     final_summary = safe_generate(
         prompt=prompt,
-        fallback_text=rule_summary,  # fallback = rule engine, sudah bermakna
-        rule_text=rule_summary       # untuk validasi angka
+        fallback_text=rule_summary,
+        rule_text=rule_summary
     )
+
+    # ✅ Cek apakah LLM berhasil atau fallback
+    llm_used = final_summary != rule_summary
 
     return {
         "summary":         final_summary,
@@ -58,4 +58,8 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "health_label":    label,
         "insights":        insights,
         "recommendations": recommendations,
+        "dominant_issue":  keyword,
+        "risk_level":      "high" if score < 35 else "medium" if score < 55 else "low",
+        "llm_used":        llm_used,
+        "metrics":         data,
     }

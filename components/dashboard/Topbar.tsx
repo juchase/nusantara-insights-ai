@@ -1,46 +1,153 @@
 "use client";
-
-import { Bell, Search, Upload } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell, Menu, Search, Upload } from "lucide-react";
 import Link from "next/link";
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   return (
-    <header className="sticky top-0 z-40 -mx-4 mb-7 border-b border-slate-200/70 bg-[#f7f6ff]/85 px-4 py-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-      {/* Search */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="hidden h-14 w-full max-w-lg items-center gap-3 rounded-full border border-slate-200 bg-white/80 px-6 shadow-sm shadow-slate-200/50 md:flex">
-          <Search size={16} className="text-slate-400" />
-          <Input
-            placeholder="Search datasets, reports..."
-            className="h-8 border-none bg-transparent px-0 text-sm shadow-none focus-visible:ring-0"
+    <header
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        height: 64,
+        background: "rgba(247,246,255,0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(229,231,235,0.7)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0 24px",
+        gap: 16,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+        {/* Hamburger */}
+        <button
+          onClick={onMenuClick}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#6b7280",
+            flexShrink: 0,
+          }}
+        >
+          <Menu size={16} />
+        </button>
+
+        {/* Search */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flex: 1,
+            maxWidth: 360,
+            height: 36,
+            background: "rgba(255,255,255,0.8)",
+            border: "1px solid #e5e7eb",
+            borderRadius: 18,
+            padding: "0 14px",
+          }}
+        >
+          <Search size={14} style={{ color: "#9ca3af", flexShrink: 0 }} />
+          <input
+            placeholder="Cari dataset, laporan..."
+            style={{
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              fontSize: 13,
+              color: "#374151",
+              width: "100%",
+            }}
           />
         </div>
+      </div>
 
-        {/* Right */}
-        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-          <Link
-            href="/dashboard/upload"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 sm:px-5"
-            style={{ backgroundColor: "#4f46e5", minWidth: 164 }}
-            aria-label="Upload dataset"
-          >
-            <Upload size={16} />
-            <span>Upload Dataset</span>
-          </Link>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexShrink: 0,
+        }}
+      >
+        <Link
+          href="/dashboard/upload"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            height: 36,
+            padding: "0 16px",
+            background: "#4f46e5",
+            color: "#fff",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 500,
+            textDecoration: "none",
+          }}
+        >
+          <Upload size={14} />
+          Upload Dataset
+        </Link>
 
-          <button className="grid size-12 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
-            <Bell size={18} />
-          </button>
+        <div style={{ width: 1, height: 20, background: "#e5e7eb" }} />
 
+        <button
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#6b7280",
+            position: "relative",
+          }}
+        >
+          <Bell size={15} />
           <div
-            className="grid size-12 place-items-center rounded-full bg-linear-to-br from-indigo-600 to-cyan-500 text-sm font-semibold text-white shadow-sm"
             style={{
-              background: "linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)",
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "#4f46e5",
+              border: "1.5px solid #fff",
             }}
-          >
-            NI
-          </div>
+          />
+        </button>
+
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #4f46e5, #06b6d4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 11,
+            fontWeight: 500,
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          NI
         </div>
       </div>
     </header>

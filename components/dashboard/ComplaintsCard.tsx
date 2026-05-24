@@ -1,46 +1,92 @@
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
 
 export default function ComplaintsCard({ data }: { data: [string, number][] }) {
+  const maxCount = Math.max(...data.map(([, count]) => count), 1);
+
   return (
-    <Card
-      className="h-full rounded-3xl border-slate-100 bg-white py-0 shadow-sm shadow-slate-200/70"
+    <div
       style={{
-        minHeight: 360,
-        borderRadius: 24,
-        boxShadow: "0 14px 30px rgba(15, 23, 42, 0.06)",
+        background: "#fff",
+        border: "1px solid #e5e7eb",
+        borderRadius: 16,
+        padding: "20px 24px",
       }}
     >
-      <CardContent
-        className="flex h-full flex-col space-y-5 p-7"
-        style={{ padding: 28 }}
+      <p
+        style={{
+          fontSize: 15,
+          fontWeight: 500,
+          color: "#111827",
+          marginBottom: 4,
+        }}
       >
-        <h3 className="text-2xl font-bold tracking-tight text-slate-950">
-          Top Customer Complaints
-        </h3>
+        Keluhan Pelanggan
+      </p>
+      <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
+        Kata yang paling sering muncul di ulasan produk ini
+      </p>
 
-        <div className="flex flex-1 flex-col gap-3">
+      {data.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "32px 0" }}>
+          <p style={{ fontSize: 13, color: "#9ca3af" }}>
+            Belum ada data keluhan untuk produk ini
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {data.map(([word, count], i) => (
             <div
               key={i}
-              className="flex items-center justify-between rounded-2xl bg-indigo-50/60 p-4 transition hover:bg-indigo-50"
+              style={{ display: "flex", alignItems: "center", gap: 10 }}
             >
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: i === 0 ? "#dc2626" : "#a5b4fc" }}
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "#374151",
+                  width: 90,
+                  flexShrink: 0,
+                  textTransform: "capitalize",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {word}
+              </span>
+              <div
+                style={{
+                  flex: 1,
+                  height: 8,
+                  background: "#f3f4f6",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    borderRadius: 4,
+                    background: i === 0 ? "#E24B4A" : "#534AB7",
+                    width: `${(count / maxCount) * 100}%`,
+                    transition: "width 0.6s ease",
+                  }}
                 />
-                <span className="font-semibold capitalize text-slate-900">
-                  {word}
-                </span>
               </div>
-
-              <span className="text-xs font-semibold text-slate-500">
-                {count} mentions
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "#6b7280",
+                  width: 64,
+                  textAlign: "right",
+                  flexShrink: 0,
+                }}
+              >
+                {count} sebutan
               </span>
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }

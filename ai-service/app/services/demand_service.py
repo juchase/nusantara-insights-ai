@@ -31,10 +31,12 @@ def predict_and_save(product_id: str):
 
         # validasi minimal data
         if len(sales) < 3:
-            print("⚠ USING DUMMY SALES")
-
-            sales = [100, 120, 130, 140, 150]
-
+            return {
+                "status": "insufficient_data",
+                "message": "Minimal 3 data penjualan diperlukan untuk prediksi",
+                "totalInserted": 0,
+                "confidence": 0
+            }
         # 2. hapus prediction lama
         db.execute(text("""
             DELETE FROM "Prediction"
@@ -56,7 +58,7 @@ def predict_and_save(product_id: str):
 
         # clamp biar realistis
         confidence = max(
-            65,
+            0,
             min(confidence * 100, 95)
         )
 
