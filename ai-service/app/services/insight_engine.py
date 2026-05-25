@@ -1,4 +1,4 @@
-def generate_structured_insights(positive, negative, neutral, keyword, growth, trend):
+def generate_structured_insights(positive, negative, neutral, keyword, growth, trend, product_name):
 
     insights = []
     recommendations = []
@@ -13,7 +13,8 @@ def generate_structured_insights(positive, negative, neutral, keyword, growth, t
             "priority": "HIGH"
         })
         raw_sentences.append(
-            f"Terdapat sentimen negatif yang cukup tinggi sebesar {negative:.0f}% dari total ulasan pelanggan."
+            f"{product_name} menerima {negative:.0f}% ulasan negatif dari total pelanggan, "
+            "menunjukkan adanya ketidakpuasan yang perlu segera ditangani."
         )
     elif positive >= 60:
         insights.append({
@@ -23,7 +24,7 @@ def generate_structured_insights(positive, negative, neutral, keyword, growth, t
             "priority": "LOW"
         })
         raw_sentences.append(
-            f"Sebanyak {positive:.0f}% pelanggan memberikan ulasan positif terhadap produk ini."
+            f"Sebanyak {positive:.0f}% pelanggan memberikan ulasan positif terhadap produk {product_name}."
         )
     else:
         insights.append({
@@ -33,7 +34,7 @@ def generate_structured_insights(positive, negative, neutral, keyword, growth, t
             "priority": "LOW"
         })
         raw_sentences.append(
-            f"Sentimen pelanggan cenderung netral dengan {positive:.0f}% ulasan positif."
+            f"Sentimen pelanggan cenderung netral dengan {positive:.0f}% ulasan positif terhadap produk {product_name}."
         )
 
     # DEMAND

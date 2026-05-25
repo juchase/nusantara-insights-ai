@@ -4,7 +4,12 @@ type ForecastPoint = {
   date: string;
   actual?: number | null;
   predicted?: number | null;
-  confidence?: number;
+};
+
+type ConfidenceContext = {
+  label: string;
+  message: string;
+  color: "green" | "amber" | "red";
 };
 
 function getDemandAlert(growth: number): {
@@ -37,20 +42,18 @@ function getDemandAlert(growth: number): {
   };
 }
 
-function getAccuracyLabel(confidence: number): { text: string; color: string } {
-  if (confidence >= 80) return { text: "Akurasi Tinggi", color: "#5DCAA5" };
-  if (confidence >= 60) return { text: "Akurasi Sedang", color: "#EF9F27" };
-  return { text: "Akurasi Rendah", color: "#E24B4A" };
-}
-
 export default function ForecastChart({
   data,
   growth,
   confidence,
+  confidenceContext,
+  modelUsed,
 }: {
   data: ForecastPoint[];
   growth: number;
   confidence: number;
+  confidenceContext?: ConfidenceContext | null;
+  modelUsed?: string;
 }) {
   const latestActual = [...data].reverse().find((d) => d.actual)?.actual;
 
@@ -62,11 +65,28 @@ export default function ForecastChart({
     : 0;
 
   const alert = getDemandAlert(growth);
-  const accuracy = getAccuracyLabel(confidence);
-
   const growthDisplay = growth > 0 ? `+${growth}%` : `${growth}%`;
   const growthColor =
     growth > 0 ? "#5DCAA5" : growth < 0 ? "#E24B4A" : "#AFA9EC";
+
+  // ✅ Warna dari confidenceContext — bukan dari data array
+  const ctxColor =
+    confidenceContext?.color === "green"
+      ? "#5DCAA5"
+      : confidenceContext?.color === "amber"
+        ? "#EF9F27"
+        : "#E24B4A";
+
+  // Fallback label kalau confidenceContext belum ada
+  const ctxLabel =
+    confidenceContext?.label ??
+    (confidence >= 70
+      ? "Akurasi Tinggi"
+      : confidence >= 40
+        ? "Akurasi Sedang"
+        : "Akurasi Rendah");
+
+  const ctxMessage = confidenceContext?.message ?? "";
 
   return (
     <div
@@ -81,7 +101,6 @@ export default function ForecastChart({
         color: "#fff",
       }}
     >
-      {/* TOP SECTION */}
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Title */}
         <div>
@@ -147,38 +166,62 @@ export default function ForecastChart({
           </div>
         </div>
 
-        {/* Reliability */}
-        {confidence > 0 && (
-          <div
+        {/* Confidence */}
+        <div
+          style={{
+            background: "rgba(255,255,255,0.07)",
+            borderRadius: 12,
+            padding: "12px 14px",
+          }}
+        >
+          <p
             style={{
-              background: "rgba(255,255,255,0.07)",
-              borderRadius: 12,
-              padding: "12px 14px",
+              fontSize: 11,
+              color: "rgba(255,255,255,0.5)",
+              marginBottom: 4,
             }}
           >
+            Tingkat Kepercayaan Model
+          </p>
+
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+              {confidence.toFixed(1)}%
+            </span>
+            <span style={{ fontSize: 11, color: ctxColor, fontWeight: 500 }}>
+              {ctxLabel}
+            </span>
+          </div>
+
+          {/* Pesan kontekstual */}
+          {ctxMessage && (
             <p
               style={{
-                fontSize: 11,
-                color: "rgba(255,255,255,0.5)",
-                marginBottom: 4,
+                fontSize: 10,
+                color: "rgba(255,255,255,0.4)",
+                marginTop: 4,
+                lineHeight: 1.4,
               }}
             >
-              Tingkat Kepercayaan Model
+              {ctxMessage}
             </p>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
-                {confidence.toFixed(1)}%
-              </span>
-              <span
-                style={{ fontSize: 11, color: accuracy.color, fontWeight: 500 }}
-              >
-                {accuracy.text}
-              </span>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Stats grid */}
+          {/* Model yang dipakai — untuk transparansi sidang */}
+          {modelUsed && (
+            <p
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.25)",
+                marginTop: 6,
+              }}
+            >
+              Model: {modelUsed.replace(/_/g, " ")}
+            </p>
+          )}
+        </div>
+
+        {/* Stats */}
         <div
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
         >
@@ -250,7 +293,7 @@ export default function ForecastChart({
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* Footer */}
       <p
         style={{
           fontSize: 11,
@@ -259,8 +302,9 @@ export default function ForecastChart({
           lineHeight: 1.5,
         }}
       >
-        Prediksi menggunakan Linear Regression berdasarkan data historis
-        penjualan produk ini
+        Prediksi menggunakan{" "}
+        {modelUsed ? modelUsed.replace(/_/g, " ") : "Linear Regression"}{" "}
+        berdasarkan data historis penjualan produk ini
       </p>
     </div>
   );

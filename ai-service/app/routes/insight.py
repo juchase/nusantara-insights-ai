@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from database import get_db
 
@@ -23,6 +24,12 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     keyword  = data["top_keyword"]
     trend    = data["forecast_trend"]
 
+    product_row = db.execute(text("""
+        SELECT name FROM "Product" WHERE id = :pid
+    """), {"pid": product_id}).fetchone()
+
+    product_name = product_row[0] if product_row else "ini"
+
     score = calculate_health_score(positive, negative, growth)
     label = get_health_label(score)
 
@@ -32,7 +39,8 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         neutral=neutral,
         keyword=keyword,
         growth=growth,
-        trend=trend
+        trend=trend,
+        product_name=product_name
     )
 
     rule_summary = " ".join(raw_sentences[:2])

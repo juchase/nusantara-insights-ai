@@ -52,6 +52,12 @@ export default function DashboardPage() {
     sentimentStats: { positive: 0, neutral: 0, negative: 0 },
   });
   const [complaints, setComplaints] = useState<[string, number][]>([]);
+  const [confidenceContext, setConfidenceContext] = useState<{
+    label: string;
+    message: string;
+    color: "green" | "amber" | "red";
+  } | null>(null);
+  const [modelUsed, setModelUsed] = useState<string>("");
 
   const router = useRouter();
 
@@ -125,6 +131,8 @@ export default function DashboardPage() {
         );
         const predictData = await predictRes.json();
         setConfidence(predictData.confidence || 0);
+        setConfidenceContext(predictData.confidence_context || null);
+        setModelUsed(predictData.model_used || "");
         await new Promise((r) => setTimeout(r, 300));
         const res = await fetch(`/api/predictions/${selectedProduct}`);
         const result = await res.json();
@@ -234,6 +242,8 @@ export default function DashboardPage() {
             data={forecastData}
             growth={growth}
             confidence={confidence}
+            confidenceContext={confidenceContext}
+            modelUsed={modelUsed}
           />
         </div>
 

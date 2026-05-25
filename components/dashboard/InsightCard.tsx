@@ -76,6 +76,7 @@ export default function InsightCard({
                 fontSize: 10,
                 fontWeight: 500,
                 padding: "3px 10px",
+                marginTop: 12,
                 borderRadius: 20,
                 background: "rgba(83,74,183,0.3)",
                 color: "#AFA9EC",
