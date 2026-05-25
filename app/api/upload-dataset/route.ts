@@ -110,21 +110,27 @@ export async function POST(req: NextRequest) {
 
             // 🤖 AI CALL (SAFE)
             const aspect = extractAspect(reviewText);
+            // ✅ Timeout 3 detik — kalau lambat langsung skip
             let sentiment = "neutral";
-
             try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 3000);
+
               const aiRes = await fetch(`${AI_URL}/analyze`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: reviewText }),
+                signal: controller.signal,
               });
+
+              clearTimeout(timeoutId);
 
               if (aiRes.ok) {
                 const aiData = await aiRes.json();
                 sentiment = aiData?.sentiment || "neutral";
               }
-            } catch (err) {
-              console.log("⚠️ AI fallback:", reviewText);
+            } catch {
+              // timeout atau error → pakai neutral, lanjut
             }
 
             // 💾 SAVE REVIEW
