@@ -6,13 +6,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { InsightResponse } from "@/types/insight";
 
-import Topbar from "@/components/dashboard/Topbar";
+import { safeFetch } from "@/lib/safe-fetch";
 import ComplaintsCard from "@/components/dashboard/ComplaintsCard";
 import SalesChart from "@/components/dashboard/SalesChart";
 import ForecastChart from "@/components/dashboard/ForecastChart";
 import InsightCard from "@/components/dashboard/InsightCard";
 import InsightPanel from "@/components/dashboard/InsightPanel";
 import SentimentDistribution from "@/components/dashboard/SentimentDistribution";
+import ProductRanking from "@/components/dashboard/ProductRanking";
 import RiskOverview from "@/components/dashboard/RiskOverview";
 import { mergeForecastData } from "@/lib/mergeForecastData";
 
@@ -79,11 +80,11 @@ export default function DashboardPage() {
   }, [router]);
 
   // PRODUCTS
+  // ── PRODUCTS ──────────────────────────────────────────
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("/api/products");
-        const data = (await res.json()) as Product[];
+        const data = await safeFetch<Product[]>("/api/products", []);
         setProducts(data);
         if (data.length > 0) setSelectedProduct(data[0].id);
       } catch (err) {
@@ -93,12 +94,22 @@ export default function DashboardPage() {
     fetchProducts();
   }, []);
 
-  // ANALYTICS
+  // ── ANALYTICS ─────────────────────────────────────────
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await fetch("/api/dashboard-analytics");
-        const data = (await res.json()) as DashboardAnalyticsResponse;
+        const data = await safeFetch<DashboardAnalyticsResponse>(
+          "/api/dashboard-analytics",
+          {
+            topKeywords: [],
+            chartData: [],
+            totalReviews: 0,
+            totalProducts: 0,
+            avgRating: 0,
+            sentimentStats: { positive: 0, neutral: 0, negative: 0 },
+          },
+        );
+
         setTopKeywords(data.topKeywords || []);
         setChartData(data.chartData || []);
         setStats({
@@ -120,66 +131,103 @@ export default function DashboardPage() {
     fetchAnalytics();
   }, []);
 
-  // FORECAST
+  // ── FORECAST ──────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
+
     const fetchForecast = async () => {
       try {
-        const predictRes = await fetch(
+        // Trigger AI predict — pakai safeFetch dengan fallback kosong
+        const predictData = await safeFetch<{
+          confidence: number;
+          confidence_context?: {
+            label: string;
+            message: string;
+            color: "green" | "amber" | "red";
+          };
+          model_used?: string;
+        }>(
           `http://localhost:8000/predict-demand/${selectedProduct}`,
-          { method: "POST" },
+          { confidence: 0 },
+          { method: "POST" }, // ← safeFetch perlu support options
         );
-        const predictData = await predictRes.json();
+
         setConfidence(predictData.confidence || 0);
         setConfidenceContext(predictData.confidence_context || null);
         setModelUsed(predictData.model_used || "");
+
         await new Promise((r) => setTimeout(r, 300));
-        const res = await fetch(`/api/predictions/${selectedProduct}`);
-        const result = await res.json();
+
+        // Ambil hasil prediksi dari DB
+        const result = await safeFetch<{ sales: any[]; predictions: any[] }>(
+          `/api/predictions/${selectedProduct}`,
+          { sales: [], predictions: [] },
+        );
+
         const merged = mergeForecastData(
           result.sales,
           result.predictions,
         ) as ForecastPoint[];
         setForecastData(merged);
-        setGrowth(calculateGrowth(merged)); // ← fix: now returns number
+        setGrowth(calculateGrowth(merged));
       } catch (err) {
         console.error(err);
+        setForecastData([]);
+        setGrowth(0);
       }
     };
+
     fetchForecast();
   }, [selectedProduct]);
 
-  // INSIGHT
+  // ── INSIGHT ───────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
+
     const fetchInsight = async () => {
       try {
         setInsightLoading(true);
-        const res = await fetch(
+
+        const data = await safeFetch<InsightResponse>(
           `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,
+          {
+            executive_summary: "",
+            summary: "",
+            health_score: 0,
+            health_label: "",
+            insights: [],
+            recommendations: [],
+            dominant_issue: "",
+            risk_level: "low",
+            llm_used: false,
+            metrics: undefined,
+          },
         );
-        const data = (await res.json()) as InsightResponse;
-        setInsight(data);
+
+        // Hanya set kalau ada data bermakna
+        if (data.summary) setInsight(data);
       } catch (err) {
         console.error(err);
       } finally {
         setInsightLoading(false);
       }
     };
+
     fetchInsight();
   }, [selectedProduct]);
 
+  // ── COMPLAINTS ────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
+
     const fetchComplaints = async () => {
-      try {
-        const res = await fetch(`/api/complaints/${selectedProduct}`);
-        const data = await res.json();
-        setComplaints(data.topKeywords || []);
-      } catch (err) {
-        console.error(err);
-      }
+      const data = await safeFetch<{ topKeywords: [string, number][] }>(
+        `/api/complaints/${selectedProduct}`,
+        { topKeywords: [] },
+      );
+      setComplaints(data.topKeywords || []);
     };
+
     fetchComplaints();
   }, [selectedProduct]);
 
@@ -223,6 +271,8 @@ export default function DashboardPage() {
           onProductChange={setSelectedProduct}
           loading={insightLoading}
         />
+
+        <ProductRanking />
 
         {/* METRICS */}
         <InsightPanel

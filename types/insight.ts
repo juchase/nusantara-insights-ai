@@ -7,6 +7,7 @@ export interface InsightItem {
 
 // types/insight.ts
 export interface InsightResponse {
+  executive_summary: string;
   summary: string;
   health_score: number;
   health_label?: string;

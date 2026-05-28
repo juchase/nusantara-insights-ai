@@ -237,8 +237,18 @@ export async function POST(req: NextRequest) {
               : reviewDate; // fallback pakai reviewDate
 
             if (!isNaN(salesValue) && !isNaN(salesDate.getTime())) {
-              await prisma.sales.create({
-                data: {
+              await prisma.sales.upsert({
+                where: {
+                  productId_date: {
+                    // ← perlu tambah @@unique ke schema
+                    productId: product.id,
+                    date: salesDate,
+                  },
+                },
+                update: {
+                  quantity: salesValue, // kalau tanggal sama → update quantity
+                },
+                create: {
                   productId: product.id,
                   date: salesDate,
                   quantity: salesValue,
