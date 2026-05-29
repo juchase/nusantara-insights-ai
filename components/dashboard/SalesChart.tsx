@@ -72,7 +72,13 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
   );
 }
 
-export default function SalesChart({ data }: { data: ForecastPoint[] }) {
+export default function SalesChart({
+  data,
+  modelUsed,
+}: {
+  data: ForecastPoint[];
+  modelUsed?: string;
+}) {
   // Pisahkan actual dan predicted — predicted mulai dari titik actual berakhir
   const lastActualIndex = data.reduce(
     (last, d, i) => (d.actual != null ? i : last),
@@ -265,8 +271,9 @@ export default function SalesChart({ data }: { data: ForecastPoint[] }) {
           }}
         />
         <p style={{ fontSize: 11, color: "#6b7280" }}>
-          Prediksi menggunakan Linear Regression berdasarkan data historis
-          penjualan
+          Prediksi menggunakan{" "}
+          {modelUsed ? modelUsed.replace(/_/g, " ") : "Linear Regression"}
+          {""}berdasarkan data historis penjualan
         </p>
       </div>
     </div>

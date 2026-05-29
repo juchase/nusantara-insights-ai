@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from database import get_db
-from app.services.aggregation_service import aggregate_product_metrics
+from app.services.aggregation_service import aggregate_product_metrics, calculate_sentiment_trend
 from app.services.health_score_service import calculate_health_score, get_health_label
 from app.services.prompt_builder import build_prompt
 from app.services.llm_service import safe_generate
@@ -112,6 +112,8 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         db.rollback()
         print(f"⚠ Gagal simpan insight: {e}")
 
+    sentiment_trend = calculate_sentiment_trend(product_id, db)
+
     return {
         "executive_summary": executive_summary,
         "summary":           final_summary,
@@ -123,4 +125,5 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "risk_level":        risk_level,
         "llm_used":          llm_used,
         "metrics":           data,
+        "sentiment_trend":   sentiment_trend,
     }

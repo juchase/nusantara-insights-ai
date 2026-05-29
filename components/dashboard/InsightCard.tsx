@@ -173,7 +173,7 @@ export default function InsightCard({
                   lineHeight: 1,
                 }}
               >
-                {insight.health_score}
+                {insight.health_score} / 100
               </p>
               <p
                 style={{

@@ -15,6 +15,7 @@ import InsightPanel from "@/components/dashboard/InsightPanel";
 import SentimentDistribution from "@/components/dashboard/SentimentDistribution";
 import ProductRanking from "@/components/dashboard/ProductRanking";
 import RiskOverview from "@/components/dashboard/RiskOverview";
+import SentimentTrendCard from "@/components/dashboard/SentimentTrendCard";
 import { mergeForecastData } from "@/lib/mergeForecastData";
 
 type Product = { id: string; name: string };
@@ -282,12 +283,24 @@ export default function DashboardPage() {
         />
 
         {/* ROW A: Sentiment Distribution + Demand Forecast */}
-        <div className="grid grid-cols-2 gap-4">
-          <SentimentDistribution
-            positive={stats.sentimentStats.positive}
-            neutral={stats.sentimentStats.neutral}
-            negative={stats.sentimentStats.negative}
-          />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 16,
+          }}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            <SentimentDistribution
+              positive={stats.sentimentStats.positive}
+              neutral={stats.sentimentStats.neutral}
+              negative={stats.sentimentStats.negative}
+            />
+            <SentimentTrendCard
+              data={insight?.sentiment_trend}
+              loading={insightLoading}
+            />
+          </div>
           <ForecastChart
             data={forecastData}
             growth={growth}
@@ -298,7 +311,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ROW B: Sentiment Timeline (full width) */}
-        <SalesChart data={forecastData} />
+        <SalesChart data={forecastData} modelUsed={modelUsed} />
 
         {/* ROW C: Complaints + Risk Overview */}
         <div className="grid grid-cols-2 gap-4">
