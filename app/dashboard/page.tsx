@@ -263,7 +263,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="space-y-6 px-6 pb-10 max-w-[1200px] mx-auto">
+      <div className="mx-auto max-w-[1200px] space-y-4 pb-8 sm:space-y-5 lg:space-y-6 lg:pb-10">
         {/* AI INSIGHT CARD — dark, full width */}
         <InsightCard
           insight={insight}
@@ -283,14 +283,8 @@ export default function DashboardPage() {
         />
 
         {/* ROW A: Sentiment Distribution + Demand Forecast */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-          }}
-        >
-          <div className="grid grid-cols-2 gap-2">
+        <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:gap-2">
             <SentimentDistribution
               positive={stats.sentimentStats.positive}
               neutral={stats.sentimentStats.neutral}
@@ -314,7 +308,7 @@ export default function DashboardPage() {
         <SalesChart data={forecastData} modelUsed={modelUsed} />
 
         {/* ROW C: Complaints + Risk Overview */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
           <ComplaintsCard data={complaints} />
           <RiskOverview insight={insight} loading={insightLoading} />
         </div>

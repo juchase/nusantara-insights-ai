@@ -90,11 +90,11 @@ export default function ForecastChart({
 
   return (
     <div
+      className="min-w-0 p-5 sm:p-6 lg:p-7"
       style={{
         minHeight: 420,
         borderRadius: 20,
         background: "#1a1a2e",
-        padding: 28,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -132,8 +132,8 @@ export default function ForecastChart({
             Prediksi Pertumbuhan
           </p>
           <p
+            className="text-[36px] sm:text-[44px]"
             style={{
-              fontSize: 44,
               fontWeight: 500,
               color: growthColor,
               lineHeight: 1,
@@ -223,7 +223,7 @@ export default function ForecastChart({
 
         {/* Stats */}
         <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]"
         >
           <div
             style={{

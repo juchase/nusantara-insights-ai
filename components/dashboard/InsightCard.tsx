@@ -51,18 +51,28 @@ export default function InsightCard({
   const risk = riskBadge(insight?.risk_level);
 
   return (
-    <div className="rounded-2xl mt-6" style={{ background: "#1a1a2e" }}>
+    <div
+      className="mt-4 overflow-hidden rounded-2xl sm:mt-5 lg:mt-6"
+      style={{ background: "#1a1a2e" }}
+    >
       {/* HEADER ROW */}
       <div
+        className="flex-col gap-4 sm:flex-row sm:items-center"
         style={{
           padding: "20px 24px 16px",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
           display: "flex",
-          alignItems: "center",
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            minWidth: 0,
+          }}
+        >
           <div
             style={{
               width: 32,
@@ -110,20 +120,20 @@ export default function InsightCard({
 
         {/* Product selector + Health Score */}
         <div
+          className="w-full flex-col items-stretch sm:w-auto sm:flex-row sm:items-center"
           style={{
             display: "flex",
-            alignItems: "center",
             gap: 16,
             flexShrink: 0,
           }}
         >
           <div
+            className="w-full sm:w-auto"
             style={{
               background: "rgba(255,255,255,0.06)",
               border: "0.5px solid rgba(255,255,255,0.1)",
               borderRadius: 10,
               padding: "10px 14px",
-              minWidth: 180,
             }}
           >
             <p
@@ -164,10 +174,10 @@ export default function InsightCard({
           </div>
 
           {insight && (
-            <div style={{ textAlign: "right" }}>
+            <div className="text-left sm:text-right">
               <p
+                className="text-[26px] sm:text-[30px]"
                 style={{
-                  fontSize: 30,
                   fontWeight: 500,
                   color: "#fff",
                   lineHeight: 1,
@@ -276,6 +286,7 @@ export default function InsightCard({
 
         {/* Footer badges */}
         <div
+          className="flex-wrap"
           style={{
             display: "flex",
             alignItems: "center",

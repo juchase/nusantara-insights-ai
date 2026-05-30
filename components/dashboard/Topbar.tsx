@@ -2,9 +2,14 @@
 import { Bell, Menu, Search, Upload } from "lucide-react";
 import Link from "next/link";
 
-export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
+export default function Topbar({
+  onMobileMenuClick,
+}: {
+  onMobileMenuClick: () => void; // ← hanya mobile
+}) {
   return (
     <header
+      className="px-3 sm:px-5 lg:px-6"
       style={{
         position: "sticky",
         top: 0,
@@ -17,23 +22,33 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 24px",
         gap: 16,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
-        {/* Hamburger */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        {/* Hamburger — mobile only */}
         <button
-          onClick={onMenuClick}
+          className="
+    flex
+    items-center
+    justify-center
+    sm:hidden
+  "
+          onClick={onMobileMenuClick}
           style={{
             width: 36,
             height: 36,
             borderRadius: 8,
             border: "1px solid #e5e7eb",
             background: "rgba(255,255,255,0.8)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             cursor: "pointer",
             color: "#6b7280",
             flexShrink: 0,
@@ -44,8 +59,8 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
         {/* Search */}
         <div
+          className="hidden lg:flex"
           style={{
-            display: "flex",
             alignItems: "center",
             gap: 8,
             flex: 1,
@@ -73,21 +88,16 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          flexShrink: 0,
-        }}
+        style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
       >
         <Link
+          className="px-3 sm:px-4"
           href="/dashboard/upload"
           style={{
             display: "inline-flex",
             alignItems: "center",
             gap: 7,
             height: 36,
-            padding: "0 16px",
             background: "#4f46e5",
             color: "#fff",
             borderRadius: 8,
@@ -97,10 +107,13 @@ export default function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
           }}
         >
           <Upload size={14} />
-          Upload Dataset
+          <span className="hidden sm:inline">Upload Dataset</span>
         </Link>
 
-        <div style={{ width: 1, height: 20, background: "#e5e7eb" }} />
+        <div
+          className="hidden sm:block"
+          style={{ width: 1, height: 20, background: "#e5e7eb" }}
+        />
 
         <button
           style={{

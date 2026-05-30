@@ -5,13 +5,11 @@
 import {
   ComposedChart,
   Line,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  Legend,
   ReferenceLine,
 } from "recharts";
 
@@ -100,19 +98,19 @@ export default function SalesChart({
 
   return (
     <div
+      className="min-w-0 px-4 py-5 sm:px-6"
       style={{
         background: "#fff",
         border: "1px solid #e5e7eb",
         borderRadius: 16,
-        padding: "20px 24px",
       }}
     >
       {/* Header */}
       <div
+        className="flex-col gap-3 sm:flex-row sm:items-start"
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
           marginBottom: 20,
         }}
       >
@@ -126,7 +124,10 @@ export default function SalesChart({
         </div>
 
         {/* Legend manual */}
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+        <div
+          className="flex-wrap"
+          style={{ display: "flex", gap: 16, alignItems: "center" }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div
               style={{
@@ -168,10 +169,10 @@ export default function SalesChart({
           </p>
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height={260}>
           <ComposedChart
             data={chartData}
-            margin={{ top: 8, right: 8, left: -12, bottom: 0 }}
+            margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
           >
             <CartesianGrid
               stroke="#f3f4f6"
@@ -252,13 +253,13 @@ export default function SalesChart({
 
       {/* Footer info */}
       <div
+        className="items-start sm:items-center"
         style={{
           marginTop: 12,
           padding: "8px 12px",
           background: "#f9fafb",
           borderRadius: 8,
           display: "flex",
-          alignItems: "center",
           gap: 8,
         }}
       >

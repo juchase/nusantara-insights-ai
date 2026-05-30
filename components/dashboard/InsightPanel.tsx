@@ -57,13 +57,7 @@ export default function InsightPanel({ insight, stats, loading }: Props) {
   return (
     <div className="space-y-4">
       {/* METRICS GRID */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 12,
-        }}
-      >
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {metrics.map((m) => (
           <div
             key={m.label}
@@ -165,7 +159,7 @@ export default function InsightPanel({ insight, stats, loading }: Props) {
       </div>
       {/* INSIGHTS + RECOMMENDATIONS — 2 column */}
       {!loading && insight && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Insights */}
           <div
             style={{
@@ -185,7 +179,7 @@ export default function InsightPanel({ insight, stats, loading }: Props) {
               {insight.insights.map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3"
+                  className="flex min-w-0 flex-wrap items-start gap-3 sm:flex-nowrap"
                   style={{
                     padding: "10px 12px",
                     border: "1px solid #f3f4f6",
@@ -202,7 +196,7 @@ export default function InsightPanel({ insight, stats, loading }: Props) {
                       background: DOT_COLOR[item.type] ?? "#888780",
                     }}
                   />
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <p
                       style={{
                         fontSize: 12,

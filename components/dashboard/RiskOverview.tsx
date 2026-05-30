@@ -86,7 +86,7 @@ export default function RiskOverview({ insight, loading }: Props) {
         {rows.map((row) => (
           <div
             key={row.label}
-            className="flex items-center justify-between"
+            className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
             style={{ background: "#f9fafb", borderRadius: 8, padding: "8px 12px" }}
           >
             <span style={{ fontSize: 12, color: "#6b7280" }}>{row.label}</span>

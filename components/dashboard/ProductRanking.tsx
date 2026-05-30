@@ -267,11 +267,7 @@ export default function ProductRanking() {
           className="animate-pulse"
         />
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 12,
-          }}
+          className="grid grid-cols-1 gap-3 md:grid-cols-3"
         >
           {[1, 2, 3].map((i) => (
             <div
@@ -297,9 +293,9 @@ export default function ProductRanking() {
     >
       {/* Header */}
       <div
+        className="flex-col gap-3 sm:flex-row sm:items-center"
         style={{
           display: "flex",
-          alignItems: "center",
           justifyContent: "space-between",
           marginBottom: 16,
         }}
@@ -331,10 +327,8 @@ export default function ProductRanking() {
 
       {/* Top 3 cards */}
       <div
+        className="grid grid-cols-1 gap-3 md:grid-cols-3"
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 12,
           marginBottom: showAll ? 16 : 0,
         }}
       >
@@ -364,102 +358,111 @@ export default function ProductRanking() {
       {/* Full ranking table — toggle */}
       {showAll && (
         <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {data.all.map((p, i) => {
-              const risk = RISK_STYLE[p.riskLevel] ?? RISK_STYLE.unknown;
-              return (
-                <div
-                  key={p.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    background: i === 0 ? "#f9fafb" : "transparent",
-                  }}
-                >
-                  {/* Rank */}
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: i < 3 ? "#4f46e5" : "#9ca3af",
-                      width: 20,
-                      flexShrink: 0,
-                    }}
-                  >
-                    #{i + 1}
-                  </span>
-
-                  {/* Name */}
-                  <span
-                    style={{
-                      fontSize: 13,
-                      color: "#111827",
-                      flex: 1,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {p.name}
-                  </span>
-
-                  {/* Health bar */}
+          <div className="overflow-x-auto">
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+                minWidth: 560,
+              }}
+            >
+              {data.all.map((p, i) => {
+                const risk = RISK_STYLE[p.riskLevel] ?? RISK_STYLE.unknown;
+                return (
                   <div
+                    key={p.id}
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 6,
-                      width: 140,
+                      gap: 12,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: i === 0 ? "#f9fafb" : "transparent",
                     }}
                   >
-                    <ScoreBar value={p.healthScore} />
+                    {/* Rank */}
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: i < 3 ? "#4f46e5" : "#9ca3af",
+                        width: 20,
+                        flexShrink: 0,
+                      }}
+                    >
+                      #{i + 1}
+                    </span>
+
+                    {/* Name */}
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: "#111827",
+                        flex: 1,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {p.name}
+                    </span>
+
+                    {/* Health bar */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        width: 140,
+                      }}
+                    >
+                      <ScoreBar value={p.healthScore} />
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: "#111827",
+                          width: 28,
+                          textAlign: "right",
+                        }}
+                      >
+                        {p.healthScore}
+                      </span>
+                    </div>
+
+                    {/* Positive rate */}
                     <span
                       style={{
                         fontSize: 11,
-                        fontWeight: 500,
-                        color: "#111827",
-                        width: 28,
+                        color: "#6b7280",
+                        width: 40,
                         textAlign: "right",
                       }}
                     >
-                      {p.healthScore}
+                      {p.positiveRate}%
+                    </span>
+
+                    {/* Risk badge */}
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 500,
+                        padding: "2px 8px",
+                        borderRadius: 20,
+                        background: risk.bg,
+                        color: risk.color,
+                        flexShrink: 0,
+                        width: 56,
+                        textAlign: "center",
+                      }}
+                    >
+                      {risk.label}
                     </span>
                   </div>
-
-                  {/* Positive rate */}
-                  <span
-                    style={{
-                      fontSize: 11,
-                      color: "#6b7280",
-                      width: 40,
-                      textAlign: "right",
-                    }}
-                  >
-                    {p.positiveRate}%
-                  </span>
-
-                  {/* Risk badge */}
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 500,
-                      padding: "2px 8px",
-                      borderRadius: 20,
-                      background: risk.bg,
-                      color: risk.color,
-                      flexShrink: 0,
-                      width: 56,
-                      textAlign: "center",
-                    }}
-                  >
-                    {risk.label}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

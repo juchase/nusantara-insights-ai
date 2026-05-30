@@ -9,23 +9,30 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f7f6ff", display: "flex" }}>
-      <Sidebar collapsed={collapsed} />
+    <div
+      style={{
+        minHeight: "100vh",
+        height: "100vh",
+        background: "#f7f6ff",
+        display: "flex",
+        overflowX: "hidden",
+      }}
+    >
+      <Sidebar
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed((p) => !p)} // ← toggle dari sidebar
+        mobileOpen={mobileSidebarOpen}
+        onNavigate={() => setMobileSidebarOpen(false)}
+      />
 
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          marginLeft: collapsed ? 64 : 232,
-          transition: "margin-left 0.22s cubic-bezier(.4,0,.2,1)",
-        }}
-      >
-        <Topbar onMenuClick={() => setCollapsed((p) => !p)} />
-        <main
-          style={{ maxWidth: 1440, margin: "0 auto", padding: "0 32px 40px" }}
-        >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <Topbar
+          onMobileMenuClick={() => setMobileSidebarOpen((p) => !p)} // ← hanya mobile
+        />
+        <main className="mx-auto w-full max-w-[1440px] px-3 pb-8 sm:px-5 md:px-6 lg:px-8 lg:pb-10">
           {children}
         </main>
       </div>
