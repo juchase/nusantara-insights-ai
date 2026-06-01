@@ -51,6 +51,8 @@ model Sales {
   quantity  Int
 
   product Product @relation(fields: [productId], references: [id])
+  
+  @@unique([productId, date])
 }
 
 model Prediction {
@@ -63,21 +65,30 @@ model Prediction {
   product Product @relation(fields: [productId], references: [id])
 }
 
-model Insight {
-  id String @id @default(uuid())
+ model Insight {
+  id         String  @id @default(uuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
 
-  productId String
+  summary            String
+  executiveSummary   String?   // ← tambah
+  insights           Json
+  recommendations    Json
 
-  summary     String
-  healthScore Int
+  sentimentScore   Float
+  dominantIssue    String
+  demandTrend      String
+  demandGrowthPct  Float
+  riskLevel        String
+  healthScore      Int
 
-  insights        Json
-  recommendations Json
+  llmUsed  Boolean  @default(false)
+  llmModel String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  product Product @relation(fields: [productId], references: [id])
+  @@index([productId])
 }
 
 model AiLog {

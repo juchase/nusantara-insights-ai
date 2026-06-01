@@ -1,4 +1,4 @@
-def generate_structured_insights(positive, negative, neutral, keyword, growth, trend):
+def generate_structured_insights(positive, negative, neutral, keyword, growth, trend, product_name):
 
     insights = []
     recommendations = []
@@ -13,7 +13,8 @@ def generate_structured_insights(positive, negative, neutral, keyword, growth, t
             "priority": "HIGH"
         })
         raw_sentences.append(
-            f"Terdapat sentimen negatif yang cukup tinggi sebesar {negative:.0f}% dari total ulasan pelanggan."
+            f"{product_name} menerima {negative:.0f}% ulasan negatif dari total pelanggan, "
+            "menunjukkan adanya ketidakpuasan yang perlu segera ditangani."
         )
     elif positive >= 60:
         insights.append({
@@ -23,7 +24,7 @@ def generate_structured_insights(positive, negative, neutral, keyword, growth, t
             "priority": "LOW"
         })
         raw_sentences.append(
-            f"Sebanyak {positive:.0f}% pelanggan memberikan ulasan positif terhadap produk ini."
+            f"Sebanyak {positive:.0f}% pelanggan memberikan ulasan positif terhadap produk {product_name}."
         )
     else:
         insights.append({
@@ -33,7 +34,7 @@ def generate_structured_insights(positive, negative, neutral, keyword, growth, t
             "priority": "LOW"
         })
         raw_sentences.append(
-            f"Sentimen pelanggan cenderung netral dengan {positive:.0f}% ulasan positif."
+            f"Sentimen pelanggan cenderung netral dengan {positive:.0f}% ulasan positif terhadap produk {product_name}."
         )
 
     # DEMAND
@@ -115,4 +116,63 @@ def generate_structured_insights(positive, negative, neutral, keyword, growth, t
     if not recommendations:
         recommendations.append("Pertahankan kualitas produk dan lakukan monitoring berkala.")
 
-    return insights, recommendations, raw_sentences  # ← tambah raw_sentences
+    return insights, recommendations, raw_sentences
+
+def generate_executive_summary(
+    product_name: str,
+    positive: float,
+    negative: float,
+    trend: str,
+    risk_level: str,
+    dominant_issue: str,
+    growth: float,
+) -> str:
+
+    # ── Sentimen ───────────────────────────
+    if negative >= 50:
+        sentimen = f"lebih dari separuh pelanggan ({negative:.0f}%) memberikan ulasan negatif"
+    elif negative >= 30:
+        sentimen = f"sentimen negatif yang cukup tinggi ({negative:.0f}%)"
+    elif positive >= 70:
+        sentimen = f"sentimen pelanggan yang sangat positif ({positive:.0f}%)"
+    elif positive >= 50:
+        sentimen = f"mayoritas pelanggan ({positive:.0f}%) memberikan ulasan positif"
+    else:
+        sentimen = f"sentimen pelanggan yang bervariasi ({positive:.0f}% positif, {negative:.0f}% negatif)"
+
+    # ── Demand ─────────────────────────────
+    if trend == "up":
+        demand = f"Permintaan diprediksi meningkat {growth:.0f}% dalam periode mendatang."
+    elif trend == "down":
+        demand = f"Permintaan diprediksi menurun {abs(growth):.0f}% dalam periode mendatang."
+    else:
+        demand = "Permintaan relatif stabil dalam periode mendatang."
+
+    # ── Prioritas ──────────────────────────
+    issue_map = {
+        "pengiriman": "peningkatan kualitas layanan pengiriman",
+        "kualitas":   "pengendalian kualitas produk",
+        "harga":      "evaluasi strategi penetapan harga",
+        "kemasan":    "perbaikan standar pengemasan produk",
+        "pelayanan":  "peningkatan responsivitas layanan pelanggan",
+        "expired":    "pengendalian masa kadaluarsa produk",
+        "bocor":      "perbaikan kualitas kemasan produk",
+    }
+    prioritas = issue_map.get(
+        dominant_issue.lower() if dominant_issue else "",
+        "monitoring performa produk secara berkala"
+    )
+
+    # ── Risk context ───────────────────────
+    risk_map = {
+        "high":   f"{product_name} memerlukan penanganan segera",
+        "medium": f"{product_name} memerlukan perhatian",
+        "low":    f"{product_name} dalam kondisi baik",
+    }
+    opening = risk_map.get(risk_level, f"{product_name} perlu dipantau")
+
+    return (
+        f"{opening} dengan {sentimen}. "
+        f"{demand} "
+        f"Prioritas utama adalah {prioritas}."
+    )

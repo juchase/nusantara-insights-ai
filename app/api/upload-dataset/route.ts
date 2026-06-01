@@ -110,21 +110,27 @@ export async function POST(req: NextRequest) {
 
             // 🤖 AI CALL (SAFE)
             const aspect = extractAspect(reviewText);
+            // ✅ Timeout 3 detik — kalau lambat langsung skip
             let sentiment = "neutral";
-
             try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 3000);
+
               const aiRes = await fetch(`${AI_URL}/analyze`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: reviewText }),
+                signal: controller.signal,
               });
+
+              clearTimeout(timeoutId);
 
               if (aiRes.ok) {
                 const aiData = await aiRes.json();
                 sentiment = aiData?.sentiment || "neutral";
               }
-            } catch (err) {
-              console.log("⚠️ AI fallback:", reviewText);
+            } catch {
+              // timeout atau error → pakai neutral, lanjut
             }
 
             // 💾 SAVE REVIEW
@@ -231,8 +237,18 @@ export async function POST(req: NextRequest) {
               : reviewDate; // fallback pakai reviewDate
 
             if (!isNaN(salesValue) && !isNaN(salesDate.getTime())) {
-              await prisma.sales.create({
-                data: {
+              await prisma.sales.upsert({
+                where: {
+                  productId_date: {
+                    // ← perlu tambah @@unique ke schema
+                    productId: product.id,
+                    date: salesDate,
+                  },
+                },
+                update: {
+                  quantity: salesValue, // kalau tanggal sama → update quantity
+                },
+                create: {
                   productId: product.id,
                   date: salesDate,
                   quantity: salesValue,

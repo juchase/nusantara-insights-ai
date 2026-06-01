@@ -1,76 +1,75 @@
+// app/dashboard/page.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { InsightResponse } from "@/types/insight";
 
-import Topbar from "@/components/dashboard/Topbar";
-import StatsCard from "@/components/dashboard/StatsCard";
+import { safeFetch } from "@/lib/safe-fetch";
 import ComplaintsCard from "@/components/dashboard/ComplaintsCard";
-import KeywordMap from "@/components/dashboard/KeywordMap";
-import ChartSection from "@/components/dashboard/ChartSection";
+import SalesChart from "@/components/dashboard/SalesChart";
 import ForecastChart from "@/components/dashboard/ForecastChart";
+import InsightCard from "@/components/dashboard/InsightCard";
 import InsightPanel from "@/components/dashboard/InsightPanel";
-
+import SentimentDistribution from "@/components/dashboard/SentimentDistribution";
+import ProductRanking from "@/components/dashboard/ProductRanking";
+import RiskOverview from "@/components/dashboard/RiskOverview";
+import SentimentTrendCard from "@/components/dashboard/SentimentTrendCard";
 import { mergeForecastData } from "@/lib/mergeForecastData";
 
+type Product = { id: string; name: string };
+type ForecastPoint = {
+  date: string;
+  actual?: number | null;
+  predicted?: number | null;
+};
+type SentimentTimelinePoint = { date: string; total: number };
+type DashboardAnalyticsResponse = {
+  topKeywords?: [string, number][];
+  chartData?: SentimentTimelinePoint[];
+  totalReviews?: number;
+  totalProducts?: number;
+  avgRating?: number;
+  sentimentStats?: { positive: number; neutral: number; negative: number };
+};
+
 export default function DashboardPage() {
-  // =============================
-  // STATES
-  // =============================
-
   const [user, setUser] = useState<any>(null);
-
-  const [chartData, setChartData] = useState<any[]>([]);
-
-  const [forecastData, setForecastData] = useState<any[]>([]);
-
-  const [growth, setGrowth] = useState(0);
-
+  const [chartData, setChartData] = useState<SentimentTimelinePoint[]>([]);
+  const [forecastData, setForecastData] = useState<ForecastPoint[]>([]);
+  const [growth, setGrowth] = useState<number>(0);
   const [topKeywords, setTopKeywords] = useState<[string, number][]>([]);
-
   const [authLoading, setAuthLoading] = useState(true);
-
   const [dataLoading, setDataLoading] = useState(true);
-
-  const [products, setProducts] = useState<any[]>([]);
-
-  // SINGLE SOURCE OF TRUTH
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
-
-  // INSIGHT
-  const [insight, setInsight] = useState<any>(null);
-
+  const [insight, setInsight] = useState<InsightResponse | null>(null);
   const [insightLoading, setInsightLoading] = useState(false);
-
-  // STATS
+  const [confidence, setConfidence] = useState(0);
   const [stats, setStats] = useState({
     totalReviews: 0,
     avgRating: 0,
     totalProducts: 0,
-    sentimentStats: {
-      positive: 0,
-      neutral: 0,
-      negative: 0,
-    },
+    sentimentStats: { positive: 0, neutral: 0, negative: 0 },
   });
+  const [complaints, setComplaints] = useState<[string, number][]>([]);
+  const [confidenceContext, setConfidenceContext] = useState<{
+    label: string;
+    message: string;
+    color: "green" | "amber" | "red";
+  } | null>(null);
+  const [modelUsed, setModelUsed] = useState<string>("");
 
   const router = useRouter();
 
-  // =============================
   // AUTH
-  // =============================
-
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const res = await fetch("/api/auth/me");
-
-        if (!res.ok) {
-          return router.push("/login");
-        }
-
+        if (!res.ok) return router.push("/login");
         const data = await res.json();
-
         setUser(data.user);
       } catch {
         router.push("/login");
@@ -78,62 +77,51 @@ export default function DashboardPage() {
         setAuthLoading(false);
       }
     };
-
     checkAuth();
   }, [router]);
 
-  // =============================
-  // FETCH PRODUCTS
-  // =============================
-
+  // PRODUCTS
+  // ── PRODUCTS ──────────────────────────────────────────
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch("/api/products");
-
-        const data = await res.json();
-
+        const data = await safeFetch<Product[]>("/api/products", []);
         setProducts(data);
-
-        // AUTO SELECT FIRST PRODUCT
-        if (data.length > 0) {
-          setSelectedProduct(data[0].id);
-        }
+        if (data.length > 0) setSelectedProduct(data[0].id);
       } catch (err) {
         console.error(err);
       }
     };
-
     fetchProducts();
   }, []);
 
-  // =============================
-  // FETCH ANALYTICS
-  // =============================
-
+  // ── ANALYTICS ─────────────────────────────────────────
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await fetch("/api/dashboard-analytics");
-
-        const data = await res.json();
+        const data = await safeFetch<DashboardAnalyticsResponse>(
+          "/api/dashboard-analytics",
+          {
+            topKeywords: [],
+            chartData: [],
+            totalReviews: 0,
+            totalProducts: 0,
+            avgRating: 0,
+            sentimentStats: { positive: 0, neutral: 0, negative: 0 },
+          },
+        );
 
         setTopKeywords(data.topKeywords || []);
-
         setChartData(data.chartData || []);
-
         setStats({
           totalReviews: data.totalReviews || 0,
-
           totalProducts: data.totalProducts || 0,
-
+          avgRating: Math.round((data.avgRating || 0) * 10) / 10,
           sentimentStats: data.sentimentStats || {
             positive: 0,
             neutral: 0,
             negative: 0,
           },
-
-          avgRating: Math.round((data.avgRating || 0) * 10) / 10,
         });
       } catch (err) {
         console.error(err);
@@ -141,46 +129,59 @@ export default function DashboardPage() {
         setDataLoading(false);
       }
     };
-
     fetchAnalytics();
   }, []);
 
-  // =============================
-  // FORECAST FLOW
-  // =============================
-
+  // ── FORECAST ──────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
 
     const fetchForecast = async () => {
       try {
-        // TRIGGER AI
-        await fetch(`http://localhost:8000/predict-demand/${selectedProduct}`, {
-          method: "POST",
-        });
+        // Trigger AI predict — pakai safeFetch dengan fallback kosong
+        const predictData = await safeFetch<{
+          confidence: number;
+          confidence_context?: {
+            label: string;
+            message: string;
+            color: "green" | "amber" | "red";
+          };
+          model_used?: string;
+        }>(
+          `http://localhost:8000/predict-demand/${selectedProduct}`,
+          { confidence: 0 },
+          { method: "POST" }, // ← safeFetch perlu support options
+        );
 
-        // FETCH FROM DB
-        const res = await fetch(`/api/predictions/${selectedProduct}`);
+        setConfidence(predictData.confidence || 0);
+        setConfidenceContext(predictData.confidence_context || null);
+        setModelUsed(predictData.model_used || "");
 
-        const result = await res.json();
+        await new Promise((r) => setTimeout(r, 300));
 
-        const merged = mergeForecastData(result.sales, result.predictions);
+        // Ambil hasil prediksi dari DB
+        const result = await safeFetch<{ sales: any[]; predictions: any[] }>(
+          `/api/predictions/${selectedProduct}`,
+          { sales: [], predictions: [] },
+        );
 
+        const merged = mergeForecastData(
+          result.sales,
+          result.predictions,
+        ) as ForecastPoint[];
         setForecastData(merged);
-
         setGrowth(calculateGrowth(merged));
       } catch (err) {
         console.error(err);
+        setForecastData([]);
+        setGrowth(0);
       }
     };
 
     fetchForecast();
   }, [selectedProduct]);
 
-  // =============================
-  // FETCH INSIGHT
-  // =============================
-
+  // ── INSIGHT ───────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
 
@@ -188,13 +189,24 @@ export default function DashboardPage() {
       try {
         setInsightLoading(true);
 
-        const res = await fetch(
+        const data = await safeFetch<InsightResponse>(
           `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,
+          {
+            executive_summary: "",
+            summary: "",
+            health_score: 0,
+            health_label: "",
+            insights: [],
+            recommendations: [],
+            dominant_issue: "",
+            risk_level: "low",
+            llm_used: false,
+            metrics: undefined,
+          },
         );
 
-        const data = await res.json();
-
-        setInsight(data);
+        // Hanya set kalau ada data bermakna
+        if (data.summary) setInsight(data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -205,102 +217,101 @@ export default function DashboardPage() {
     fetchInsight();
   }, [selectedProduct]);
 
-  // =============================
-  // GROWTH
-  // =============================
+  // ── COMPLAINTS ────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedProduct) return;
 
-  function calculateGrowth(data: any[]) {
-    const actual = data.filter((d) => d.actual).map((d) => d.actual);
+    const fetchComplaints = async () => {
+      const data = await safeFetch<{ topKeywords: [string, number][] }>(
+        `/api/complaints/${selectedProduct}`,
+        { topKeywords: [] },
+      );
+      setComplaints(data.topKeywords || []);
+    };
 
-    const predicted = data.filter((d) => d.predicted).map((d) => d.predicted);
+    fetchComplaints();
+  }, [selectedProduct]);
 
-    if (!actual.length || !predicted.length) {
-      return 0;
-    }
+  // ✅ FIX di DashboardPage
+  function calculateGrowth(data: ForecastPoint[]): number {
+    const actual = data.filter((d) => d.actual).map((d) => d.actual ?? 0);
+    const predicted = data
+      .filter((d) => d.predicted)
+      .map((d) => d.predicted ?? 0);
+    if (!actual.length || !predicted.length) return 0;
 
     const lastActual = actual[actual.length - 1];
+    const avgPredicted =
+      predicted.reduce((a, b) => a + b, 0) / predicted.length;
+    // ↑ rata-rata, bukan total
 
-    const avgPred = predicted.reduce((a, b) => a + b, 0) / predicted.length;
-
-    return Number((((avgPred - lastActual) / lastActual) * 100).toFixed(1));
+    if (lastActual === 0) return 0;
+    return parseFloat(
+      (((avgPredicted - lastActual) / lastActual) * 100).toFixed(1),
+    );
   }
-
-  // =============================
-  // LOADING
-  // =============================
 
   if (authLoading || dataLoading) {
-    return <div className="p-10">Loading...</div>;
+    return (
+      <>
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-sm text-gray-400">Memuat dashboard...</p>
+        </div>
+      </>
+    );
   }
-
-  // =============================
-  // UI
-  // =============================
 
   return (
     <>
-      <Topbar />
+      <div className="mx-auto max-w-[1200px] space-y-4 pb-8 sm:space-y-5 lg:space-y-6 lg:pb-10">
+        {/* AI INSIGHT CARD — dark, full width */}
+        <InsightCard
+          insight={insight}
+          products={products}
+          selectedProduct={selectedProduct}
+          onProductChange={setSelectedProduct}
+          loading={insightLoading}
+        />
 
-      <div className="space-y-8">
-        {/* PRODUCT SELECT */}
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium">Select Product:</label>
+        <ProductRanking />
 
-          <select
-            value={selectedProduct}
-            onChange={(e) => setSelectedProduct(e.target.value)}
-            className="border rounded-lg px-3 py-2"
-          >
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+        {/* METRICS */}
+        <InsightPanel
+          insight={insight}
+          stats={stats}
+          loading={insightLoading}
+        />
+
+        {/* ROW A: Sentiment Distribution + Forecast */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {/* ← tambah overflow-hidden */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
+            <SentimentDistribution
+              positive={stats.sentimentStats.positive}
+              neutral={stats.sentimentStats.neutral}
+              negative={stats.sentimentStats.negative}
+            />
+            <SentimentTrendCard
+              data={insight?.sentiment_trend}
+              loading={insightLoading}
+            />
+          </div>
+
+          <ForecastChart
+            data={forecastData}
+            growth={growth}
+            confidence={confidence}
+            confidenceContext={confidenceContext}
+            modelUsed={modelUsed}
+          />
         </div>
+        {/* ROW B: Sentiment Timeline (full width) */}
+        <SalesChart data={forecastData} modelUsed={modelUsed} />
 
-        {/* INSIGHT */}
-        <InsightPanel insight={insight} loading={insightLoading} />
-
-        {/* STATS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatsCard
-            title="Total Reviews"
-            value={stats.totalReviews.toString()}
-          />
-
-          <StatsCard
-            title="Positive Sentiment"
-            value={`${stats.sentimentStats.positive}%`}
-          />
-
-          <StatsCard
-            title="Total Products"
-            value={stats.totalProducts.toString()}
-          />
-        </div>
-
-        {/* DASHBOARD GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* CHART */}
-          <div className="lg:col-span-8">
-            <ChartSection data={chartData} />
-          </div>
-
-          {/* FORECAST */}
-          <div className="lg:col-span-4">
-            <ForecastChart data={forecastData} growth={growth} />
-          </div>
-
-          {/* COMPLAINTS */}
-          <div className="lg:col-span-5">
-            <ComplaintsCard data={topKeywords.slice(0, 5)} />
-          </div>
-
-          {/* KEYWORD MAP */}
-          <div className="lg:col-span-7">
-            <KeywordMap data={topKeywords.slice(0, 5)} />
-          </div>
+        {/* ROW C: Complaints + Risk Overview */}
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+          <ComplaintsCard data={complaints} />
+          <RiskOverview insight={insight} loading={insightLoading} />
         </div>
       </div>
     </>

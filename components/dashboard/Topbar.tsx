@@ -1,35 +1,167 @@
 "use client";
-
-import { Bell, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Bell, Menu, Search, Upload } from "lucide-react";
 import Link from "next/link";
 
-export default function Topbar() {
+export default function Topbar({
+  onMobileMenuClick,
+}: {
+  onMobileMenuClick: () => void; // ← hanya mobile
+}) {
   return (
-    <header className="fixed top-0 right-0 left-64 bg-white/80 backdrop-blur border-b px-8 py-4 flex justify-between items-center z-40">
-      {/* Search */}
-      <div className="flex items-center bg-gray-100 px-4 py-2 rounded-full w-96">
-        <Input
-          placeholder="Search datasets, reports..."
-          className="border-none bg-transparent focus-visible:ring-0"
-        />
-      </div>
-
-      {/* Right */}
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/upload">
-          <Button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">
-            <Upload size={16} />
-            Upload Dataset
-          </Button>
-        </Link>
-
-        <button className="p-2 hover:bg-gray-100 rounded-full">
-          <Bell size={18} />
+    <header
+      className="px-3 sm:px-5 lg:px-6"
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        height: 64,
+        background: "rgba(247,246,255,0.85)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        borderBottom: "1px solid rgba(229,231,235,0.7)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 16,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        {/* Hamburger — mobile only */}
+        <button
+          className="
+    flex
+    items-center
+    justify-center
+    sm:hidden
+  "
+          onClick={onMobileMenuClick}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 8,
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.8)",
+            cursor: "pointer",
+            color: "#6b7280",
+            flexShrink: 0,
+          }}
+        >
+          <Menu size={16} />
         </button>
 
-        <div className="w-9 h-9 rounded-full bg-gray-300" />
+        {/* Search */}
+        <div
+          className="hidden lg:flex"
+          style={{
+            alignItems: "center",
+            gap: 8,
+            flex: 1,
+            maxWidth: 360,
+            height: 36,
+            background: "rgba(255,255,255,0.8)",
+            border: "1px solid #e5e7eb",
+            borderRadius: 18,
+            padding: "0 14px",
+          }}
+        >
+          <Search size={14} style={{ color: "#9ca3af", flexShrink: 0 }} />
+          <input
+            placeholder="Cari dataset, laporan..."
+            style={{
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              fontSize: 13,
+              color: "#374151",
+              width: "100%",
+            }}
+          />
+        </div>
+      </div>
+
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
+      >
+        <Link
+          className="px-3 sm:px-4"
+          href="/dashboard/upload"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 7,
+            height: 36,
+            background: "#4f46e5",
+            color: "#fff",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 500,
+            textDecoration: "none",
+          }}
+        >
+          <Upload size={14} />
+          <span className="hidden sm:inline">Upload Dataset</span>
+        </Link>
+
+        <div
+          className="hidden sm:block"
+          style={{ width: 1, height: 20, background: "#e5e7eb" }}
+        />
+
+        <button
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: "1px solid #e5e7eb",
+            background: "rgba(255,255,255,0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#6b7280",
+            position: "relative",
+          }}
+        >
+          <Bell size={15} />
+          <div
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "#4f46e5",
+              border: "1.5px solid #fff",
+            }}
+          />
+        </button>
+
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #4f46e5, #06b6d4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 11,
+            fontWeight: 500,
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          NI
+        </div>
       </div>
     </header>
   );
