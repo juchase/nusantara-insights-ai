@@ -282,9 +282,10 @@ export default function DashboardPage() {
           loading={insightLoading}
         />
 
-        {/* ROW A: Sentiment Distribution + Demand Forecast */}
-        <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
-          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:gap-2">
+        {/* ROW A: Sentiment Distribution + Forecast */}
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {/* ← tambah overflow-hidden */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
             <SentimentDistribution
               positive={stats.sentimentStats.positive}
               neutral={stats.sentimentStats.neutral}
@@ -295,6 +296,7 @@ export default function DashboardPage() {
               loading={insightLoading}
             />
           </div>
+
           <ForecastChart
             data={forecastData}
             growth={growth}
@@ -303,7 +305,6 @@ export default function DashboardPage() {
             modelUsed={modelUsed}
           />
         </div>
-
         {/* ROW B: Sentiment Timeline (full width) */}
         <SalesChart data={forecastData} modelUsed={modelUsed} />
 

@@ -143,17 +143,20 @@ export default function SentimentTrendCard({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
+          gap: 8,
           marginBottom: 14,
+          minWidth: 0, // ← tambah ini
+          overflow: "hidden", // ← tambah ini
         }}
       >
         {/* Periode awal */}
         <div
           style={{
             flex: 1,
+            minWidth: 0, // ← tambah ini
             background: "#f9fafb",
             borderRadius: 10,
-            padding: "10px 14px",
+            padding: "10px 10px", // ← kurangi padding horizontal
             textAlign: "center",
           }}
         >
@@ -170,7 +173,7 @@ export default function SentimentTrendCard({
           </p>
           <p
             style={{
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 500,
               color: "#111827",
               lineHeight: 1,
@@ -179,7 +182,14 @@ export default function SentimentTrendCard({
             {data.first_period_positive}%
           </p>
           {data.first_period_range && (
-            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>
+            <p
+              style={{
+                fontSize: 9,
+                color: "#9ca3af",
+                marginTop: 4,
+                wordBreak: "break-word",
+              }}
+            >
               {data.first_period_range}
             </p>
           )}
@@ -188,17 +198,19 @@ export default function SentimentTrendCard({
           </p>
         </div>
 
-        {/* Arrow + delta */}
+        {/* Arrow + delta — lebar fixed */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: 4,
+            flexShrink: 0, // ← jangan dikecilkan
+            width: 44, // ← lebar fixed
           }}
         >
-          <span style={{ fontSize: 20, color: cfg.color }}>{cfg.arrow}</span>
-          <span style={{ fontSize: 12, fontWeight: 500, color: cfg.color }}>
+          <span style={{ fontSize: 18, color: cfg.color }}>{cfg.arrow}</span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: cfg.color }}>
             {delta}
           </span>
         </div>
@@ -207,9 +219,10 @@ export default function SentimentTrendCard({
         <div
           style={{
             flex: 1,
+            minWidth: 0, // ← tambah ini
             background: "#f9fafb",
             borderRadius: 10,
-            padding: "10px 14px",
+            padding: "10px 10px", // ← kurangi padding horizontal
             textAlign: "center",
           }}
         >
@@ -226,7 +239,7 @@ export default function SentimentTrendCard({
           </p>
           <p
             style={{
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 500,
               color: cfg.color,
               lineHeight: 1,
@@ -235,7 +248,14 @@ export default function SentimentTrendCard({
             {data.second_period_positive}%
           </p>
           {data.second_period_range && (
-            <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>
+            <p
+              style={{
+                fontSize: 9,
+                color: "#9ca3af",
+                marginTop: 4,
+                wordBreak: "break-word",
+              }}
+            >
               {data.second_period_range}
             </p>
           )}
@@ -244,7 +264,6 @@ export default function SentimentTrendCard({
           </p>
         </div>
       </div>
-
       {/* Message */}
       <div
         style={{
