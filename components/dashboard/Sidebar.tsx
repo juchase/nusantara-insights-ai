@@ -66,7 +66,7 @@ function SidebarContent({
       <div
         style={{
           height: 64,
-          padding: visuallyCollapsed ? "0 17px" : "0 14px 0 20px",
+          padding: visuallyCollapsed ? "0 17px" : "0 14px 0 10px",
           borderBottom: "1px solid #f3f4f6",
           display: "flex",
           alignItems: "center",
@@ -185,7 +185,7 @@ function SidebarContent({
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    padding: visuallyCollapsed ? "10px 0" : "8px 10px",
+                    padding: visuallyCollapsed ? "10px 0 10px 6px" : "8px 10px",
                     justifyContent: visuallyCollapsed ? "center" : "flex-start",
                     borderRadius: 7,
                     fontSize: 12.5,
@@ -197,7 +197,6 @@ function SidebarContent({
                     transition: "background 0.12s, color 0.12s, padding 0.22s",
                     overflow: "hidden",
                     whiteSpace: "nowrap",
-                    paddingLeft: 10,
                   }}
                 >
                   <Icon size={16} style={{ flexShrink: 0 }} />
