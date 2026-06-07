@@ -5,6 +5,30 @@ export async function GET() {
     select: {
       id: true,
       name: true,
+      category: true,
+      createdAt: true,
+      _count: {
+        select: {
+          reviews: true,
+          sales: true,
+          predictions: true,
+        },
+      },
+      insights: {
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 1,
+        select: {
+          healthScore: true,
+          riskLevel: true,
+          dominantIssue: true,
+          updatedAt: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
     },
   });
 

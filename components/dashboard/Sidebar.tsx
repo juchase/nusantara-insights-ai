@@ -86,22 +86,8 @@ function SidebarContent({
             justifyContent: visuallyCollapsed ? "center" : "flex-start",
           }}
         >
-          <div
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 8,
-              flexShrink: 0,
-              background: "linear-gradient(135deg, #4f46e5, #06b6d4)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-              fontWeight: 500,
-              color: "#fff",
-            }}
-          >
-            NI
+          <div className="flex justify-center items-center w-10 h-10">
+            <img src="/logo.png" alt="Logo" />
           </div>
           {!visuallyCollapsed && (
             <div style={{ whiteSpace: "nowrap", overflow: "hidden" }}>

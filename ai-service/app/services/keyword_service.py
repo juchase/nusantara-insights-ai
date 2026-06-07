@@ -50,9 +50,33 @@ def extract_keywords(text: str) -> list[str]:
         if len(w) > 3 and w not in STOPWORDS
     ]
 
+# keyword_service.py
+
+def get_product_name_tokens(db) -> set:
+    """Ambil semua nama produk dari DB, pecah jadi kata-kata untuk stopwords."""
+    rows = db.execute(text("""
+        SELECT name FROM "Product"
+    """)).fetchall()
+
+    tokens = set()
+    for row in rows:
+        words = row[0].lower().split()
+        for word in words:
+            clean = re.sub(r'[^a-z]', '', word)
+            if len(clean) > 2:
+                tokens.add(clean)
+
+    print(f"🏷️ Product name tokens as stopwords: {tokens}")
+    return tokens
+
+
 def update_keyword_summary(product_id: str):
     db = SessionLocal()
     try:
+        # ✅ Stopwords dinamis = Sastrawi + custom + nama produk dari DB
+        product_tokens = get_product_name_tokens(db)
+        dynamic_stopwords = STOPWORDS | product_tokens  # gabungkan
+
         rows = db.execute(text("""
             SELECT "reviewText" FROM "Review"
             WHERE "productId" = :product_id
@@ -60,15 +84,12 @@ def update_keyword_summary(product_id: str):
 
         word_count: dict[str, int] = {}
         for row in rows:
-            words = extract_keywords(row[0])
+            # Pakai dynamic_stopwords bukan STOPWORDS
+            words = re.sub(r'[^a-zA-Z\s]', '', row[0].lower()).split()
             for word in words:
-                # ✅ Normalize di sini sebelum masuk dict
                 normalized = word.lower().strip()
-                word_count[normalized] = word_count.get(normalized, 0) + 1
-
-        if not word_count:
-            print(f"⚠ Tidak ada keyword untuk produk {product_id}")
-            return
+                if len(normalized) > 3 and normalized not in dynamic_stopwords:
+                    word_count[normalized] = word_count.get(normalized, 0) + 1
 
         # Prioritaskan keyword yang ada di VALID_COMPLAINT_KEYWORDS
         # Sisanya tetap masuk tapi di belakang
