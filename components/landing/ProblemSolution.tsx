@@ -64,20 +64,21 @@ export default function ProblemSolution() {
           {/* Background image placeholder */}
           <div
             className="absolute inset-0 opacity-50 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-            style={{ backgroundImage: "url('/ai-face.jpg')" }}
+            style={{ backgroundImage: "url('/garuda_ai.png')" }}
           />
 
-          {/* Overlay Gradient agar teks lebih terbaca */}
-          <div className="absolute inset-0 bg-linear-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80" />
+          {/* Lapisan gradien tipis di bawah */}
+          <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
 
-          <div className="relative text-center z-10 p-8">
-            <h3 className="text-6xl font-black text-emerald-400 mb-2 drop-shadow-2xl">
+          {/* Konten teks */}
+          <div className="relative z-10 p-8 text-center w-full mt-70">
+            <h3 className="text-5xl font-black text-emerald-400 mb-2 drop-shadow-2xl">
               98%
             </h3>
-            <p className="text-white/80 text-xs font-bold uppercase tracking-[0.2em] mb-4">
+            <p className="text-white text-xs font-bold uppercase tracking-[0.2em] mb-3">
               Accuracy Rate
             </p>
-            <p className="text-white/60 text-sm leading-relaxed max-w-[280px] mx-auto">
+            <p className="text-white/70 text-sm leading-relaxed max-w-[280px] mx-auto">
               Precision in sentiment classification across Bahasa Indonesia and
               local dialects.
             </p>
