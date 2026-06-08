@@ -11,25 +11,25 @@ export default function Navbar() {
         </div>
         <div className="hidden md:flex gap-8 text-sm font-medium text-gray-600">
           <Link href="#" className="text-indigo-600">
-            Solutions
+            Solusi
           </Link>
           <Link href="#" className="hover:text-indigo-600 transition">
-            Pricing
+            Harga
           </Link>
           <Link href="#" className="hover:text-indigo-600 transition">
-            About
+            Tentang
           </Link>
           <Link href="#" className="hover:text-indigo-600 transition">
-            Contact
+            Kontak
           </Link>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/login" className="text-sm font-medium text-gray-600">
-            Login
+            Masuk
           </Link>
           <Link href="/register">
             <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-6">
-              Get Started
+              Mulai
             </Button>
           </Link>
         </div>

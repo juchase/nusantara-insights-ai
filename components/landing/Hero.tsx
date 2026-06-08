@@ -26,7 +26,7 @@ export default function Hero() {
                 NusantaraInsight AI
               </p>
               <p className="text-[11px] text-gray-400 uppercase tracking-widest">
-                Business Intelligence Platform
+                Platform Kecerdasan Bisnis
               </p>
             </div>
           </div>
@@ -47,9 +47,9 @@ export default function Hero() {
           {/* Real stats — tidak overclaim */}
           <div className="flex gap-6 mb-8 pb-8 border-b border-gray-100">
             {[
-              { value: "3 Model AI", desc: "Sentimen, Forecast, Insight" },
+              { value: "3 Model AI", desc: "Sentimen, Prediksi, Insight" },
               { value: "100% Lokal", desc: "Berjalan offline, data aman" },
-              { value: "Hybrid AI", desc: "Rule Engine + LLM terintegrasi" },
+              { value: "AI Hybrid", desc: "Rule Engine + LLM terintegrasi" },
             ].map((s) => (
               <div key={s.value}>
                 <p className="text-[15px] font-semibold text-gray-900 mb-0.5">
@@ -86,7 +86,7 @@ export default function Hero() {
           <div className="bg-white p-2 rounded-[2rem] shadow-[0_15px_40px_rgba(79,70,229,0.12)] border border-indigo-50">
             <img
               src="/dashboard-preview.png"
-              alt="Preview Dashboard NusantaraInsight AI"
+              alt="Pratinjau Dashboard NusantaraInsight AI"
               className="rounded-[1.7rem] w-full h-auto object-cover max-h-[420px]"
             />
           </div>
@@ -105,7 +105,7 @@ export default function Hero() {
                 AI Insight Aktif
               </p>
               <p className="text-[13px] font-bold text-slate-800 leading-none">
-                Hybrid Rule + LLM
+                Rule Engine + LLM
               </p>
             </div>
           </motion.div>

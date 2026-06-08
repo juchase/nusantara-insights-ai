@@ -5,18 +5,18 @@ import { Smile, BarChart3, Lightbulb } from "lucide-react";
 export default function Features() {
   const feats = [
     {
-      title: "Sentiment Analysis",
-      desc: "Understand the 'Why' behind your customer ratings. We categorize emotions and pinpoint specific product pain points instantly.",
+      title: "Analisis Sentimen",
+      desc: "Pahami apa yang pelanggan rasakan dari setiap ulasan. Sistem mengkategorikan sentimen dan mengidentifikasi aspek produk yang paling sering dikeluhkan.",
       icon: <Smile className="text-indigo-600" />,
     },
     {
-      title: "Demand Forecasting",
-      desc: "Never run out of stock or over-order again. Our AI models predict next month's demand based on social trends and historical data.",
+      title: "Prediksi Permintaan",
+      desc: "Antisipasi lonjakan permintaan sebelum terjadi. Model prediksi adaptif memilih algoritma terbaik berdasarkan pola data historis penjualan kamu.",
       icon: <BarChart3 className="text-indigo-600" />,
     },
     {
-      title: "AI Insight Generator",
-      desc: "Receive daily strategic recommendations. 'Launch a Spicy Variant' or 'Improve Packing Durability' - direct advice for your business.",
+      title: "Generator Insight AI",
+      desc: "Dapatkan rekomendasi aksi bisnis yang konkret. Rule engine menganalisis data, LLM lokal menyajikannya dalam bahasa yang mudah dipahami.",
       icon: <Lightbulb className="text-indigo-600" />,
     },
   ];
@@ -25,11 +25,10 @@ export default function Features() {
     <section className="py-20 bg-white text-center">
       <div className="max-w-4xl mx-auto mb-20 px-6">
         <h2 className="text-4xl font-extrabold text-slate-900 mb-4">
-          Built for Precise Intelligence
+          Dibangun untuk Kecerdasan Bisnis Nyata
         </h2>
         <p className="text-gray-500">
-          Enterprise-grade AI tools tailored specifically for the Indonesian
-          UMKM ecosystem.
+          Fitur AI yang dirancang khusus untuk kebutuhan UMKM Indonesia.
         </p>
       </div>
 

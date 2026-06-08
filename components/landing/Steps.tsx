@@ -8,23 +8,23 @@ export default function StepsSection() {
   const steps = [
     {
       icon: <FileText size={24} />, // Ukuran icon sedikit diperkecil
-      title: "User Upload",
-      desc: "Upload marketplace exports or connect directly via API.",
+      title: "Upload Dataset",
+      desc: "Upload file CSV berisi data ulasan dan penjualan produk kamu.",
       color: "bg-indigo-600",
       glow: "shadow-[0_0_30px_rgba(79,70,229,0.5)]",
     },
     {
       icon: <Cpu size={24} />,
-      title: "AI Processing",
-      desc: "Our neural networks process patterns, distilling data into meaning.",
+      title: "Proses AI",
+      desc: "Sistem menganalisis sentimen, mendeteksi pola, dan menjalankan prediksi secara otomatis.",
       color: "bg-emerald-400 text-slate-900",
       glow: "shadow-[0_0_40px_rgba(52,211,153,0.6)]",
       isCenter: true,
     },
     {
       icon: <Rocket size={24} />,
-      title: "Business Insights",
-      desc: "Access your dashboard with real-time recommendations.",
+      title: "Dapatkan Insight",
+      desc: "Baca ringkasan eksekutif, rekomendasi aksi, dan prediksi permintaan di dashboard.",
       color: "bg-indigo-600",
       glow: "shadow-[0_0_30px_rgba(79,70,229,0.5)]",
     },
@@ -41,10 +41,10 @@ export default function StepsSection() {
         {/* HEADER STEPS - Margin dikurangi agar efisien */}
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-3 tracking-tight">
-            Three Steps to Intelligence
+            Tiga Langkah Menuju Kecerdasan Bisnis
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto text-base md:text-lg">
-            Seamless integration into your current business workflow.
+            Integrasi mudah ke dalam alur kerja bisnis kamu.
           </p>
         </div>
 
@@ -98,23 +98,24 @@ export default function StepsSection() {
 
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] uppercase tracking-[0.2em] text-slate-500 font-bold">
               <Link href="#" className="hover:text-white transition-colors">
-                Privacy
+                Privasi
               </Link>
               <Link href="#" className="hover:text-white transition-colors">
-                Terms
+                Ketentuan
               </Link>
               <Link href="#" className="hover:text-white transition-colors">
-                API Docs
+                Dokumentasi API
               </Link>
               <Link href="#" className="hover:text-white transition-colors">
-                Security
+                Keamanan
               </Link>
             </div>
           </div>
 
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-[9px] text-slate-600 uppercase tracking-[0.15em] font-medium text-center md:text-left">
-              © 2024 NusantaraInsight AI. Architectural Intelligence.
+              © 2024 NusantaraInsight AI. Platform Kecerdasan Bisnis untuk
+              UMKM Indonesia.
             </p>
 
             <div className="flex items-center gap-1 bg-white/5 px-3 py-2 rounded-full">
@@ -123,7 +124,7 @@ export default function StepsSection() {
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
               </span>
               <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                Status: <span className="text-slate-200">Operational</span>
+                <span className="text-slate-200">● SISTEM AKTIF</span>
               </span>
             </div>
           </div>
