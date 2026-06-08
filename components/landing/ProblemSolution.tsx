@@ -4,9 +4,9 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 function StatCard({ title, desc }: { title: string; desc: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-      <h3 className="text-xl font-black text-slate-900 mb-2">{title}</h3>
-      <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+    <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md shadow-sm">
+      <h3 className="text-lg font-black text-white mb-1">{title}</h3>
+      <p className="text-white/70 text-xs leading-relaxed">{desc}</p>
     </div>
   );
 }
@@ -84,9 +84,19 @@ export default function ProblemSolution() {
           </div>
         </div>
 
-        {/* RIGHT SIDE - Stat Cards */}
-        <div className="relative rounded-[2.5rem] overflow-hidden bg-white min-h-[400px] h-full flex items-center justify-center shadow-2xl shadow-indigo-100 border border-slate-200">
-          <div className="w-full p-8 space-y-4">
+        {/* RIGHT SIDE - Balanced AI Image Box */}
+        <div className="relative rounded-[2.5rem] overflow-hidden bg-[#0a0a0a] min-h-[400px] h-full flex items-center justify-center shadow-2xl shadow-indigo-100">
+          {/* Background image placeholder */}
+          <div
+            className="absolute inset-0 opacity-50 bg-cover bg-center transition-transform duration-700 hover:scale-105"
+            style={{ backgroundImage: "url('/garuda_ai.png')" }}
+          />
+
+          {/* Lapisan gradien tipis di bawah */}
+          <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
+
+          {/* Konten teks */}
+          <div className="relative z-10 w-full p-8 space-y-3 mt-auto">
             {stats.map((stat) => (
               <StatCard
                 key={stat.title}
@@ -94,6 +104,13 @@ export default function ProblemSolution() {
                 desc={stat.desc}
               />
             ))}
+          </div>
+
+          {/* Aksesori Dekorasi Digital */}
+          <div className="absolute top-6 right-6 flex gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/20" />
           </div>
         </div>
       </div>
