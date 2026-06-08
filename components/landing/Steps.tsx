@@ -51,7 +51,7 @@ export default function StepsSection() {
         {/* STEPS CONTENT - Menggunakan flex-1 agar mengambil ruang tengah */}
         <div className="relative mb-20 flex flex-col justify-center">
           {/* THE GLOWING LINE - Posisi disesuaikan dengan icon baru */}
-          <div className="absolute top-9 left-0 w-full flex justify-center pointer-events-none hidden md:flex">
+          <div className="absolute top-9 left-0 w-full justify-center pointer-events-none hidden md:flex">
             <div className="w-[60%] h-px bg-linear-to-r from-transparent via-emerald-400 to-transparent opacity-30" />
             <div className="absolute w-[60%] h-px bg-linear-to-r from-transparent via-emerald-400 to-transparent blur-[2px] opacity-50" />
           </div>

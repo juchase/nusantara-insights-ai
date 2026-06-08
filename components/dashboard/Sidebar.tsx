@@ -13,6 +13,7 @@ import {
   PanelLeftOpen,
   LogOut,
 } from "lucide-react";
+import SVGComponent from "../svg/logo";
 
 const NAV = [
   {
@@ -66,7 +67,7 @@ function SidebarContent({
       <div
         style={{
           height: 64,
-          padding: visuallyCollapsed ? "0 17px" : "0 14px 0 10px",
+          padding: visuallyCollapsed ? "0 17px" : "0 14px 0 5px",
           borderBottom: "1px solid #f3f4f6",
           display: "flex",
           alignItems: "center",
@@ -80,15 +81,14 @@ function SidebarContent({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 10,
             overflow: "hidden",
+            gap: 4,
             flex: 1,
             justifyContent: visuallyCollapsed ? "center" : "flex-start",
           }}
         >
-          <div className="flex justify-center items-center w-10 h-10">
-            <img src="/logo.png" alt="Logo" />
-          </div>
+          <SVGComponent />
+
           {!visuallyCollapsed && (
             <div style={{ whiteSpace: "nowrap", overflow: "hidden" }}>
               <p style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>
