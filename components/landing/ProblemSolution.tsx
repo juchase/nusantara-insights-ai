@@ -2,7 +2,31 @@
 
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
+function StatCard({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+      <h3 className="text-xl font-black text-slate-900 mb-2">{title}</h3>
+      <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+    </div>
+  );
+}
+
 export default function ProblemSolution() {
+  const stats = [
+    {
+      title: "3 Algoritma AI",
+      desc: "Naive Bayes · Linear Regression · Rule Engine",
+    },
+    {
+      title: "100% Offline",
+      desc: "Data tidak keluar dari server lokal",
+    },
+    {
+      title: "Bahasa Indonesia",
+      desc: "Dioptimalkan untuk ulasan produk lokal",
+    },
+  ];
+
   return (
     // Menggunakan bg-slate-50 dan border-y agar terpisah jelas dari section putih
     <section className="py-18 bg-slate-50 border-y border-slate-200/60">
@@ -11,17 +35,18 @@ export default function ProblemSolution() {
         <div className="flex flex-col justify-center space-y-8 py-4">
           <div className="space-y-4">
             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
-              Stop Guessing. <br />
-              <span className="text-indigo-600">Start Growing.</span>
+              Hentikan Tebak-tebakan. <br />
+              <span className="text-indigo-600">Mulai Berkembang.</span>
             </h2>
             <p className="text-gray-500 max-w-md">
-              Tinggalkan metode lama yang memakan waktu. Gunakan teknologi AI
-              untuk memahami pelanggan Anda secara mendalam.
+              Tinggalkan cara lama yang menghabiskan waktu. Gunakan kecerdasan
+              AI untuk memahami pelanggan dan mengambil keputusan bisnis yang
+              tepat.
             </p>
           </div>
 
           <div className="space-y-5">
-            {/* Manual Struggle */}
+            {/* Analisis Manual */}
             <div className="group p-5 rounded-2xl bg-white border border-slate-200 transition-all hover:border-red-100 shadow-sm hover:shadow-md">
               <div className="flex gap-4">
                 <div className="mt-1">
@@ -29,17 +54,17 @@ export default function ProblemSolution() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1 text-base">
-                    The Old Way: Manual Struggle
+                    Cara Lama: Analisis Manual
                   </h4>
                   <p className="text-gray-500 text-sm leading-relaxed">
-                    Sifting through hundreds of reviews manually is slow,
-                    biased, and misses the big picture.
+                    Membaca ratusan ulasan satu per satu itu lambat, tidak
+                    akurat, dan melewatkan pola penting.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* AI Intelligence */}
+            {/* Kecerdasan AI */}
             <div className="group p-5 rounded-2xl bg-white border border-slate-200 transition-all hover:border-emerald-100 shadow-sm hover:shadow-md">
               <div className="flex gap-4">
                 <div className="mt-1">
@@ -47,11 +72,11 @@ export default function ProblemSolution() {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 mb-1 text-base">
-                    The Nusantara Way: AI Intelligence
+                    Cara Nusantara: Kecerdasan AI
                   </h4>
                   <p className="text-gray-500 text-sm leading-relaxed">
-                    Automated sentiment extraction. We turn noise into a
-                    strategic roadmap for your local business.
+                    Ekstraksi sentimen otomatis dari ulasan pelanggan. Ubah
+                    data mentah menjadi peta strategi bisnis.
                   </p>
                 </div>
               </div>
@@ -59,36 +84,16 @@ export default function ProblemSolution() {
           </div>
         </div>
 
-        {/* RIGHT SIDE - Balanced AI Image Box */}
-        <div className="relative rounded-[2.5rem] overflow-hidden bg-[#0a0a0a] min-h-[400px] h-full flex items-center justify-center shadow-2xl shadow-indigo-100">
-          {/* Background image placeholder */}
-          <div
-            className="absolute inset-0 opacity-50 bg-cover bg-center transition-transform duration-700 hover:scale-105"
-            style={{ backgroundImage: "url('/garuda_ai.png')" }}
-          />
-
-          {/* Lapisan gradien tipis di bawah */}
-          <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
-
-          {/* Konten teks */}
-          <div className="relative z-10 p-8 text-center w-full mt-70">
-            <h3 className="text-5xl font-black text-emerald-400 mb-2 drop-shadow-2xl">
-              98%
-            </h3>
-            <p className="text-white text-xs font-bold uppercase tracking-[0.2em] mb-3">
-              Accuracy Rate
-            </p>
-            <p className="text-white/70 text-sm leading-relaxed max-w-[280px] mx-auto">
-              Precision in sentiment classification across Bahasa Indonesia and
-              local dialects.
-            </p>
-          </div>
-
-          {/* Aksesori Dekorasi Digital */}
-          <div className="absolute top-6 right-6 flex gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/20" />
+        {/* RIGHT SIDE - Stat Cards */}
+        <div className="relative rounded-[2.5rem] overflow-hidden bg-white min-h-[400px] h-full flex items-center justify-center shadow-2xl shadow-indigo-100 border border-slate-200">
+          <div className="w-full p-8 space-y-4">
+            {stats.map((stat) => (
+              <StatCard
+                key={stat.title}
+                title={stat.title}
+                desc={stat.desc}
+              />
+            ))}
           </div>
         </div>
       </div>
