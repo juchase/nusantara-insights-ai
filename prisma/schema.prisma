@@ -7,11 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER @map("user")
+  DEMO @map("demo")
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
   password  String
+  role      UserRole @default(USER)
   createdAt DateTime @default(now())
 
   products Product[]
@@ -20,7 +26,7 @@ model User {
 model Product {
   id        String   @id @default(uuid())
   userId    String
-  name      String   @unique
+  name      String
   category  String?
   createdAt DateTime @default(now())
 
@@ -98,26 +104,6 @@ model AiLog {
   llmResponse String
   status      String
   createdAt   DateTime @default(now())
-}
-
-model DashboardSummary {
-  id            String   @id @default("main")
-  totalReviews  Int
-  positiveCount Int
-  neutralCount  Int
-  negativeCount Int
-  totalRating   Float
-  avgRating     Float
-  updatedAt     DateTime @updatedAt
-}
-
-model DailyReviewSummary {
-  id        String   @id @default(uuid())
-  date      DateTime
-  total     Int
-  createdAt DateTime @default(now())
-
-  @@unique([date])
 }
 
 model KeywordSummary {

@@ -1,8 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { predictDemand } from "@/lib/ai-client";
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const { productId } = await req.json();
+
+  const userPayload = getUserFromRequest(req);
+
+  if (!userPayload) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   // 1. ambil sales dari DB
   const salesData = await prisma.sales.findMany({
@@ -37,6 +45,7 @@ export async function POST(req: Request) {
   await prisma.prediction.createMany({
     data: aiResult.predictions.map((p: any) => ({
       productId,
+      userId: userPayload.userId,
       predictedSales: p.predictedSales,
       predictionDate: new Date(p.date),
       modelVersion: "v1-linear",

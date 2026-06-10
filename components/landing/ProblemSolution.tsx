@@ -4,9 +4,14 @@ import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 function StatCard({ title, desc }: { title: string; desc: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md shadow-sm">
-      <h3 className="text-lg font-black text-white mb-1">{title}</h3>
-      <p className="text-white/70 text-xs leading-relaxed">{desc}</p>
+    // Meningkatkan kekokohan warna kartu agar teks putih sangat mudah dibaca di atas gambar latar belakang
+    <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-md shadow-sm transition-all duration-300 hover:bg-slate-900/50 hover:border-white/20">
+      <h3 className="text-base lg:text-lg font-black text-white mb-1 tracking-tight">
+        {title}
+      </h3>
+      <p className="text-slate-300 text-xs leading-relaxed font-medium">
+        {desc}
+      </p>
     </div>
   );
 }
@@ -15,68 +20,78 @@ export default function ProblemSolution() {
   const stats = [
     {
       title: "3 Algoritma AI",
-      desc: "Naive Bayes · Linear Regression · Rule Engine",
+      desc: "Sentimen • Prediksi • Insight",
     },
     {
-      title: "100% Offline",
-      desc: "Data tidak keluar dari server lokal",
+      title: "AI Hybrid",
+      desc: "Rule Engine + LLM Enhancement",
     },
     {
       title: "Bahasa Indonesia",
-      desc: "Dioptimalkan untuk ulasan produk lokal",
+      desc: "Dirancang khusus untuk UMKM Indonesia",
     },
   ];
 
   return (
-    // Menggunakan bg-slate-50 dan border-y agar terpisah jelas dari section putih
-    <section className="py-18 bg-slate-50 border-y border-slate-200/60">
-      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 lg:gap-20 items-stretch">
-        {/* LEFT SIDE - Content */}
-        <div className="flex flex-col justify-center space-y-8 py-4">
+    // Menggunakan py-24 untuk ritme scrolling vertikal landing page yang lebih seimbang dan lega
+    <section className="py-24 bg-slate-50 border-y border-slate-200/60">
+      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+        {/* SISI KIRI: Komparasi Masalah vs Solusi */}
+        <div className="flex flex-col justify-center space-y-8 py-2">
           <div className="space-y-4">
-            <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl lg:text-4xl font-black text-slate-900 tracking-tight leading-[1.15]">
               Hentikan Tebak-tebakan. <br />
-              <span className="text-indigo-600">Mulai Berkembang.</span>
+              <span className="bg-linear-to-r bg-clip-text text-transparent from-indigo-600 to-indigo-500">
+                Mulai Berkembang.
+              </span>
             </h2>
-            <p className="text-gray-500 max-w-md">
+            <p className="text-sm text-slate-500 max-w-md leading-relaxed">
               Tinggalkan cara lama yang menghabiskan waktu. Gunakan kecerdasan
               AI untuk memahami pelanggan dan mengambil keputusan bisnis yang
               tepat.
             </p>
           </div>
 
-          <div className="space-y-5">
-            {/* Analisis Manual */}
-            <div className="group p-5 rounded-2xl bg-white border border-slate-200 transition-all hover:border-red-100 shadow-sm hover:shadow-md">
+          <div className="space-y-4">
+            {/* Cara Lama: Analisis Manual (Efek Hover Ditegaskan) */}
+            <div className="group p-5 rounded-2xl bg-white border border-slate-200/80 transition-all duration-300 hover:border-red-200 shadow-sm hover:shadow-md hover:-translate-y-0.5">
               <div className="flex gap-4">
-                <div className="mt-1">
-                  <AlertCircle className="text-red-500" size={20} />
+                <div className="mt-1 shrink-0">
+                  <AlertCircle
+                    className="text-slate-400 transition-colors duration-300 group-hover:text-red-500"
+                    size={22}
+                  />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-1 text-base">
+                  <h4 className="font-bold text-slate-900 mb-1 text-base transition-colors duration-300 group-hover:text-red-600">
                     Cara Lama: Analisis Manual
                   </h4>
-                  <p className="text-gray-500 text-sm leading-relaxed">
+                  <p className="text-slate-500 text-xs lg:text-sm leading-relaxed">
                     Membaca ratusan ulasan satu per satu itu lambat, tidak
-                    akurat, dan melewatkan pola penting.
+                    akurat, dan rentan melewatkan pola keluhan penting dari
+                    pelanggan.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Kecerdasan AI */}
-            <div className="group p-5 rounded-2xl bg-white border border-slate-200 transition-all hover:border-emerald-100 shadow-sm hover:shadow-md">
+            {/* Cara Nusantara: Kecerdasan AI (Efek Hover Ditegaskan) */}
+            <div className="group p-5 rounded-2xl bg-white border border-slate-200/80 transition-all duration-300 hover:border-emerald-200 shadow-sm hover:shadow-md hover:-translate-y-0.5">
               <div className="flex gap-4">
-                <div className="mt-1">
-                  <CheckCircle2 className="text-emerald-500" size={20} />
+                <div className="mt-1 shrink-0">
+                  <CheckCircle2
+                    className="text-slate-400 transition-colors duration-300 group-hover:text-emerald-500"
+                    size={22}
+                  />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 mb-1 text-base">
+                  <h4 className="font-bold text-slate-900 mb-1 text-base transition-colors duration-300 group-hover:text-emerald-600">
                     Cara Nusantara: Kecerdasan AI
                   </h4>
-                  <p className="text-gray-500 text-sm leading-relaxed">
-                    Ekstraksi sentimen otomatis dari ulasan pelanggan. Ubah
-                    data mentah menjadi peta strategi bisnis.
+                  <p className="text-slate-500 text-xs lg:text-sm leading-relaxed">
+                    Ekstraksi sentimen otomatis dari ulasan pelanggan. Mengubah
+                    data mentah menjadi peta strategi operasional bisnis yang
+                    siap aksi.
                   </p>
                 </div>
               </div>
@@ -84,33 +99,30 @@ export default function ProblemSolution() {
           </div>
         </div>
 
-        {/* RIGHT SIDE - Balanced AI Image Box */}
-        <div className="relative rounded-[2.5rem] overflow-hidden bg-[#0a0a0a] min-h-[400px] h-full flex items-center justify-center shadow-2xl shadow-indigo-100">
-          {/* Background image placeholder */}
+        {/* SISI KANAN: Kotak Ilustrasi Latar Belakang AI */}
+        <div className="relative rounded-[2rem] overflow-hidden bg-[#0a0a0a] min-h-[440px] lg:h-[500px] flex items-center justify-center shadow-2xl shadow-indigo-100/50 border border-slate-800/20">
+          {/* Gambar Latar Belakang Placeholder */}
           <div
-            className="absolute inset-0 opacity-50 bg-cover bg-center transition-transform duration-700 hover:scale-105"
+            className="absolute inset-0 opacity-40 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-105"
             style={{ backgroundImage: "url('/garuda_ai.png')" }}
           />
 
-          {/* Lapisan gradien tipis di bawah */}
-          <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/30 to-transparent" />
+          {/* PERBAIKAN: Mengembalikan dari bg-linear-to-t ke bg-gradient-to-t standar v4 */}
+          <div className="absolute inset-0 bg-linear-to-t from-black via-black/40 to-transparent" />
 
-          {/* Konten teks */}
-          <div className="relative z-10 w-full p-8 space-y-3 mt-auto">
+          {/* Susunan Kartu Statistik Mengambang */}
+          <div className="relative z-10 w-full p-6 lg:p-8 space-y-3 mt-auto">
             {stats.map((stat) => (
-              <StatCard
-                key={stat.title}
-                title={stat.title}
-                desc={stat.desc}
-              />
+              <StatCard key={stat.title} title={stat.title} desc={stat.desc} />
             ))}
           </div>
 
-          {/* Aksesori Dekorasi Digital */}
-          <div className="absolute top-6 right-6 flex gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/40" />
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/20" />
+          {/* Aksesori Dekorasi Digital (Live Status Indicator) */}
+          <div className="absolute top-6 right-6 flex items-center gap-2 bg-slate-900/80 border border-white/10 px-2.5 py-1 rounded-full backdrop-blur-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+              Engine Live
+            </span>
           </div>
         </div>
       </div>

@@ -1,12 +1,24 @@
-import { prisma } from "@/lib/prisma";
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const userPayload = getUserFromRequest(request);
+
+  if (!userPayload) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const products = await prisma.product.findMany({
+    where: {
+      userId: userPayload.userId,
+    },
+
     select: {
       id: true,
       name: true,
       category: true,
       createdAt: true,
+
       _count: {
         select: {
           reviews: true,
@@ -14,6 +26,7 @@ export async function GET() {
           predictions: true,
         },
       },
+
       insights: {
         orderBy: {
           createdAt: "desc",
@@ -27,6 +40,7 @@ export async function GET() {
         },
       },
     },
+
     orderBy: {
       createdAt: "desc",
     },

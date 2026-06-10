@@ -13,13 +13,13 @@ export default function Navbar() {
           <Link href="#" className="text-indigo-600">
             Solusi
           </Link>
-          <Link href="#" className="hover:text-indigo-600 transition">
+          <Link href="/pricing" className="hover:text-indigo-600 transition">
             Harga
           </Link>
-          <Link href="#" className="hover:text-indigo-600 transition">
+          <Link href="/about" className="hover:text-indigo-600 transition">
             Tentang
           </Link>
-          <Link href="#" className="hover:text-indigo-600 transition">
+          <Link href="/contact" className="hover:text-indigo-600 transition">
             Kontak
           </Link>
         </div>

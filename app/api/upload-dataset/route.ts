@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { extractAspect } from "@/lib/aspect-extractor";
+import { getUserFromRequest } from "@/lib/auth";
 
 const AI_URL = "http://127.0.0.1:8000";
 
@@ -24,16 +25,21 @@ export async function POST(req: NextRequest) {
 
   console.log("📊 TOTAL DATA:", data.length);
 
-  // 🔥 DEMO USER
-  const user = await prisma.user.upsert({
-    where: { email: "demo@gmail.com" },
-    update: {},
-    create: {
-      email: "demo@gmail.com",
-      name: "Demo User",
-      password: "123456",
+  const userPayload = getUserFromRequest(req);
+
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userPayload.userId,
     },
   });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
 
   const BATCH_SIZE = 50;
   const CONCURRENT_LIMIT = 5;
@@ -144,92 +150,6 @@ export async function POST(req: NextRequest) {
                 aspect,
               },
             });
-
-            // 📊 DASHBOARD SUMMARY
-            await prisma.dashboardSummary.upsert({
-              where: { id: "main" },
-              update: {
-                totalReviews: { increment: 1 },
-                totalRating: { increment: rating },
-                ...(sentiment === "positive" && {
-                  positiveCount: { increment: 1 },
-                }),
-                ...(sentiment === "neutral" && {
-                  neutralCount: { increment: 1 },
-                }),
-                ...(sentiment === "negative" && {
-                  negativeCount: { increment: 1 },
-                }),
-              },
-              create: {
-                id: "main",
-                totalReviews: 1,
-                totalRating: rating,
-                avgRating: rating,
-                positiveCount: sentiment === "positive" ? 1 : 0,
-                neutralCount: sentiment === "neutral" ? 1 : 0,
-                negativeCount: sentiment === "negative" ? 1 : 0,
-              },
-            });
-
-            // 📊 DAILY SUMMARY
-            const dateOnly = new Date(reviewDate);
-            dateOnly.setHours(0, 0, 0, 0);
-
-            await prisma.dailyReviewSummary.upsert({
-              where: { date: dateOnly },
-              update: { total: { increment: 1 } },
-              create: { date: dateOnly, total: 1 },
-            });
-
-            // 🧠 SMART COMPLAINT (FULL TEXT)
-            if (sentiment === "negative") {
-              const text = reviewText.toLowerCase();
-
-              // 🔥 filter biar tidak semua masuk
-              const negativeIndicators = [
-                "tidak",
-                "rusak",
-                "lama",
-                "buruk",
-                "kecewa",
-                "lambat",
-              ];
-
-              const isComplaint = negativeIndicators.some((w) =>
-                text.includes(w),
-              );
-
-              if (isComplaint) {
-                const cleanText = text
-                  .replace(/[^\w\s]/g, "")
-                  .replace(/\s+/g, " ")
-                  .trim();
-
-                if (sentiment === "negative") {
-                  await prisma.keywordSummary.upsert({
-                    where: {
-                      productId_word: {
-                        productId: product.id,
-                        word: aspect,
-                      },
-                    },
-
-                    update: {
-                      count: {
-                        increment: 1,
-                      },
-                    },
-
-                    create: {
-                      productId: product.id,
-                      word: aspect,
-                      count: 1,
-                    },
-                  });
-                }
-              }
-            }
 
             const salesValue = Number(normalized.sales);
             const salesDate = normalized.date

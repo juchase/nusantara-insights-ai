@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
+import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -10,6 +11,24 @@ export default function DashboardLayout({
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const expireAt = Number(localStorage.getItem("demoExpireAt"));
+
+      if (expireAt && Date.now() > expireAt) {
+        localStorage.removeItem("demoExpireAt");
+
+        router.push("/");
+
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [router]);
 
   return (
     <div

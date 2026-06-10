@@ -1,9 +1,20 @@
 // app/api/product-ranking/route.ts
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const userPayload = getUserFromRequest(request);
+
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const products = await prisma.product.findMany({
+    where: {
+      id: userPayload.userId,
+    },
     include: {
       reviews: {
         select: { sentiment: true, rating: true },

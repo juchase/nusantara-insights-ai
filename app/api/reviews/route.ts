@@ -1,8 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const userPayload = getUserFromRequest(request);
+
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const reviews = await prisma.review.findMany({
+    where: {
+      id: userPayload.userId,
+    },
     include: {
       product: {
         select: {
@@ -23,8 +34,14 @@ export async function GET() {
 }
 
 // 🔥 TAMBAHKAN INI
-export async function POST(req: Request) {
-  const body = await req.json();
+export async function POST(request: NextRequest) {
+  const userPayload = getUserFromRequest(request);
+
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
 
   const { reviewText, rating, productId, aspect, reviewDate } = body;
 
@@ -45,6 +62,7 @@ export async function POST(req: Request) {
       reviewText,
       rating,
       productId,
+      id: userPayload.userId,
       sentiment: aiData.sentiment, // 🔥 hasil AI
       aspect: aspect || "lainnya",
       reviewDate: reviewDate ? new Date(reviewDate) : new Date(),
