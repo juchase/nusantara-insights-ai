@@ -26,12 +26,15 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
 
     data = aggregate_product_metrics(product_id=product_id, db=db)
 
-    positive = data["positive_percentage"]
-    negative = data["negative_percentage"]
-    neutral  = data["neutral_percentage"]
-    growth   = data["growth_percentage"]
-    keyword  = data["top_keyword"]
-    trend    = data["forecast_trend"]
+    # ── Cast semua nilai ke float ────────────────────────────────────────────
+    # aggregate_product_metrics dan query DB bisa mengembalikan Decimal dari
+    # PostgreSQL — semua operasi aritmatika butuh tipe yang konsisten (float)
+    positive = float(data.get("positive_percentage") or 0)
+    negative = float(data.get("negative_percentage") or 0)
+    neutral  = float(data.get("neutral_percentage")  or 0)
+    growth   = float(data.get("growth_percentage")   or 0)
+    keyword  = data.get("top_keyword")
+    trend    = data.get("forecast_trend") or "stable"
 
     score      = calculate_health_score(positive, negative, growth)
     label      = get_health_label(score)
@@ -67,7 +70,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     )
     llm_used = final_summary != rule_summary
 
-    # ✅ Simpan ke DB — nama kolom sesuai schema
+    # ── Simpan ke DB ─────────────────────────────────────────────────────────
     try:
         db.execute(text("""
             INSERT INTO "Insight" (
@@ -94,16 +97,18 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
             "executive_summary": executive_summary,
             "insights":          json.dumps(insights),
             "recommendations":   json.dumps(recommendations),
-            "sentiment":         positive,
+            # Semua nilai numerik di-cast ke float sebelum masuk DB
+            # untuk menghindari error serialisasi Decimal
+            "sentiment":         float(positive),
             "issue":             keyword or "none",
             "trend":             trend,
-            "growth":            growth,
+            "growth":            float(growth),
             "risk":              risk_level,
-            "health_score":      score,
+            "health_score":      float(score),
             "llm_used":          llm_used,
             "model":             "qwen2.5" if llm_used else None,
-            "created_at":        current_time,  # Isian untuk kolom createdAt
-            "updated_at":        current_time,  # Isian untuk kolom updatedAt
+            "created_at":        current_time,
+            "updated_at":        current_time,
         })
         db.commit()
         print(f"✅ Insight saved untuk {product_name}")

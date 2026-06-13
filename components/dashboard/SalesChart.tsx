@@ -73,9 +73,11 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 export default function SalesChart({
   data,
   modelUsed,
+  loading,
 }: {
   data: ForecastPoint[];
   modelUsed?: string;
+  loading?: boolean;
 }) {
   // Pisahkan actual dan predicted — predicted mulai dari titik actual berakhir
   const lastActualIndex = data.reduce(
@@ -95,6 +97,32 @@ export default function SalesChart({
   const maxVal = Math.max(...allValues, 0);
 
   const hasData = data.length > 0;
+
+  if (loading) {
+    return (
+      <div
+        className="min-w-0 px-4 py-5 sm:px-6"
+        style={{
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 16,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "center", padding: 20 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: "4px solid #e5e7eb",
+              borderTop: "4px solid #3b82f6",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

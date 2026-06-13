@@ -22,29 +22,60 @@ def aggregate_product_metrics(product_id, db):
 
     # KeywordSummary tidak punya productId — ambil global
     top_keyword = db.execute(text("""
-        SELECT word FROM "KeywordSummary"
+        SELECT word
+        FROM "KeywordSummary"
+        WHERE "productId" = :pid
         ORDER BY count DESC
         LIMIT 1
-    """)).scalar()
-
-    predictions = db.execute(text("""
-        SELECT "predictedSales" FROM "Prediction"
-        WHERE "productId" = :pid
-        ORDER BY "predictionDate" DESC
-        LIMIT 2
-    """), {"pid": product_id}).fetchall()
+    """), {
+        "pid": product_id
+    }).scalar()
 
     total = positive + negative + neutral
 
-    pos_pct  = round((positive / total * 100), 1) if total > 0 else 0
-    neg_pct  = round((negative / total * 100), 1) if total > 0 else 0
-    neu_pct  = round((neutral  / total * 100), 1) if total > 0 else 0
+    pos_pct = (
+        round((positive / total) * 100, 1)
+        if total > 0
+        else 0
+    )
 
-    growth_pct = 0.0
-    if len(predictions) >= 2:
-        latest, previous = predictions[0][0], predictions[1][0]
-        if previous > 0:
-            growth_pct = round(((latest - previous) / previous) * 100, 1)
+    neg_pct = (
+        round((negative / total) * 100, 1)
+        if total > 0
+        else 0
+    )
+
+    neu_pct = (
+        round((neutral / total) * 100, 1)
+        if total > 0
+        else 0
+    )
+
+    last_sale = db.execute(text("""
+        SELECT quantity
+        FROM "Sales"
+        WHERE "productId" = :pid
+        ORDER BY date DESC
+        LIMIT 1
+    """), {
+        "pid": product_id
+    }).scalar()
+
+    avg_prediction = db.execute(text("""
+        SELECT AVG("predictedSales")
+        FROM "Prediction"
+        WHERE "productId" = :pid
+    """), {
+        "pid": product_id
+    }).scalar()
+
+    growth_pct = 0
+
+    if last_sale and avg_prediction:
+        growth_pct = round(
+            ((avg_prediction - last_sale) / last_sale) * 100,
+            1
+        )
 
     if growth_pct > 5:
         trend = "up"

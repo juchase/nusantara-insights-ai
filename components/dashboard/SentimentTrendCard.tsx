@@ -38,7 +38,8 @@ export default function SentimentTrendCard({
   data?: SentimentTrend;
   loading?: boolean;
 }) {
-  if (loading)
+  // 1. Kondisi Loading
+  if (loading) {
     return (
       <div
         style={{
@@ -64,8 +65,13 @@ export default function SentimentTrendCard({
         />
       </div>
     );
+  }
 
-  if (!data || data.status === "insufficient_data")
+  // 2. Ambil status dengan aman (ubah ke lowercase untuk menghindari salah ketik dari backend)
+  const dataStatus = data?.status?.toLowerCase();
+
+  // 3. Kondisi jika data TIDAK VALID atau statusnya 'insufficient_data'
+  if (!data || dataStatus === "insufficient_data" || dataStatus !== "ok") {
     return (
       <div
         style={{
@@ -90,6 +96,7 @@ export default function SentimentTrendCard({
         </p>
       </div>
     );
+  }
 
   const cfg = TREND_CONFIG[data.trend] ?? TREND_CONFIG.stable;
   const delta = data.delta > 0 ? `+${data.delta}%` : `${data.delta}%`;

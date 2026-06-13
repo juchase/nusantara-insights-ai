@@ -4,6 +4,8 @@
 
 import { InsightResponse } from "@/types/insight";
 import { Cpu, Sparkles } from "lucide-react";
+import InsightCardSkeleton from "@/components/dashboard/skeleton/InsightCardSkeleton";
+import EmptyState from "@/components/dashboard/EmptyState";
 
 interface Props {
   insight: InsightResponse | null;
@@ -49,6 +51,10 @@ export default function InsightCard({
   };
 
   const risk = riskBadge(insight?.risk_level);
+
+  if (loading) {
+    return <InsightCardSkeleton />;
+  }
 
   return (
     <div
@@ -247,7 +253,7 @@ export default function InsightCard({
         ) : (
           <>
             {/* Executive summary — dari rule engine */}
-            {insight?.executive_summary && (
+            {insight?.executive_summary ? (
               <p
                 style={{
                   fontSize: 14,
@@ -258,29 +264,54 @@ export default function InsightCard({
               >
                 {insight.executive_summary}
               </p>
+            ) : (
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "#e8e8f0",
+                  lineHeight: 1.7,
+                  marginBottom: 12,
+                }}
+              >
+                Summary tidak tersedia
+              </p>
             )}
 
             {/* AI polished summary — dari LLM */}
-            {insight?.summary &&
-              insight.summary !== insight.executive_summary && (
-                <div
-                  style={{
-                    borderTop: "1px solid rgba(255,255,255,0.06)",
-                    paddingTop: 10,
-                    marginTop: 4,
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: "rgba(255,255,255,0.55)",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {insight.summary}
-                  </p>
-                </div>
-              )}
+            {insight?.summary ? (
+              <>
+                {insight?.summary &&
+                  insight.summary !== insight.executive_summary && (
+                    <div
+                      style={{
+                        borderTop: "1px solid rgba(255,255,255,0.06)",
+                        paddingTop: 10,
+                        marginTop: 4,
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "rgba(255,255,255,0.55)",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {insight.summary}
+                      </p>
+                    </div>
+                  )}
+              </>
+            ) : (
+              <p
+                style={{
+                  fontSize: 12,
+                  color: "rgba(255,255,255,0.55)",
+                  lineHeight: 1.6,
+                }}
+              >
+                Silahkan upload dataset untuk mendapatkan insight
+              </p>
+            )}
           </>
         )}
 

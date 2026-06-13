@@ -7,197 +7,315 @@ import { getUserFromRequest } from "@/lib/auth";
 const AI_URL = "http://127.0.0.1:8000";
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData();
-  const file = formData.get("file") as File;
+  try {
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
 
-  if (!file) {
-    return NextResponse.json({ error: "No file" }, { status: 400 });
-  }
-
-  const csvText = await file.text();
-
-  const parsed = Papa.parse(csvText, {
-    header: true,
-    skipEmptyLines: true,
-  });
-
-  const data = parsed.data as any[];
-
-  console.log("📊 TOTAL DATA:", data.length);
-
-  const userPayload = getUserFromRequest(req);
-
-  if (!userPayload) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const user = await prisma.user.findUnique({
-    where: {
-      id: userPayload.userId,
-    },
-  });
-
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  const BATCH_SIZE = 50;
-  const CONCURRENT_LIMIT = 5;
-
-  let success = 0;
-  let skipped = 0;
-
-  const normalize = (obj: any) => {
-    const newObj: any = {};
-    for (const key in obj) {
-      newObj[key.toLowerCase()] = obj[key];
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
-    return newObj;
-  };
 
-  for (let i = 0; i < data.length; i += BATCH_SIZE) {
-    const batch = data.slice(i, i + BATCH_SIZE);
+    const csvText = await file.text();
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    const data = parsed.data as any[];
+    console.log("📊 TOTAL BARIS DATA CSV:", data.length);
 
-    console.log(`🚀 Batch ${i / BATCH_SIZE + 1}`);
+    const userPayload = getUserFromRequest(req);
+    if (!userPayload) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    for (let j = 0; j < batch.length; j += CONCURRENT_LIMIT) {
-      const chunk = batch.slice(j, j + CONCURRENT_LIMIT);
+    const user = await prisma.user.findUnique({
+      where: { id: userPayload.userId },
+    });
 
-      const results = await Promise.all(
-        chunk.map(async (item, index) => {
-          try {
-            const normalized = normalize(item);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
-            const productName = normalized.product || "General Product";
-            const reviewText = normalized.reviewtext || normalized.review;
+    const BATCH_SIZE = 50;
+    const CONCURRENT_LIMIT = 5;
 
-            if (!reviewText) return null;
+    let success = 0;
+    let skipped = 0;
 
-            const rating = Number(normalized.rating || 3);
+    const normalize = (obj: any) => {
+      const newObj: any = {};
+      for (const key in obj) {
+        newObj[key.trim().toLowerCase()] = obj[key];
+      }
+      return newObj;
+    };
 
-            let reviewDate;
+    const productCache = new Map<string, string>();
 
-            if (normalized.date) {
-              reviewDate = new Date(normalized.date);
-            } else {
-              // 🔥 fallback timeline biar chart hidup
-              const base = new Date();
-              base.setDate(base.getDate() - index);
-              reviewDate = base;
-            }
+    // ── PROSES SEMUA BATCH ──────────────────────────────────────────────────
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE);
+      console.log(`📦 Memproses Batch ke-${Math.floor(i / BATCH_SIZE) + 1}`);
 
-            if (isNaN(reviewDate.getTime())) return null;
+      // Daftarkan produk secara sinkronus sebelum Promise.all
+      for (const item of batch) {
+        const normalized = normalize(item);
+        const productName = (normalized.product || "General Product").trim();
 
-            // 🔥 UPSERT PRODUCT (FIX UNIQUE ERROR)
-            let product = await prisma.product.findFirst({
-              where: { name: productName },
+        if (!productCache.has(productName)) {
+          let product = await prisma.product.findFirst({
+            where: { name: productName, userId: user.id },
+          });
+          if (!product) {
+            product = await prisma.product.create({
+              data: { name: productName, userId: user.id },
             });
+            console.log(`✨ Produk baru dibuat: ${productName}`);
+          }
+          productCache.set(productName, product.id);
+        }
+      }
 
-            if (!product) {
+      // Proses ulasan dan sales secara async per chunk
+      for (let j = 0; j < batch.length; j += CONCURRENT_LIMIT) {
+        const chunk = batch.slice(j, j + CONCURRENT_LIMIT);
+
+        const results = await Promise.all(
+          chunk.map(async (item, index) => {
+            try {
+              const normalized = normalize(item);
+              const productName = (
+                normalized.product || "General Product"
+              ).trim();
+              const reviewText =
+                normalized.reviewtext ||
+                normalized.review ||
+                normalized.review_text;
+
+              if (!reviewText) {
+                console.warn("⚠️ Baris dilewati: teks ulasan kosong.");
+                return null;
+              }
+
+              const rating = Number(normalized.rating || 3);
+              const dateValue = normalized.date || normalized.review_date;
+              let reviewDate: Date;
+
+              if (dateValue) {
+                reviewDate = new Date(dateValue);
+              } else {
+                const base = new Date();
+                base.setDate(base.getDate() - (i + j + index));
+                reviewDate = base;
+              }
+
+              if (isNaN(reviewDate.getTime())) {
+                console.error(`❌ Format tanggal tidak valid: ${productName}`);
+                return null;
+              }
+
+              const cachedProductId = productCache.get(productName);
+              if (!cachedProductId) return null;
+
+              const aspect = extractAspect(reviewText);
+              let sentiment = "neutral";
+
               try {
-                product = await prisma.product.create({
-                  data: {
-                    name: productName,
-                    userId: user.id,
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+                const aiRes = await fetch(`${AI_URL}/analyze`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ text: reviewText }),
+                  signal: controller.signal,
+                });
+
+                clearTimeout(timeoutId);
+                if (aiRes.ok) {
+                  const aiData = await aiRes.json();
+                  sentiment = aiData?.sentiment || "neutral";
+                }
+              } catch {
+                sentiment = "neutral";
+              }
+
+              await prisma.review.create({
+                data: {
+                  productId: cachedProductId,
+                  reviewText,
+                  rating,
+                  reviewDate,
+                  sentiment,
+                  aspect,
+                },
+              });
+
+              const salesValue = Number(normalized.sales);
+              const salesDate = dateValue ? new Date(dateValue) : reviewDate;
+
+              if (!isNaN(salesValue) && !isNaN(salesDate.getTime())) {
+                await prisma.sales.upsert({
+                  where: {
+                    productId_date: {
+                      productId: cachedProductId,
+                      date: salesDate,
+                    },
+                  },
+                  update: { quantity: salesValue },
+                  create: {
+                    productId: cachedProductId,
+                    date: salesDate,
+                    quantity: salesValue,
                   },
                 });
-              } catch (err: any) {
-                // 🔥 kalau race condition terjadi, ambil lagi
-                product = await prisma.product.findFirst({
-                  where: { name: productName },
-                });
               }
-            }
 
-            if (!product) {
-              console.error("❌ Product not found after upsert");
+              return true;
+            } catch (err) {
+              console.error("❌ Error pemrosesan baris:", err);
               return null;
             }
+          }),
+        );
 
-            // 🤖 AI CALL (SAFE)
-            const aspect = extractAspect(reviewText);
-            // ✅ Timeout 3 detik — kalau lambat langsung skip
-            let sentiment = "neutral";
-            try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // Update keyword summary setelah setiap chunk
+        for (const [productName, cachedProductId] of productCache.entries()) {
+          const allReviews = await prisma.review.findMany({
+            where: { productId: cachedProductId },
+            select: { reviewText: true },
+          });
 
-              const aiRes = await fetch(`${AI_URL}/analyze`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: reviewText }),
-                signal: controller.signal,
-              });
+          const wordCounts: { [key: string]: number } = {};
+          const stopWords = new Set([
+            "dan",
+            "yang",
+            "di",
+            "ke",
+            "dari",
+            "ini",
+            "itu",
+            "untuk",
+            "dengan",
+            "saya",
+            "tapi",
+            "agak",
+            "tidak",
+            "bisa",
+            "sudah",
+            "ada",
+            "adalah",
+            "akan",
+            "atau",
+            "kami",
+            "kamu",
+            "bgt",
+            "banget",
+            "aja",
+            "saja",
+          ]);
 
-              clearTimeout(timeoutId);
+          allReviews.forEach((rev) => {
+            const words = rev.reviewText
+              .toLowerCase()
+              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+              .split(/\s+/);
 
-              if (aiRes.ok) {
-                const aiData = await aiRes.json();
-                sentiment = aiData?.sentiment || "neutral";
+            words.forEach((word) => {
+              const cleanWord = word.trim();
+              if (cleanWord.length > 2 && !stopWords.has(cleanWord)) {
+                wordCounts[cleanWord] = (wordCounts[cleanWord] || 0) + 1;
               }
-            } catch {
-              // timeout atau error → pakai neutral, lanjut
-            }
-
-            // 💾 SAVE REVIEW
-            await prisma.review.create({
-              data: {
-                productId: product.id,
-                reviewText,
-                rating,
-                reviewDate,
-                sentiment,
-                aspect,
-              },
             });
+          });
 
-            const salesValue = Number(normalized.sales);
-            const salesDate = normalized.date
-              ? new Date(normalized.date)
-              : reviewDate; // fallback pakai reviewDate
+          const sortedWords = Object.entries(wordCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
 
-            if (!isNaN(salesValue) && !isNaN(salesDate.getTime())) {
-              await prisma.sales.upsert({
-                where: {
-                  productId_date: {
-                    // ← perlu tambah @@unique ke schema
-                    productId: product.id,
-                    date: salesDate,
-                  },
-                },
-                update: {
-                  quantity: salesValue, // kalau tanggal sama → update quantity
-                },
-                create: {
-                  productId: product.id,
-                  date: salesDate,
-                  quantity: salesValue,
-                },
-              });
-            }
-
-            console.log("📊 SALES:", {
-              product: productName,
-              sales: salesValue,
-              date: salesDate,
+          for (const [word, count] of sortedWords) {
+            await prisma.keywordSummary.upsert({
+              where: { productId_word: { productId: cachedProductId, word } },
+              update: { count },
+              create: { productId: cachedProductId, word, count },
             });
-
-            return true;
-          } catch (err) {
-            console.error("❌ ERROR:", err);
-            return null;
           }
-        }),
-      );
+        }
 
-      success += results.filter(Boolean).length;
-      skipped += results.length - results.filter(Boolean).length;
+        success += results.filter(Boolean).length;
+        skipped += results.length - results.filter(Boolean).length;
+      }
     }
-  }
 
-  return NextResponse.json({
-    message: "Upload selesai",
-    success,
-    skipped,
-  });
+    // ── TRIGGER PROPHET + INSIGHT SEKALI SETELAH SEMUA BATCH SELESAI ───────
+    // Tidak lagi dipanggil dari dashboard — hanya dipanggil di sini saat upload
+    console.log("🤖 Memulai pipeline AI untuk semua produk yang diupload...");
+
+    const aiPipelineResults = await Promise.allSettled(
+      Array.from(productCache.entries()).map(
+        async ([productName, productId]) => {
+          try {
+            // Langkah 1: Prophet forecasting
+            console.log(`📈 Prophet: ${productName}`);
+            const forecastRes = await fetch(
+              `${AI_URL}/predict-demand/${productId}`,
+              { method: "POST" },
+            );
+
+            if (!forecastRes.ok) {
+              console.warn(
+                `⚠️ Prophet gagal untuk ${productName}: ${forecastRes.status}`,
+              );
+            } else {
+              const forecastData = await forecastRes.json();
+              console.log(
+                `✅ Prophet selesai: ${productName} | confidence: ${forecastData.confidence}%`,
+              );
+            }
+
+            // Langkah 2: Generate insight (setelah forecast tersedia di DB)
+            console.log(`💡 Insight: ${productName}`);
+            const insightRes = await fetch(
+              `${AI_URL}/generate-insight/${productId}`,
+              { method: "GET" },
+            );
+
+            if (!insightRes.ok) {
+              console.warn(
+                `⚠️ Insight gagal untuk ${productName}: ${insightRes.status}`,
+              );
+            } else {
+              console.log(`✅ Insight selesai: ${productName}`);
+            }
+
+            return { productId, productName, status: "success" };
+          } catch (err) {
+            console.error(`❌ Pipeline AI gagal untuk ${productName}:`, err);
+            return { productId, productName, status: "error" };
+          }
+        },
+      ),
+    );
+
+    const aiSuccess = aiPipelineResults.filter(
+      (r) => r.status === "fulfilled" && (r.value as any).status === "success",
+    ).length;
+
+    console.log(
+      `🎉 Pipeline AI selesai: ${aiSuccess}/${productCache.size} produk berhasil`,
+    );
+
+    return NextResponse.json({
+      message: "Proses upload data selesai dengan sukses",
+      success,
+      skipped,
+      aiPipeline: {
+        total: productCache.size,
+        success: aiSuccess,
+      },
+    });
+  } catch (globalError: any) {
+    console.error("❌ CRITICAL ERROR:", globalError);
+    return NextResponse.json(
+      { error: "Internal Server Error", details: globalError.message },
+      { status: 500 },
+    );
+  }
 }

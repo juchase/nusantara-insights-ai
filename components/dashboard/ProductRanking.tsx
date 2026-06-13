@@ -3,6 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { Trophy, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import CardSkeleton from "./skeleton/CardSkeleton";
+import EmptyState from "./EmptyState";
 
 interface ProductRank {
   id: string;
@@ -246,41 +248,9 @@ export default function ProductRanking() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading)
-    return (
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          padding: "20px 24px",
-        }}
-      >
-        <div
-          style={{
-            height: 14,
-            width: 160,
-            background: "#f3f4f6",
-            borderRadius: 4,
-            marginBottom: 16,
-          }}
-          className="animate-pulse"
-        />
-        <div
-          className="grid grid-cols-1 gap-3 md:grid-cols-3"
-        >
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              style={{ height: 140, background: "#f9fafb", borderRadius: 10 }}
-              className="animate-pulse"
-            />
-          ))}
-        </div>
-      </div>
-    );
+  if (loading) return <CardSkeleton />;
 
-  if (!data || data.total === 0) return null;
+  if (!data || data.total === 0) return <EmptyState />;
 
   return (
     <div

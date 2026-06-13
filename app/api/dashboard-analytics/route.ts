@@ -9,36 +9,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // products milik user
-  const products = await prisma.product.findMany({
+  const productId = req.nextUrl.searchParams.get("productId");
+
+  if (!productId) {
+    return NextResponse.json({ error: "Product ID required" }, { status: 400 });
+  }
+
+  const product = await prisma.product.findFirst({
     where: {
+      id: productId,
       userId: userPayload.userId,
-    },
-    select: {
-      id: true,
     },
   });
 
-  const productIds = products.map((p) => p.id);
+  if (!product) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  // semua review user
   const reviews = await prisma.review.findMany({
     where: {
-      productId: {
-        in: productIds,
-      },
+      productId,
     },
     orderBy: {
       reviewDate: "asc",
     },
   });
 
-  // keyword summary
   const keywords = await prisma.keywordSummary.findMany({
     where: {
-      productId: {
-        in: productIds,
-      },
+      productId,
     },
     orderBy: {
       count: "desc",
@@ -58,7 +57,7 @@ export async function GET(req: NextRequest) {
     (r) => r.sentiment === "negative",
   ).length;
 
-  const totalRating = reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0);
+  const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
 
   const avgRating = totalReviews > 0 ? totalRating / totalReviews : 0;
 
@@ -73,7 +72,6 @@ export async function GET(req: NextRequest) {
       totalReviews > 0 ? Math.round((negativeCount / totalReviews) * 100) : 0,
   };
 
-  // chart reviews per hari
   const chartMap = new Map<string, number>();
 
   reviews.forEach((r) => {
@@ -90,14 +88,11 @@ export async function GET(req: NextRequest) {
     total,
   }));
 
-  const topKeywords = keywords.map((k) => [k.word, k.count]);
-
   return NextResponse.json({
     totalReviews,
-    avgRating: Number(avgRating.toFixed(1)),
-    totalProducts: products.length,
+    avgRating,
     sentimentStats,
     chartData,
-    topKeywords,
+    topKeywords: keywords.map((k) => [k.word, k.count]),
   });
 }

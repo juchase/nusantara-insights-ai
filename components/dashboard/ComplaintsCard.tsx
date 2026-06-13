@@ -1,7 +1,43 @@
 "use client";
 
-export default function ComplaintsCard({ data }: { data: [string, number][] }) {
+export default function ComplaintsCard({
+  data,
+  loading,
+}: {
+  data: [string, number][];
+  loading: boolean;
+}) {
   const maxCount = Math.max(...data.map(([, count]) => count), 1);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 16,
+          padding: "20px 24px",
+        }}
+      >
+        <p
+          style={{
+            fontSize: 15,
+            fontWeight: 500,
+            color: "#111827",
+            marginBottom: 4,
+          }}
+        >
+          Keluhan Pelanggan
+        </p>
+        <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
+          Kata yang paling sering muncul di ulasan produk ini
+        </p>
+        <div style={{ textAlign: "center", padding: "32px 0" }}>
+          <p style={{ fontSize: 13, color: "#9ca3af" }}>Memuat data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

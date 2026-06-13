@@ -4,3 +4,4 @@ asyncpg
 httpx
 pydantic
 python-dotenv
+prophet

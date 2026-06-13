@@ -6,7 +6,9 @@ import { InsightResponse } from "@/types/insight";
 
 interface Props {
   insight: InsightResponse | null;
-  stats: any;
+  totalReviews: number;
+  avgRating: number;
+  totalProducts: number;
   loading: boolean;
 }
 
@@ -24,139 +26,15 @@ const PRIORITY_STYLE: Record<string, { background: string; color: string }> = {
   LOW: { background: "#EAF3DE", color: "#3B6D11" },
 };
 
-export default function InsightPanel({ insight, stats, loading }: Props) {
-  // METRICS ROW
-  const metrics = [
-    {
-      label: "Total Ulasan",
-      value: stats.totalReviews.toLocaleString("id-ID"),
-      badge: "Live",
-      secondary: `${stats.sentimentStats.positive}% positif`,
-      progress: stats.sentimentStats.positive,
-      progressColor: "#1D9E75",
-      icon: "💬",
-    },
-    {
-      label: "Sentimen Positif",
-      value: `${stats.sentimentStats.positive}%`,
-      secondary: `${stats.sentimentStats.negative}% negatif`,
-      progress: stats.sentimentStats.positive,
-      progressColor:
-        stats.sentimentStats.positive >= 50 ? "#1D9E75" : "#E24B4A",
-      icon: "😊",
-    },
-    {
-      label: "Total Produk",
-      value: stats.totalProducts.toString(),
-      secondary: "produk terdaftar",
-      progress: null,
-      icon: "📦",
-    },
-  ];
-
+export default function InsightPanel({
+  insight,
+  totalReviews,
+  avgRating,
+  totalProducts,
+  loading,
+}: Props) {
   return (
     <div className="space-y-4">
-      {/* METRICS GRID */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {metrics.map((m) => (
-          <div
-            key={m.label}
-            style={{
-              background: "#fff",
-              border: "1px solid #e5e7eb",
-              borderRadius: 12,
-              padding: "16px 18px",
-            }}
-          >
-            {/* Top row — label + icon */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 10,
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 11,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                  color: "#6b7280",
-                  fontWeight: 500,
-                }}
-              >
-                {m.label}
-              </p>
-              <span style={{ fontSize: 16 }}>{m.icon}</span>
-            </div>
-
-            {/* Value */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                gap: 8,
-                marginBottom: 10,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 28,
-                  fontWeight: 500,
-                  color: "#111827",
-                  lineHeight: 1,
-                }}
-              >
-                {loading ? "—" : m.value}
-              </span>
-              {m.badge && (
-                <span
-                  style={{
-                    fontSize: 11,
-                    background: "#EAF3DE",
-                    color: "#3B6D11",
-                    padding: "2px 8px",
-                    borderRadius: 20,
-                    fontWeight: 500,
-                    marginBottom: 2,
-                  }}
-                >
-                  {m.badge}
-                </span>
-              )}
-            </div>
-
-            {/* Progress bar — kalau ada */}
-            {m.progress !== null && m.progress !== undefined && (
-              <div
-                style={{
-                  height: 4,
-                  background: "#f3f4f6",
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  marginBottom: 8,
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${m.progress}%`,
-                    background: m.progressColor,
-                    borderRadius: 2,
-                    transition: "width 0.6s ease",
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Secondary info */}
-            <p style={{ fontSize: 11, color: "#9ca3af" }}>
-              {loading ? "—" : m.secondary}
-            </p>
-          </div>
-        ))}
-      </div>
       {/* INSIGHTS + RECOMMENDATIONS — 2 column */}
       {!loading && insight && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

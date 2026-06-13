@@ -4,12 +4,23 @@ type ForecastPoint = {
   date: string;
   actual?: number | null;
   predicted?: number | null;
+  upper?: number | null; // yhat_upper Prophet
+  lower?: number | null; // yhat_lower Prophet
 };
 
 type ConfidenceContext = {
   label: string;
   message: string;
   color: "green" | "amber" | "red";
+};
+
+// Tipe untuk forecast_summary yang dikembalikan demand_service.py
+type ForecastSummary = {
+  avg: number;
+  min: number;
+  max: number;
+  lower: number;
+  upper: number;
 };
 
 function getDemandAlert(growth: number): {
@@ -42,34 +53,133 @@ function getDemandAlert(growth: number): {
   };
 }
 
+// ── Komponen mini: bar uncertainty interval ───────────────────────────────
+function IntervalBar({
+  lower,
+  upper,
+  avg,
+}: {
+  lower: number;
+  upper: number;
+  avg: number;
+}) {
+  // Hitung posisi relatif dalam bar (0–100%)
+  const range = upper - lower;
+  const pct = range > 0 ? ((avg - lower) / range) * 100 : 50;
+  const clamped = Math.max(0, Math.min(100, pct));
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      {/* Label ujung */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 4,
+        }}
+      >
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+          Min {lower.toLocaleString("id-ID")}
+        </span>
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+          Maks {upper.toLocaleString("id-ID")}
+        </span>
+      </div>
+
+      {/* Track */}
+      <div
+        style={{
+          position: "relative",
+          height: 6,
+          borderRadius: 99,
+          background: "rgba(255,255,255,0.12)",
+          overflow: "visible",
+        }}
+      >
+        {/* Fill dari lower ke upper */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            height: "100%",
+            width: "100%",
+            borderRadius: 99,
+            background:
+              "linear-gradient(90deg, rgba(93,202,165,0.25) 0%, rgba(93,202,165,0.55) 50%, rgba(93,202,165,0.25) 100%)",
+          }}
+        />
+        {/* Titik prediksi rata-rata */}
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: `${clamped}%`,
+            transform: "translate(-50%, -50%)",
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#5DCAA5",
+            border: "2px solid #1a1a2e",
+            boxShadow: "0 0 6px rgba(93,202,165,0.7)",
+          }}
+        />
+      </div>
+
+      <p
+        style={{
+          fontSize: 10,
+          color: "rgba(255,255,255,0.35)",
+          marginTop: 5,
+          textAlign: "center",
+        }}
+      >
+        Rentang prediksi 80% (uncertainty interval Prophet)
+      </p>
+    </div>
+  );
+}
+
+// ── Komponen utama ────────────────────────────────────────────────────────
 export default function ForecastChart({
   data,
   growth,
   confidence,
   confidenceContext,
   modelUsed,
+  forecastSummary,
+  loading,
 }: {
   data: ForecastPoint[];
   growth: number;
   confidence: number;
   confidenceContext?: ConfidenceContext | null;
   modelUsed?: string;
+  forecastSummary?: ForecastSummary | null; // dari Prophet forecast_summary
+  loading: boolean;
 }) {
   const latestActual = [...data].reverse().find((d) => d.actual)?.actual;
 
-  const predictedValues = data
-    .filter((d) => d.predicted)
-    .map((d) => d.predicted ?? 0);
-  const avgPredicted = predictedValues.length
-    ? predictedValues.reduce((a, b) => a + b, 0) / predictedValues.length
-    : 0;
+  // Gunakan forecastSummary dari Prophet jika tersedia,
+  // fallback ke kalkulasi manual dari data array
+  const avgPredicted =
+    forecastSummary?.avg ??
+    (() => {
+      const vals = data.filter((d) => d.predicted).map((d) => d.predicted ?? 0);
+      return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    })();
+
+  const hasInterval =
+    forecastSummary &&
+    forecastSummary.lower !== undefined &&
+    forecastSummary.upper !== undefined &&
+    forecastSummary.upper > forecastSummary.lower;
 
   const alert = getDemandAlert(growth);
   const growthDisplay = growth > 0 ? `+${growth}%` : `${growth}%`;
   const growthColor =
     growth > 0 ? "#5DCAA5" : growth < 0 ? "#E24B4A" : "#AFA9EC";
 
-  // ✅ Warna dari confidenceContext — bukan dari data array
   const ctxColor =
     confidenceContext?.color === "green"
       ? "#5DCAA5"
@@ -77,7 +187,6 @@ export default function ForecastChart({
         ? "#EF9F27"
         : "#E24B4A";
 
-  // Fallback label kalau confidenceContext belum ada
   const ctxLabel =
     confidenceContext?.label ??
     (confidence >= 70
@@ -88,6 +197,49 @@ export default function ForecastChart({
 
   const ctxMessage = confidenceContext?.message ?? "";
 
+  if (!data) {
+    return (
+      <div
+        className="min-w-0 p-5 sm:p-6 lg:p-7"
+        style={{
+          minHeight: 420,
+          borderRadius: 20,
+          background: "#1a1a2e",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          color: "#fff",
+        }}
+      >
+        <p className="text-sm text-[#AFA9EC]">Tidak ada data prediksi</p>
+      </div>
+    );
+  }
+
+  // ── Loading state ──────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div
+        className="min-w-0 p-5 sm:p-6 lg:p-7"
+        style={{
+          minHeight: 420,
+          borderRadius: 20,
+          background: "#1a1a2e",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          color: "#fff",
+        }}
+      >
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5DCAA5]" />
+        <p className="mt-4 text-sm text-[#AFA9EC]">Memuat prediksi...</p>
+      </div>
+    );
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div
       className="min-w-0 p-5 sm:p-6 lg:p-7"
@@ -102,7 +254,7 @@ export default function ForecastChart({
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Title */}
+        {/* ── Title ── */}
         <div>
           <p style={{ fontSize: 15, fontWeight: 500, color: "#fff" }}>
             Prediksi Permintaan
@@ -118,7 +270,7 @@ export default function ForecastChart({
           </p>
         </div>
 
-        {/* Growth */}
+        {/* ── Growth ── */}
         <div>
           <p
             style={{
@@ -133,11 +285,7 @@ export default function ForecastChart({
           </p>
           <p
             className="text-[36px] sm:text-[44px]"
-            style={{
-              fontWeight: 500,
-              color: growthColor,
-              lineHeight: 1,
-            }}
+            style={{ fontWeight: 500, color: growthColor, lineHeight: 1 }}
           >
             {growthDisplay}
           </p>
@@ -166,7 +314,7 @@ export default function ForecastChart({
           </div>
         </div>
 
-        {/* Confidence */}
+        {/* ── Confidence ── */}
         <div
           style={{
             background: "rgba(255,255,255,0.07)",
@@ -183,7 +331,6 @@ export default function ForecastChart({
           >
             Tingkat Kepercayaan Model
           </p>
-
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             <span style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
               {confidence.toFixed(1)}%
@@ -192,8 +339,6 @@ export default function ForecastChart({
               {ctxLabel}
             </span>
           </div>
-
-          {/* Pesan kontekstual */}
           {ctxMessage && (
             <p
               style={{
@@ -206,8 +351,6 @@ export default function ForecastChart({
               {ctxMessage}
             </p>
           )}
-
-          {/* Model yang dipakai — untuk transparansi sidang */}
           {modelUsed && (
             <p
               style={{
@@ -221,10 +364,8 @@ export default function ForecastChart({
           )}
         </div>
 
-        {/* Stats */}
-        <div
-          className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]"
-        >
+        {/* ── Stats: Penjualan Terakhir + Rata-rata Prediksi ── */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]">
           <div
             style={{
               background: "rgba(255,255,255,0.07)",
@@ -291,9 +432,65 @@ export default function ForecastChart({
             </p>
           </div>
         </div>
+
+        {/* ── Uncertainty Interval Prophet — hanya tampil jika data tersedia ── */}
+        {hasInterval && forecastSummary && (
+          <div
+            style={{
+              background: "rgba(93,202,165,0.07)",
+              border: "1px solid rgba(93,202,165,0.18)",
+              borderRadius: 12,
+              padding: "12px 14px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 11,
+                color: "rgba(255,255,255,0.5)",
+                marginBottom: 2,
+              }}
+            >
+              Rentang Prediksi 7 Hari
+            </p>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 6,
+                marginBottom: 2,
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#5DCAA5" }}>
+                {Math.round(forecastSummary.lower).toLocaleString("id-ID")}
+              </span>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
+                —
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#5DCAA5" }}>
+                {Math.round(forecastSummary.upper).toLocaleString("id-ID")}
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.35)",
+                  marginLeft: 2,
+                }}
+              >
+                unit/hari
+              </span>
+            </div>
+
+            {/* Bar visual */}
+            <IntervalBar
+              lower={forecastSummary.lower}
+              upper={forecastSummary.upper}
+              avg={forecastSummary.avg}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <p
         style={{
           fontSize: 11,
@@ -303,8 +500,8 @@ export default function ForecastChart({
         }}
       >
         Prediksi menggunakan{" "}
-        {modelUsed ? modelUsed.replace(/_/g, " ") : "Linear Regression"}{" "}
-        berdasarkan data historis penjualan produk ini
+        {modelUsed ? modelUsed.replace(/_/g, " ") : "Prophet"} berdasarkan data
+        historis penjualan produk ini
       </p>
     </div>
   );

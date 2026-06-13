@@ -1,193 +1,109 @@
 from app.utils.db import SessionLocal
 from sqlalchemy import text
+from datetime import timedelta
+import pandas as pd
 import numpy as np
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import Ridge
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
-from datetime import datetime, timedelta
-import uuid
 
-# ─────────────────────────────────────────
-# LANGKAH 1 — DIAGNOSA DATA
-# ─────────────────────────────────────────
-
-def diagnose_data(sales: list) -> dict:
-    arr = np.array(sales, dtype=float)
-
-    mean     = float(np.mean(arr))
-    std      = float(np.std(arr))
-    cv       = (std / mean * 100) if mean > 0 else 999
-
-    # Autocorrelation lag-1
-    # Mendekati 1 = ada pola kuat, mendekati 0 = random
-    if len(arr) > 2:
-        autocorr = float(np.corrcoef(arr[:-1], arr[1:])[0, 1])
-        if np.isnan(autocorr):
-            autocorr = 0.0
-    else:
-        autocorr = 0.0
-
-    # Verdict berdasarkan CV dan autocorrelation
-    if cv > 60 and abs(autocorr) < 0.3:
-        verdict       = "volatile_random"
-        recommendation = "smooth + polynomial"
-    elif cv > 60 and abs(autocorr) >= 0.3:
-        verdict        = "volatile_with_pattern"
-        recommendation = "smooth + polynomial"
-    elif cv <= 60 and abs(autocorr) >= 0.3:
-        verdict        = "stable_with_pattern"
-        recommendation = "polynomial only"
-    else:
-        verdict        = "stable_no_pattern"
-        recommendation = "linear sufficient"
-
-    print(f"📊 DIAGNOSA: CV={cv:.1f}% | autocorr={autocorr:.3f} | verdict={verdict}")
-    print(f"💡 REKOMENDASI: {recommendation}")
-
-    return {
-        "mean":           round(mean, 1),
-        "std":            round(std, 1),
-        "cv_pct":         round(cv, 1),
-        "autocorr":       round(autocorr, 3),
-        "data_points":    len(arr),
-        "verdict":        verdict,
-        "recommendation": recommendation,
-    }
+# Prophet diimport di dalam fungsi untuk menghindari cold-start lambat di level modul
+# Kalau ingin pre-load, pindahkan ke atas file setelah instalasi stabil
+def _get_prophet():
+    from prophet import Prophet
+    return Prophet
 
 
 # ─────────────────────────────────────────
-# LANGKAH 2 — SMOOTHING (jika volatile)
+# HELPER — BUILD PROPHET MODEL
 # ─────────────────────────────────────────
 
-def smooth_sales(sales: list, window: int = 3) -> list:
+def build_prophet_model(df_train: pd.DataFrame) -> object:
     """
-    Moving average untuk reduksi noise.
-    Dipakai kalau CV > 60% (data volatile).
+    Buat dan latih model Prophet dari DataFrame dengan kolom ds dan y.
+    Konfigurasi disesuaikan untuk data penjualan UMKM harian:
+    - weekly_seasonality  : aktif — pola hari kerja vs akhir pekan
+    - yearly_seasonality  : aktif jika data >= 1 tahun, nonaktif jika lebih sedikit
+    - seasonality_mode    : multiplicative — lebih cocok untuk data ritel yang fluktuatif
+    - interval_width      : 0.80 — uncertainty interval 80%
     """
-    if len(sales) < window:
-        return sales
+    Prophet = _get_prophet()
 
-    smoothed = []
-    for i in range(len(sales)):
-        start = max(0, i - window + 1)
-        smoothed.append(round(float(np.mean(sales[start:i + 1])), 2))
+    has_yearly = (df_train["ds"].max() - df_train["ds"].min()).days >= 365
 
-    print(f"🔄 SMOOTHING: {sales[:5]} → {smoothed[:5]}")
-    return smoothed
+    model = Prophet(
+        weekly_seasonality=True,
+        yearly_seasonality=has_yearly,
+        daily_seasonality=False,
+        seasonality_mode="multiplicative",
+        interval_width=0.80,
+        changepoint_prior_scale=0.05,   # konservatif — hindari overfit pada lonjakan sesaat
+    )
+
+    # Tambahkan hari libur nasional Indonesia
+    # Prophet akan memperhitungkan Lebaran, Natal, dll sebagai efek khusus
+    try:
+        model.add_country_holidays(country_name="ID")
+    except Exception:
+        # Fallback jika holidays belum tersedia di environment
+        pass
+
+    model.fit(df_train)
+    return model
 
 
 # ─────────────────────────────────────────
-# LANGKAH 3 — MODEL SELECTION
+# HELPER — CONFIDENCE DARI INTERVAL
 # ─────────────────────────────────────────
 
-def build_polynomial_model(degree: int):
-    return Pipeline([
-        ("poly",  PolynomialFeatures(degree=degree, include_bias=False)),
-        ("ridge", Ridge(alpha=1.0)),
-    ])
-
-def select_best_model(X, y, diagnosis: dict):
+def calculate_confidence(forecast: pd.DataFrame, data_points: int) -> tuple[float, dict]:
     """
-    Pilih model terbaik berdasarkan hasil diagnosa:
-    - stable_no_pattern   → Linear saja (degree 1)
-    - stable_with_pattern → Coba degree 1-2
-    - volatile_*          → Coba degree 1-3
+    Hitung confidence berdasarkan lebar uncertainty interval relatif terhadap prediksi.
+    Interval sempit = confidence tinggi, interval lebar = confidence rendah.
     """
-    verdict = diagnosis["verdict"]
+    yhat       = forecast["yhat"].values
+    yhat_upper = forecast["yhat_upper"].values
+    yhat_lower = forecast["yhat_lower"].values
 
-    if verdict == "stable_no_pattern":
-        degrees = [1]
-    elif verdict == "stable_with_pattern":
-        degrees = [1, 2]
-    else:
-        # volatile — coba semua, pilih terbaik
-        degrees = [1, 2, 3]
+    # Relative interval width — seberapa lebar interval dibanding nilai prediksi
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rel_widths = np.where(
+            yhat > 0,
+            (yhat_upper - yhat_lower) / yhat,
+            1.0
+        )
 
-    best_model  = None
-    best_score  = -999
-    best_degree = 1
+    avg_rel_width = float(np.mean(rel_widths))
 
-    for degree in degrees:
-        try:
-            if degree == 1:
-                m = LinearRegression()
-            else:
-                m = build_polynomial_model(degree)
+    # Konversi ke confidence (interval lebar → confidence rendah)
+    raw_confidence = max(0.0, 1.0 - avg_rel_width) * 100
 
-            m.fit(X, y)
-            score = r2_score(y, m.predict(X))
+    # Bonus kecil jika data historis banyak
+    if data_points >= 90:
+        raw_confidence = min(raw_confidence * 1.1, 95.0)
+    elif data_points < 14:
+        raw_confidence *= 0.75   # penalty data sedikit
 
-            print(f"   degree={degree} → R²={score:.4f}")
+    confidence = round(max(5.0, min(raw_confidence, 95.0)), 2)
 
-            # Hindari overfit — degree tinggi dengan gain kecil tidak worth it
-            improvement_threshold = 0.05
-            if score > best_score + (improvement_threshold if degree > 1 else 0):
-                best_score  = score
-                best_model  = m
-                best_degree = degree
-
-        except Exception as e:
-            print(f"   degree={degree} → ERROR: {e}")
-            continue
-
-    print(f"✅ MODEL TERPILIH: degree={best_degree} | R²={best_score:.4f}")
-    return best_model, best_degree, best_score
-
-
-# ─────────────────────────────────────────
-# LANGKAH 4 — CONFIDENCE + CONTEXT
-# ─────────────────────────────────────────
-
-def calculate_confidence(r2_score_val: float, diagnosis: dict) -> float:
-    """
-    Confidence disesuaikan dengan karakteristik data.
-    Data volatile dapat penalty karena prediksi memang lebih tidak pasti.
-    """
-    base = max(0.0, r2_score_val) * 100
-
-    # Penalty kalau data volatile
-    if diagnosis["cv_pct"] > 60:
-        base *= 0.85   # kurangi 15% untuk data volatile
-    elif diagnosis["cv_pct"] > 40:
-        base *= 0.92   # kurangi 8% untuk data cukup volatile
-
-    # Bonus kalau ada autocorrelation kuat
-    if abs(diagnosis["autocorr"]) > 0.5:
-        base = min(base * 1.1, 95)
-
-    # Minimum 5% (bukan 0, karena model tetap memberikan estimasi)
-    return round(max(5.0, min(base, 95.0)), 2)
-
-
-def get_confidence_context(confidence: float, diagnosis: dict) -> dict:
-    cv = diagnosis["cv_pct"]
-
-    if cv > 60:
-        return {
-            "label":   "Data Fluktuatif",
-            "message": "Penjualan sangat tidak beraturan — prediksi sebagai estimasi kasar saja",
-            "color":   "amber"
-        }
-    elif confidence >= 70:
-        return {
+    # Context label
+    if confidence >= 70:
+        context = {
             "label":   "Akurasi Tinggi",
-            "message": "Pola penjualan konsisten, prediksi dapat diandalkan",
-            "color":   "green"
+            "message": "Pola penjualan konsisten, prediksi interval dapat diandalkan",
+            "color":   "green",
         }
     elif confidence >= 40:
-        return {
+        context = {
             "label":   "Akurasi Sedang",
-            "message": "Ada pola tren, gunakan sebagai referensi",
-            "color":   "amber"
+            "message": "Ada pola tren, gunakan sebagai referensi perencanaan stok",
+            "color":   "amber",
         }
     else:
-        return {
+        context = {
             "label":   "Akurasi Rendah",
             "message": "Tambah data historis lebih banyak untuk hasil lebih akurat",
-            "color":   "red"
+            "color":   "red",
         }
+
+    return confidence, context
 
 
 # ─────────────────────────────────────────
@@ -198,101 +114,130 @@ def predict_and_save(product_id: str):
     db = SessionLocal()
 
     try:
-        print(f"🚀 START PREDICTION: {product_id}")
+        print(f"🚀 START PROPHET PREDICTION: {product_id}")
 
-        # Ambil sales dari DB
+        # ── AMBIL DATA DARI DB ────────────────────────────────────────
         result = db.execute(text("""
-            SELECT "quantity" FROM "Sales"
+            SELECT "date", SUM("quantity") as total_qty
+            FROM "Sales"
             WHERE "productId" = :product_id
+            GROUP BY "date"
             ORDER BY "date" ASC
         """), {"product_id": product_id}).fetchall()
 
-        sales = [row[0] for row in result]
-        print(f"📊 SALES DATA ({len(sales)} titik): {sales[:10]}...")
-
-        if len(sales) < 3:
-            print("⚠ Data tidak cukup untuk prediksi")
+        if not result or len(result) < 7:
+            print("⚠ Data tidak cukup untuk prediksi (minimal 7 hari)")
             return {
-                "status":      "insufficient_data",
-                "message":     "Minimal 3 data penjualan diperlukan untuk prediksi",
+                "status":        "insufficient_data",
+                "message":       "Minimal 7 data penjualan harian diperlukan untuk prediksi Prophet",
                 "totalInserted": 0,
-                "confidence":  0,
+                "confidence":    0,
             }
 
-        # ── LANGKAH 1: Diagnosa ─────────────────
-        diagnosis = diagnose_data(sales)
+        # ── SIAPKAN DATAFRAME PROPHET (kolom: ds, y) ──────────────────
+        df = pd.DataFrame(result, columns=["ds", "y"])
+        df["ds"] = pd.to_datetime(df["ds"])
+        df["y"]  = df["y"].astype(float)
 
-        # ── LANGKAH 2: Smoothing jika perlu ─────
-        if diagnosis["cv_pct"] > 60:
-            print(f"🔄 Data volatile (CV={diagnosis['cv_pct']:.1f}%), apply smoothing...")
-            sales_for_training = smooth_sales(sales, window=3)
-        else:
-            print(f"✅ Data cukup stabil (CV={diagnosis['cv_pct']:.1f}%), skip smoothing")
-            sales_for_training = sales
+        # Clip nilai negatif (retur) ke 0 — penjualan tidak boleh negatif
+        df["y"] = df["y"].clip(lower=0)
 
-        # ── LANGKAH 3: Pilih model terbaik ──────
-        X = np.arange(1, len(sales_for_training) + 1).reshape(-1, 1)
-        y = np.array(sales_for_training)
+        data_points = len(df)
+        print(f"📊 DATA HISTORIS: {data_points} hari ({df['ds'].min().date()} s/d {df['ds'].max().date()})")
 
-        print(f"🤖 MODEL SELECTION (verdict: {diagnosis['verdict']}):")
-        best_model, best_degree, best_r2 = select_best_model(X, y, diagnosis)
+        # ── LATIH MODEL PROPHET ───────────────────────────────────────
+        print("🤖 Melatih model Prophet...")
+        model = build_prophet_model(df)
 
-        # ── LANGKAH 4: Hitung confidence ────────
-        confidence         = calculate_confidence(best_r2, diagnosis)
-        confidence_context = get_confidence_context(confidence, diagnosis)
+        # ── BUAT PREDIKSI 7 HARI KE DEPAN ────────────────────────────
+        future    = model.make_future_dataframe(periods=7, freq="D")
+        forecast  = model.predict(future)
 
-        print(f"📈 CONFIDENCE: {confidence}% ({confidence_context['label']})")
+        # Ambil hanya 7 hari prediksi (bukan historis)
+        forecast_future = forecast.tail(7).copy()
 
-        # Prediksi 7 hari ke depan
-        future_days = np.arange(
-            len(sales_for_training) + 1,
-            len(sales_for_training) + 8
-        ).reshape(-1, 1)
+        # Clip prediksi negatif ke 0
+        forecast_future["yhat"]       = forecast_future["yhat"].clip(lower=0)
+        forecast_future["yhat_lower"] = forecast_future["yhat_lower"].clip(lower=0)
+        forecast_future["yhat_upper"] = forecast_future["yhat_upper"].clip(lower=0)
 
-        predictions = best_model.predict(future_days)
+        print(f"📈 PREDIKSI 7 HARI:")
+        for _, row in forecast_future.iterrows():
+            print(f"   {row['ds'].date()} → {row['yhat']:.1f} [{row['yhat_lower']:.1f} – {row['yhat_upper']:.1f}]")
 
-        # Pastikan prediksi tidak negatif
-        predictions = np.maximum(predictions, 0)
+        # ── HITUNG CONFIDENCE ─────────────────────────────────────────
+        confidence, confidence_context = calculate_confidence(forecast_future, data_points)
+        print(f"📊 CONFIDENCE: {confidence}% ({confidence_context['label']})")
 
+        # ── SIMPAN KE DB ──────────────────────────────────────────────
         # Hapus prediksi lama
         db.execute(text("""
             DELETE FROM "Prediction"
             WHERE "productId" = :product_id
         """), {"product_id": product_id})
 
-        # Insert prediksi baru
-        for i, pred in enumerate(predictions):
-            date = datetime.today() + timedelta(days=i + 1)
-            db.execute(text("""
-                INSERT INTO "Prediction"
-                ("id", "productId", "predictedSales", "predictionDate", "modelVersion")
-                VALUES (:id, :product_id, :sales, :prediction_date, :model_version)
-            """), {
-                "id":            str(uuid.uuid4()),
-                "product_id":    product_id,
-                "sales":         int(round(pred)),
-                "prediction_date": date,
-                "model_version": f"v2-poly{best_degree}",  # versi model tercatat
-            })
+        # Insert prediksi baru beserta upper dan lower bound
+        for _, row in forecast_future.iterrows():
+            pred_date      = row["ds"].date()
+            pred_value     = int(round(row["yhat"]))
+            pred_upper     = int(round(row["yhat_upper"]))
+            pred_lower     = int(round(row["yhat_lower"]))
 
-            print(f"   INSERTED: {int(round(pred))} on {date.strftime('%Y-%m-%d')}")
+            # Cek apakah kolom upperBound dan lowerBound sudah ada di tabel Prediction
+            # Jika belum, gunakan INSERT tanpa kolom tersebut dan tambahkan migrasi Prisma
+            try:
+                db.execute(text("""
+                    INSERT INTO "Prediction" ("id", "productId", "predictionDate", "predictedSales", "upperBound", "lowerBound", "createdAt")
+                    VALUES (gen_random_uuid(), :product_id, :pred_date, :pred_value, :pred_upper, :pred_lower, NOW())
+                """), {
+                    "product_id": product_id,
+                    "pred_date":  pred_date,
+                    "pred_value": pred_value,
+                    "pred_upper": pred_upper,
+                    "pred_lower": pred_lower,
+                })
+            except Exception:
+                # Fallback: insert tanpa upper/lower jika kolom belum ada
+                db.execute(text("""
+                    INSERT INTO "Prediction" ("id", "productId", "predictionDate", "predictedSales", "createdAt")
+                    VALUES (gen_random_uuid(), :product_id, :pred_date, :pred_value, NOW())
+                """), {
+                    "product_id": product_id,
+                    "pred_date":  pred_date,
+                    "pred_value": pred_value,
+                })
+            print(f"   INSERTED: {pred_value} on {pred_date}")
 
         db.commit()
         print("✅ COMMIT SUCCESS")
 
+        # ── HITUNG GROWTH ─────────────────────────────────────────────
+        last_actual    = float(df["y"].iloc[-1])
+        avg_prediction = float(forecast_future["yhat"].mean())
+        growth = round(((avg_prediction - last_actual) / last_actual) * 100, 1) if last_actual > 0 else 0
+
         return {
-            "status":        "success",
-            "totalInserted": len(predictions),
-            "confidence":    confidence,
+            "status":             "success",
+            "totalInserted":      len(forecast_future),
+            "growth":             growth,
+            "confidence":         confidence,
             "confidence_context": confidence_context,
-            "model_used":    f"polynomial_degree_{best_degree}",
-            "r2_score":      round(best_r2, 4),
-            "diagnosis":     diagnosis,
+            "model_used":         "prophet",
+            "data_points":        data_points,
+            "forecast_summary": {
+                "avg":   round(avg_prediction, 1),
+                "min":   round(float(forecast_future["yhat"].min()), 1),
+                "max":   round(float(forecast_future["yhat"].max()), 1),
+                "lower": round(float(forecast_future["yhat_lower"].mean()), 1),
+                "upper": round(float(forecast_future["yhat_upper"].mean()), 1),
+            },
         }
 
     except Exception as e:
         db.rollback()
         print(f"🔥 ERROR: {e}")
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
     finally:
