@@ -98,7 +98,9 @@ export default function SentimentTrendCard({
     );
   }
 
+  // 4. Jika lolos validasi di atas, baru render sisa kode ke bawah...
   const cfg = TREND_CONFIG[data.trend] ?? TREND_CONFIG.stable;
+
   const delta = data.delta > 0 ? `+${data.delta}%` : `${data.delta}%`;
 
   return (

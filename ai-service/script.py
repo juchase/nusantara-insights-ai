@@ -1,148 +1,79 @@
-"""
-prepare_datasets.py
-====================
-Script preprocessing dataset untuk NusantaraInsights AI
-Mengubah PRDECT-ID dan FMCG 2022-2024 ke skema yang ditetapkan di Bab 3.
-
-Jalankan:
-    python prepare_datasets.py
-
-Output:
-    output/ulasan_nusantara.csv   → siap untuk Sentiment Analysis
-    output/penjualan_nusantara.csv → siap untuk Demand Forecasting
-"""
-
-import pandas as pd
+import sys
 import os
 
-# ─── KONFIGURASI PATH (OTOMATIS DAN ANTI-EROR) ───────────────────────────────
-# Mengunci direktori dasar tempat file prepare_datasets.py ini berada
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT_ULASAN    = os.path.join(BASE_DIR, "PRDECT-ID_Dataset.csv")
-INPUT_PENJUALAN = os.path.join(BASE_DIR, "FMCG_2022_2024.csv")
-OUTPUT_DIR      = os.path.join(BASE_DIR, "output")
+# Menambahkan root directory agar Python bisa membaca modul 'app'
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+from app.utils.db import SessionLocal
+from sqlalchemy import text
+import traceback
 
-# ─────────────────────────────────────────────────────────────────────────────
-# BAGIAN 1 — DATASET ULASAN (PRDECT-ID)
-# ─────────────────────────────────────────────────────────────────────────────
-print("=" * 60)
-print("MEMPROSES DATASET ULASAN (PRDECT-ID)")
-print("=" * 60)
+# Import service demand (Prophet) dan service insight (LLM + Stats)
+from app.services.demand_service import predict_and_save
+# Catatan: Sesuaikan path import router/service ini jika fungsi generate_insight Anda ditaruh di file terpisah
+# dari router FastAPI utama (misal dari app.services.insight_service atau file endpoint router-nya)
+from app.routes.insight import generate_insight # 👈 Sesuaikan file asal fungsi generate_insight Anda
 
-df_ulasan = pd.read_csv(INPUT_ULASAN)
+def rebuild_all_pipelines():
+    db = SessionLocal()
+    try:
+        # 1. Ambil semua productId unik yang memiliki ulasan untuk diproses
+        product_rows = db.execute(text('SELECT DISTINCT "productId" FROM "Review"')).fetchall()
+        product_ids = [row[0] for row in product_rows]
+    except Exception as e:
+        print(f"🔥 Gagal mengambil data produk dari database: {e}")
+        return
+    finally:
+        db.close()
 
-print(f"  Jumlah baris awal   : {len(df_ulasan):,}")
-print(f"  Kolom asal          : {list(df_ulasan.columns)}")
-print(f"  Distribusi Sentiment: {df_ulasan['Sentiment'].value_counts().to_dict()}")
+    total_products = len(product_ids)
+    print(f"🔄 Memulai proses pembangunan ulang AI Pipeline untuk {total_products} produk...")
+    print("=" * 60)
 
-# 1. Rename kolom ke skema NusantaraInsights AI
-df_ulasan = df_ulasan.rename(columns={
-    "Customer Review"   : "review_text",
-    "Customer Rating"   : "star_rating",
-    "Sentiment"         : "sentiment_label",
-    "Category"          : "product_category",
-    "Product Name"      : "product_name",
-})
+    success_count = 0
+    fail_count = 0
 
-# 2. Tambah review_id sebagai primary key
-df_ulasan.insert(0, "review_id", range(1, len(df_ulasan) + 1))
+    for idx, product_id in enumerate(product_ids, start=1):
+        print(f"\n[🚀 {idx}/{total_products}] Memproses Product ID: {product_id}")
+        print("-" * 50)
+        
+        # Menggunakan session baru per produk agar transaksi DB terisolasi dengan aman
+        product_db = SessionLocal()
+        try:
+            # 🔄 TAHAP 1: Hitung Prediksi Penjualan & Simpan Interval Prophet (Upper/Lower)
+            print("📊 Menjalankan Prediksi Deret Waktu (Prophet Service)...")
+            demand_result = predict_and_save(product_id)
+            
+            if isinstance(demand_result, dict) and demand_result.get("status") == "insufficient_data":
+                print(f"⚠️ Prophet melewatkan produk ini: {demand_result.get('message')}")
+                # Tetap lanjut ke tahap insight sentimen meskipun data penjualan kurang dari 7 hari
 
-# 3. Normalkan label sentimen ke huruf kecil (positif/negatif)
-#    PRDECT-ID hanya punya Positive/Negative, tidak ada Neutral
-df_ulasan["sentiment_label"] = df_ulasan["sentiment_label"].str.lower()
+            # 🔄 TAHAP 2: Agregasi Metrik, Hitung Tren Sentimen Periode, & Generate Ringkasan LLM
+            print("🤖 Memicu Analisis Sentimen & Insight Executive via AI Engine...")
+            # generate_insight otomatis menghitung sentiment_trend, confidence, dan menyimpan data ke tabel "Insight"
+            insight_result = generate_insight(product_id=product_id, db=product_db)
+            
+            print(f"✨ Berhasil membuat Insight Baru.")
+            print(f"   - Health Score : {insight_result.get('health_score')} ({insight_result.get('health_label')})")
+            print(f"   - LLM Digunakan: {'Ya' if insight_result.get('llm_used') else 'Tidak (Fallback)'}")
+            
+            success_count += 1
+            
+        except Exception as err:
+            product_db.rollback()
+            fail_count += 1
+            print(f"❌ Gagal memproses Product ID {product_id}")
+            print(f"   Detail Error: {err}")
+            traceback.print_exc()
+        finally:
+            product_db.close()
+            print("-" * 50)
 
-# 4. Tambah kolom netral dummy untuk ulasan dengan rating 3
-#    (PRDECT-ID tidak punya label Neutral, kita derive dari star_rating)
-mask_netral = df_ulasan["star_rating"] == 3
-df_ulasan.loc[mask_netral, "sentiment_label"] = "netral"
-print(f"\n  Baris diubah ke Netral (star_rating=3): {mask_netral.sum()}")
+    print("\n" + "=" * 60)
+    print("🏁 EKSEKUSI PIPELINE AI SELESAI")
+    print(f"✅ Sukses Terproses : {success_count} produk")
+    print(f"⚠️ Gagal Terproses  : {fail_count} produk")
+    print("=" * 60)
 
-# 5. Pilih dan urutkan kolom sesuai skema Bab 3
-kolom_output_ulasan = [
-    "review_id",
-    "product_category",
-    "product_name",
-    "review_text",
-    "star_rating",
-    "sentiment_label",
-]
-df_ulasan_out = df_ulasan[kolom_output_ulasan]
-
-# 6. Simpan
-path_ulasan = os.path.join(OUTPUT_DIR, "ulasan_nusantara.csv")
-df_ulasan_out.to_csv(path_ulasan, index=False, encoding="utf-8-sig")
-
-print(f"\n  Distribusi final sentiment_label:")
-print(df_ulasan_out["sentiment_label"].value_counts().to_string(dtype=False))
-print(f"\n  Contoh 3 baris pertama:")
-print(df_ulasan_out.head(3).to_string(index=False))
-print(f"\n✅ Disimpan ke: {path_ulasan} ({len(df_ulasan_out):,} baris)")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# BAGIAN 2 — DATASET PENJUALAN (FMCG 2022-2024)
-# ─────────────────────────────────────────────────────────────────────────────
-print("\n" + "=" * 60)
-print("MEMPROSES DATASET PENJUALAN (FMCG 2022-2024)")
-print("=" * 60)
-
-df_penjualan = pd.read_csv(INPUT_PENJUALAN)
-
-print(f"  Jumlah baris awal   : {len(df_penjualan):,}")
-print(f"  Kolom asal          : {list(df_penjualan.columns)}")
-print(f"  Rentang tanggal     : {df_penjualan['date'].min()} s/d {df_penjualan['date'].max()}")
-print(f"  Jumlah SKU unik     : {df_penjualan['sku'].nunique()}")
-
-# 1. Rename kolom ke skema NusantaraInsights AI
-df_penjualan = df_penjualan.rename(columns={
-    "date"            : "date",
-    "sku"             : "product_id",
-    "price_unit"      : "unit_price",
-    "promotion_flag"  : "promotion_flag",
-    "stock_available" : "stock_level",
-    "units_sold"      : "units_sold",
-})
-
-# 2. Tambah transaction_id sebagai primary key
-df_penjualan.insert(0, "transaction_id", range(1, len(df_penjualan) + 1))
-
-# 3. Pastikan format tanggal konsisten (YYYY-MM-DD)
-df_penjualan["date"] = pd.to_datetime(df_penjualan["date"]).dt.strftime("%Y-%m-%d")
-
-# 4. Pilih dan urutkan kolom sesuai skema Bab 3
-kolom_output_penjualan = [
-    "transaction_id",
-    "date",
-    "product_id",
-    "units_sold",
-    "unit_price",
-    "promotion_flag",
-    "stock_level",
-]
-df_penjualan_out = df_penjualan[kolom_output_penjualan]
-
-# 5. Simpan
-path_penjualan = os.path.join(OUTPUT_DIR, "penjualan_nusantara.csv")
-df_penjualan_out.to_csv(path_penjualan, index=False, encoding="utf-8-sig")
-
-print(f"\n  Rentang promotion_flag: {df_penjualan_out['promotion_flag'].unique()}")
-print(f"  Rentang units_sold    : {df_penjualan_out['units_sold'].min()} - {df_penjualan_out['units_sold'].max()}")
-print(f"  Rentang unit_price    : {df_penjualan_out['unit_price'].min()} - {df_penjualan_out['unit_price'].max()}")
-print(f"\n  Contoh 3 baris pertama:")
-print(df_penjualan_out.head(3).to_string(index=False))
-print(f"\n✅ Disimpan ke: {path_penjualan} ({len(df_penjualan_out):,} baris)")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# RINGKASAN AKHIR
-# ─────────────────────────────────────────────────────────────────────────────
-print("\n" + "=" * 60)
-print("RINGKASAN OUTPUT")
-print("=" * 60)
-print(f"  1. {path_ulasan}")
-print(f"     {len(df_ulasan_out):,} baris ulasan | kolom: {list(df_ulasan_out.columns)}")
-print(f"  2. {path_penjualan}")
-print(f"     {len(df_penjualan_out):,} baris transaksi | kolom: {list(df_penjualan_out.columns)}")
-print("\nKedua file siap diupload ke platform NusantaraInsights AI.")
+if __name__ == "__main__":
+    rebuild_all_pipelines()

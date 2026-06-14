@@ -1,5 +1,3 @@
-// app/api/insights/[productId]/route.ts
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
@@ -17,6 +15,7 @@ export async function GET(
   try {
     const { productId } = await context.params;
 
+    // 1. Validasi kepemilikan produk
     const product = await prisma.product.findFirst({
       where: { id: productId, userId: userPayload.userId },
     });
@@ -25,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Ambil insight terbaru dari DB — tidak memanggil AI service
+    // 2. Ambil insight terbaru dari database
     const insight = await prisma.insight.findFirst({
       where: { productId, product: { userId: userPayload.userId } },
       orderBy: { createdAt: "desc" },
@@ -35,15 +34,19 @@ export async function GET(
       return NextResponse.json(null, { status: 200 });
     }
 
-    // ── Ambil data tambahan untuk metrics dan sentiment_trend dari DB ───────
-    const [reviewStats, predictions] = await Promise.all([
-      // Hitung metrics sentimen langsung dari tabel Review
+    // 3. Ambil data agregat ulasan dan prediksi secara paralel
+    const [reviewStats, allReviews, predictions] = await Promise.all([
       prisma.review.groupBy({
         by: ["sentiment"],
         where: { productId },
         _count: { sentiment: true },
       }),
-      // Ambil prediksi terbaru untuk growth dan confidence
+      // Ambil data tanggal dan sentimen ulasan secara berurutan (PENTING untuk Tren Sentimen)
+      prisma.review.findMany({
+        where: { productId },
+        select: { sentiment: true, reviewDate: true }, // Menggunakan reviewDate sesuai skema DB
+        orderBy: { reviewDate: "asc" },
+      }),
       prisma.prediction.findMany({
         where: { productId },
         orderBy: { predictionDate: "asc" },
@@ -51,6 +54,7 @@ export async function GET(
       }),
     ]);
 
+    // 4. Hitung Persentase Sentimen Global
     const totalReviews = reviewStats.reduce(
       (sum, r) => sum + r._count.sentiment,
       0,
@@ -71,7 +75,82 @@ export async function GET(
     const neutralPercentage =
       totalReviews > 0 ? (neutralCount / totalReviews) * 100 : 0;
 
-    // ── Map field DB (camelCase Prisma) ke format yang diharapkan frontend ──
+    // 5. KALKULASI TREN PERIODE (COCOK DENGAN KARTU DISPLAY DI TENGAH DASHBOARD)
+    let sentimentTrendResponse;
+
+    if (allReviews.length < 10) {
+      sentimentTrendResponse = {
+        status: "insufficient_data",
+        first_period_positive: 0,
+        second_period_positive: 0,
+        delta: 0,
+        trend: "insufficient_data",
+        label: "Data belum cukup",
+        message: "Minimal 10 ulasan diperlukan untuk analisis tren",
+      };
+    } else {
+      const mid = Math.floor(allReviews.length / 2);
+      const firstPeriod = allReviews.slice(0, mid);
+      const secondPeriod = allReviews.slice(mid);
+
+      const calcPosPct = (reviewsArray: typeof allReviews) => {
+        if (reviewsArray.length === 0) return 0;
+        const pos = reviewsArray.filter(
+          (r) => r.sentiment === "positive",
+        ).length;
+        return Math.round((pos / reviewsArray.length) * 1000) / 10;
+      };
+
+      const firstPos = calcPosPct(firstPeriod);
+      const secondPos = calcPosPct(secondPeriod);
+      const delta = Math.round((secondPos - firstPos) * 10) / 10;
+
+      // Format string tanggal YYYY-MM-DD dengan aman dari object reviewDate
+      const formatDate = (dateInput: any) => {
+        if (!dateInput) return "—";
+        const d = new Date(dateInput);
+        return isNaN(d.getTime()) ? "—" : d.toISOString().slice(0, 10);
+      };
+
+      const firstStart = formatDate(firstPeriod[0]?.reviewDate);
+      const firstEnd = formatDate(
+        firstPeriod[firstPeriod.length - 1]?.reviewDate,
+      );
+      const secondStart = formatDate(secondPeriod[0]?.reviewDate);
+      const secondEnd = formatDate(
+        secondPeriod[secondPeriod.length - 1]?.reviewDate,
+      );
+
+      let trend = "stable";
+      let label = "Stabil";
+      let message = "Sentimen pelanggan relatif konsisten antar periode";
+
+      if (delta > 5) {
+        trend = "improving";
+        label = "Membaik";
+        message = `Sentimen positif naik ${delta.toFixed(1)}% pada periode akhir`;
+      } else if (delta < -5) {
+        trend = "declining";
+        label = "Menurun";
+        message = `Sentimen positif turun ${Math.abs(delta).toFixed(1)}% pada periode akhir`;
+      }
+
+      sentimentTrendResponse = {
+        status: "ok",
+        trend,
+        label,
+        message,
+        delta,
+        first_period_positive: firstPos,
+        second_period_positive: secondPos,
+        first_period_range: `${firstStart} — ${firstEnd}`,
+        second_period_range: `${secondStart} — ${secondEnd}`,
+        first_period_count: firstPeriod.length,
+        second_period_count: secondPeriod.length,
+      };
+    }
+
+    // 6. Return Data JSON Terstruktur ke Frontend
     return NextResponse.json({
       executive_summary: insight.executiveSummary ?? "",
       summary: insight.summary ?? "",
@@ -91,7 +170,20 @@ export async function GET(
         forecast_trend: insight.demandTrend ?? "stable",
         top_keyword: insight.dominantIssue ?? "",
       },
-      // forecastSummary dari data prediksi di DB
+      sentiment_trend: sentimentTrendResponse,
+
+      // ✅ PASANG DATA CONFIDENCE HASIL MIGRASI BARU DI SINI
+      confidence: (insight as any).confidence ?? 0,
+      confidence_context: (insight as any).confidence
+        ? {
+            label: (insight as any).confidenceLabel ?? "Akurasi Rendah",
+            message: (insight as any).confidenceMessage ?? "",
+            color:
+              ((insight as any).confidenceColor as "green" | "amber" | "red") ??
+              "red",
+          }
+        : null,
+
       forecastSummary:
         predictions.length > 0
           ? {
@@ -115,7 +207,7 @@ export async function GET(
           : null,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error inside GET insights route:", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 },

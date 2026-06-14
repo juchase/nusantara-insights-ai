@@ -2,7 +2,8 @@ import requests
 import re
 
 LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions"
-MODEL_ID      = "qwen2.5-1.5b-instruct"  # dari hasil /v1/models
+MODEL_ID      = "qwen2.5-1.5b-instruct"
+
 
 def generate_natural_insight(prompt: str) -> str:
     payload = {
@@ -10,7 +11,12 @@ def generate_natural_insight(prompt: str) -> str:
         "messages": [
             {
                 "role": "system",
-                "content": "Kamu adalah analis bisnis UMKM Indonesia. Tulis kalimat bisnis yang natural dan formal dalam Bahasa Indonesia. Jangan tambah informasi yang tidak ada."
+                "content": (
+                    "Kamu adalah analis bisnis UMKM Indonesia. "
+                    "Tulis narasi bisnis yang natural, formal, dan lengkap dalam Bahasa Indonesia. "
+                    "Selalu selesaikan kalimat hingga tuntas. "
+                    "Jangan tambahkan informasi yang tidak ada dalam input."
+                )
             },
             {
                 "role": "user",
@@ -18,7 +24,7 @@ def generate_natural_insight(prompt: str) -> str:
             }
         ],
         "temperature": 0.1,
-        "max_tokens": 80,
+        "max_tokens": 180,   # dinaikkan dari 80 → 180 agar narasi tidak terpotong
         "stream": False
     }
 
@@ -33,15 +39,29 @@ def generate_natural_insight(prompt: str) -> str:
 def clean_output(text: str) -> str:
     if not text:
         return ""
+
+    # Hapus karakter tidak perlu tapi pertahankan tanda baca penting
+    text = re.sub(r'[^\w\s.,!?%():-]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Ambil maksimal 3 kalimat (bukan 2) agar narasi lebih lengkap
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-    sentences = [s for s in sentences if len(s) > 15]
-    result = " ".join(sentences[:2])
-    result = re.sub(r'[^\w\s.,!?%():-]', '', result)
-    return re.sub(r'\s+', ' ', result).strip()
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
+
+    # Pastikan kalimat terakhir tidak terpotong (harus diakhiri tanda baca)
+    complete = []
+    for s in sentences[:3]:
+        if s and s[-1] in ".!?":
+            complete.append(s)
+        else:
+            # Kalimat tidak lengkap — tambahkan titik agar tidak menggantung
+            complete.append(s + ".")
+
+    return " ".join(complete)
 
 
 def validate_output(text: str, rule_text: str) -> bool:
-    if not text or len(text) < 20:
+    if not text or len(text) < 30:
         return False
 
     INVALID_WORDS = ["produktif", "konsumen kami", "perusahaan kami"]

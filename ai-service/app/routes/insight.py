@@ -70,7 +70,37 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     )
     llm_used = final_summary != rule_summary
 
-    # ── Simpan ke DB ─────────────────────────────────────────────────────────
+        # ── HITUNG CONFIDENCE DARI TABEL PREDICTION ──────────────────────────────
+    confidence_row = db.execute(text("""
+        SELECT 
+            AVG("predictedSales") as avg_pred,
+            AVG("upperBound" - "lowerBound") as avg_interval
+        FROM "Prediction"
+        WHERE "productId" = :pid
+          AND "upperBound" IS NOT NULL
+          AND "lowerBound" IS NOT NULL
+    """), {"pid": product_id}).fetchone()
+
+    if confidence_row and confidence_row[0] is not None and confidence_row[1] is not None:
+        avg_pred     = float(confidence_row[0])
+        avg_interval = float(confidence_row[1])
+        # Ambil rata-rata rasio lebar interval terhadap nilai prediksi asli
+        rel_width    = avg_interval / avg_pred if avg_pred > 0 else 1.0
+        # Formula: Sempit interval -> Confidence tinggi
+        raw_confidence = max(0.0, 1.0 - rel_width) * 100
+        confidence   = round(max(5.0, min(raw_confidence, 95.0)), 2)
+    else:
+        confidence = 0.0
+
+    confidence_label   = "Akurasi Tinggi" if confidence >= 70 else "Akurasi Sedang" if confidence >= 40 else "Akurasi Rendah"
+    confidence_color   = "green" if confidence >= 70 else "amber" if confidence >= 40 else "red"
+    confidence_message = (
+        "Pola penjualan konsisten, prediksi interval dapat diandalkan" if confidence >= 70 else
+        "Ada pola tren, gunakan sebagai referensi perencanaan stok" if confidence >= 40 else
+        "Tambah data historis lebih banyak untuk hasil lebih akurat"
+    )
+
+    # ── SIMPAN KE DB (UPDATE INSERT QUERY) ───────────────────────────────────
     try:
         db.execute(text("""
             INSERT INTO "Insight" (
@@ -80,6 +110,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
                 "sentimentScore", "dominantIssue", "demandTrend",
                 "demandGrowthPct", "riskLevel", "healthScore",
                 "llmUsed", "llmModel",
+                "confidence", "confidenceLabel", "confidenceMessage", "confidenceColor",
                 "createdAt", "updatedAt"
             ) VALUES (
                 :id, :product_id,
@@ -88,6 +119,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
                 :sentiment, :issue, :trend,
                 :growth, :risk, :health_score,
                 :llm_used, :model,
+                :confidence, :confidence_label, :confidence_message, :confidence_color,
                 :created_at, :updated_at
             )
         """), {
@@ -97,8 +129,6 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
             "executive_summary": executive_summary,
             "insights":          json.dumps(insights),
             "recommendations":   json.dumps(recommendations),
-            # Semua nilai numerik di-cast ke float sebelum masuk DB
-            # untuk menghindari error serialisasi Decimal
             "sentiment":         float(positive),
             "issue":             keyword or "none",
             "trend":             trend,
@@ -107,10 +137,17 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
             "health_score":      float(score),
             "llm_used":          llm_used,
             "model":             "qwen2.5" if llm_used else None,
+            # Ambil nilai baru hasil olahan interval Prophet
+            "confidence":         float(confidence),
+            "confidence_label":   confidence_label,
+            "confidence_message": confidence_message,
+            "confidence_color":   confidence_color,
             "created_at":        current_time,
             "updated_at":        current_time,
         })
         db.commit()
+        print(f"✅ Insight & Confidence ({confidence}%) saved untuk {product_name}")
+
         print(f"✅ Insight saved untuk {product_name}")
 
     except Exception as e:

@@ -28,7 +28,6 @@ type ForecastPoint = {
   lower?: number | null;
 };
 
-// Tipe forecast_summary dari Prophet
 type ForecastSummary = {
   avg: number;
   min: number;
@@ -99,16 +98,6 @@ export default function DashboardPage() {
     checkAuth();
   }, [router]);
 
-  useEffect(() => {
-    // Jika auth sudah selesai dan array produk dipastikan kosong (User Baru)
-    if (!authLoading && products.length === 0) {
-      setAnalyticsLoading(false);
-      setForecastLoading(false);
-      setInsightLoading(false);
-      setComplaintsLoading(false);
-    }
-  }, [authLoading, products.length]);
-
   // ── PRODUCTS ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchProducts = async () => {
@@ -130,7 +119,6 @@ export default function DashboardPage() {
     const loadAnalytics = async () => {
       try {
         setAnalyticsLoading(true);
-
         const analytics = await safeFetch<DashboardAnalyticsResponse>(
           `/api/dashboard-analytics?productId=${selectedProduct}`,
           {
@@ -141,7 +129,6 @@ export default function DashboardPage() {
             sentimentStats: { positive: 0, neutral: 0, negative: 0 },
           },
         );
-
         setTopKeywords(analytics.topKeywords || []);
         setChartData(analytics.chartData || []);
         setStats({
@@ -157,7 +144,62 @@ export default function DashboardPage() {
     loadAnalytics();
   }, [selectedProduct, products.length]);
 
-  // ── FORECAST ──────────────────────────────────────────────────────────────
+  // ── INSIGHT — baca dari DB saja, tidak call AI service ───────────────────
+  // AI hanya dipanggil saat upload dataset (upload-dataset/route.ts)
+  useEffect(() => {
+    if (!selectedProduct) return;
+
+    const loadInsight = async () => {
+      try {
+        setInsightLoading(true);
+
+        const insightData = await safeFetch<any>(
+          `/api/insights/${selectedProduct}`,
+          null,
+        );
+
+        if (!insightData) {
+          // Belum ada insight — produk baru diupload atau pipeline AI belum selesai
+          setInsight(null);
+          return;
+        }
+
+        setInsight({
+          executive_summary:
+            insightData.executive_summary || "Belum ada ringkasan.",
+          summary: insightData.summary || "Belum ada insight AI.",
+          health_score: insightData.health_score ?? 0,
+          health_label: insightData.health_label || "Belum dianalisis",
+          insights: insightData.insights || [],
+          recommendations: insightData.recommendations || [],
+          dominant_issue: insightData.dominant_issue || "—",
+          risk_level: insightData.risk_level || "low",
+          llm_used: insightData.llm_used ?? false,
+          metrics: insightData.metrics,
+          sentiment_trend: insightData.sentiment_trend,
+        });
+
+        // forecastSummary sudah tersedia dari response insights
+        if (insightData.forecastSummary) {
+          setForecastSummary(insightData.forecastSummary);
+        }
+
+        // Confidence dan growth dari metrics
+        const growthPct = insightData.metrics?.growth_percentage ?? 0;
+        setGrowth(growthPct);
+
+        setConfidence(insightData.confidence ?? 0);
+        setConfidenceContext(insightData.confidence_context ?? null);
+      } finally {
+        setInsightLoading(false);
+      }
+    };
+
+    loadInsight();
+  }, [selectedProduct]);
+
+  // ── FORECAST — baca prediksi dari DB saja ────────────────────────────────
+  // Prophet sudah dijalankan saat upload, hasilnya sudah ada di tabel Prediction
   useEffect(() => {
     if (!selectedProduct) return;
 
@@ -165,30 +207,6 @@ export default function DashboardPage() {
       try {
         setForecastLoading(true);
 
-        // Panggil lewat Next.js API route (bukan langsung ke localhost:8000)
-        const predictData = await safeFetch<any>(
-          "/api/predict-demand",
-          {
-            confidence: 0,
-            growth: 0,
-            forecastSummary: null,
-          },
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId: selectedProduct }),
-          },
-        );
-
-        setConfidence(predictData.confidence || 0);
-        setConfidenceContext(predictData.confidence_context || null);
-        setModelUsed(predictData.model_used || "");
-        setGrowth(predictData.growth || 0);
-
-        // Simpan forecast_summary dari Prophet (berisi avg, min, max, lower, upper)
-        setForecastSummary(predictData.forecastSummary || null);
-
-        // Ambil data chart (aktual + prediksi) dari DB
         const forecast = await safeFetch(
           `/api/predictions/${selectedProduct}`,
           { sales: [], predictions: [] },
@@ -200,59 +218,16 @@ export default function DashboardPage() {
             forecast.predictions,
           ) as ForecastPoint[],
         );
+
+        // Confidence dari prediksi yang tersimpan
+        // (sudah di-set dari loadInsight via metrics)
+        setModelUsed("prophet");
       } finally {
         setForecastLoading(false);
       }
     };
 
     loadForecast();
-  }, [selectedProduct]);
-
-  // ── INSIGHT ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!selectedProduct) return;
-
-    const loadInsight = async () => {
-      try {
-        setInsightLoading(true);
-
-        const insightData = await safeFetch<InsightResponse>(
-          `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,
-          {
-            executive_summary: "",
-            summary: "",
-            health_score: 0,
-            health_label: "",
-            insights: [],
-            recommendations: [],
-            dominant_issue: "",
-            risk_level: "low",
-            llm_used: false,
-            metrics: undefined,
-          },
-        );
-
-        setInsight({
-          executive_summary:
-            insightData.executive_summary ||
-            "Belum ada ringkasan yang tersedia.",
-          summary: insightData.summary || "Belum ada insight AI yang tersedia.",
-          health_score: insightData.health_score ?? 0,
-          health_label: insightData.health_label || "Belum dianalisis",
-          insights: insightData.insights || [],
-          recommendations: insightData.recommendations || [],
-          dominant_issue: insightData.dominant_issue || "—",
-          risk_level: insightData.risk_level || "low",
-          llm_used: insightData.llm_used ?? false,
-          metrics: insightData.metrics,
-          sentiment_trend: insightData.sentiment_trend,
-        });
-      } finally {
-        setInsightLoading(false);
-      }
-    };
-
-    loadInsight();
   }, [selectedProduct]);
 
   // ── COMPLAINTS ────────────────────────────────────────────────────────────
@@ -312,7 +287,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* ForecastChart sekarang menerima forecastSummary dari Prophet */}
           <ForecastChart
             data={forecastData}
             growth={growth}
