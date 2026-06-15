@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
 
     let success = 0;
     let skipped = 0;
+    let duplicateReviews = 0;
 
     const normalize = (obj: any) => {
       const newObj: any = {};
@@ -137,8 +138,25 @@ export async function POST(req: NextRequest) {
                 sentiment = "neutral";
               }
 
-              await prisma.review.create({
-                data: {
+              // ── UPSERT Review — aman dari duplikat ──────────────────────
+              // Constraint unik: productId + reviewText + reviewDate
+              // Upload ulang CSV yang sama tidak akan menambah data
+              // Upload CSV minggu baru akan menambah baris baru (tanggal beda)
+              await prisma.review.upsert({
+                where: {
+                  productId_reviewText_reviewDate: {
+                    productId: cachedProductId,
+                    reviewText: reviewText,
+                    reviewDate: reviewDate,
+                  },
+                },
+                update: {
+                  // Update sentiment dan rating kalau model AI berubah
+                  rating,
+                  sentiment,
+                  aspect,
+                },
+                create: {
                   productId: cachedProductId,
                   reviewText,
                   rating,
@@ -148,10 +166,17 @@ export async function POST(req: NextRequest) {
                 },
               });
 
+              // ── UPSERT Sales — sudah aman dari sebelumnya ────────────────
+              // Constraint unik: productId + date
+              // Data penjualan minggu baru otomatis ditambahkan
               const salesValue = Number(normalized.sales);
               const salesDate = dateValue ? new Date(dateValue) : reviewDate;
 
-              if (!isNaN(salesValue) && !isNaN(salesDate.getTime())) {
+              if (
+                !isNaN(salesValue) &&
+                salesValue > 0 &&
+                !isNaN(salesDate.getTime())
+              ) {
                 await prisma.sales.upsert({
                   where: {
                     productId_date: {
@@ -176,8 +201,8 @@ export async function POST(req: NextRequest) {
           }),
         );
 
-        // Update keyword summary setelah setiap chunk
-        for (const [productName, cachedProductId] of productCache.entries()) {
+        // ── Update keyword summary setelah setiap chunk ─────────────────────
+        for (const [, cachedProductId] of productCache.entries()) {
           const allReviews = await prisma.review.findMany({
             where: { productId: cachedProductId },
             select: { reviewText: true },
@@ -245,14 +270,12 @@ export async function POST(req: NextRequest) {
     }
 
     // ── TRIGGER PROPHET + INSIGHT SEKALI SETELAH SEMUA BATCH SELESAI ───────
-    // Tidak lagi dipanggil dari dashboard — hanya dipanggil di sini saat upload
     console.log("🤖 Memulai pipeline AI untuk semua produk yang diupload...");
 
     const aiPipelineResults = await Promise.allSettled(
       Array.from(productCache.entries()).map(
         async ([productName, productId]) => {
           try {
-            // Langkah 1: Prophet forecasting
             console.log(`📈 Prophet: ${productName}`);
             const forecastRes = await fetch(
               `${AI_URL}/predict-demand/${productId}`,
@@ -270,7 +293,6 @@ export async function POST(req: NextRequest) {
               );
             }
 
-            // Langkah 2: Generate insight (setelah forecast tersedia di DB)
             console.log(`💡 Insight: ${productName}`);
             const insightRes = await fetch(
               `${AI_URL}/generate-insight/${productId}`,

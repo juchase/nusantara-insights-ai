@@ -50,6 +50,8 @@ model Review {
   createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
+  
+  @@unique([productId, reviewText, reviewDate])
 }
 
 model Sales {
