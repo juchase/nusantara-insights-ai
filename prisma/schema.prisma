@@ -59,6 +59,7 @@ model Sales {
   productId String
   date      DateTime
   quantity  Int
+  promotionFlag Boolean? @default(false)
 
   product Product @relation(fields: [productId], references: [id])
   

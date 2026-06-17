@@ -1,25 +1,25 @@
 def build_prompt(raw_sentences: list, top_recommendation: str) -> str:
 
-    # Gabung maksimal 3 kalimat dari rule engine (bukan 2)
-    # agar konteks lebih lengkap untuk LLM
-    rule_text = " ".join(raw_sentences[:3])
+    # Prioritaskan kalimat PERTAMA (biasanya berisi nama produk + sentimen)
+    # dan kalimat KEDUA (biasanya berisi growth/demand) — jangan dipotong dulu
+    # baru batasi total panjang di akhir jika masih kepanjangan
+    sentences = raw_sentences[:2]
+    rule_text = " ".join(sentences)
 
-    prompt = f"""Tugas: Ubah kalimat analisis bisnis berikut menjadi narasi yang lebih natural dan mudah dipahami pelaku UMKM. Gunakan semua angka yang ada. Tulis 2-3 kalimat lengkap. Akhiri setiap kalimat dengan tanda titik. Bahasa Indonesia formal.
+    # Batas lebih longgar — cukup untuk 2 kalimat lengkap dengan nama produk
+    # (sebelumnya 300 karakter terlalu ketat sampai memotong nama produk)
+    if len(rule_text) > 420:
+        rule_text = rule_text[:420].rsplit(" ", 1)[0]
 
-Contoh 1:
-Input: Produk A menerima 65% ulasan positif dari total pelanggan. Permintaan produk diprediksi meningkat sebesar 12% dalam periode mendatang, perlu kesiapan stok tambahan. Siapkan stok tambahan untuk mengantisipasi kenaikan permintaan 12% dalam 7 hari ke depan.
-Output: Produk A mendapat respons positif dari pelanggan dengan 65% ulasan yang memuaskan. Permintaan diprediksi naik 12% dalam 7 hari ke depan, sehingga disarankan untuk segera menyiapkan stok tambahan agar tidak terjadi kehabisan produk.
+    rec_text = top_recommendation[:120] if top_recommendation else ""
 
-Contoh 2:
-Input: Produk B menerima 48% ulasan negatif dari total pelanggan, menunjukkan adanya ketidakpuasan yang perlu segera ditangani. Permintaan produk diprediksi menurun sebesar 22% dalam periode mendatang. Keluhan utama pelanggan berfokus pada layanan pengiriman yang lambat atau bermasalah.
-Output: Hampir separuh pelanggan (48%) memberikan ulasan negatif terhadap Produk B, terutama terkait layanan pengiriman. Permintaan diprediksi turun 22% dalam 7 hari ke depan, sehingga evaluasi mitra ekspedisi perlu segera dilakukan untuk mencegah penurunan lebih lanjut.
+    prompt = f"""Tugas: Ubah kalimat analisis bisnis berikut menjadi narasi yang natural dan mudah dipahami. WAJIB sebutkan nama produk dan semua angka yang ada. Tulis 2 kalimat lengkap. Bahasa Indonesia formal.
 
-Contoh 3:
-Input: Mayoritas pelanggan (72%) memberikan ulasan positif terhadap Produk C. Permintaan relatif stabil dalam periode mendatang. Pertahankan kualitas layanan dan pantau performa produk secara berkala.
-Output: Produk C mendapat apresiasi tinggi dari pelanggan dengan 72% ulasan positif dan permintaan yang stabil. Disarankan untuk terus mempertahankan kualitas produk dan layanan agar kepuasan pelanggan tetap terjaga.
+Contoh:
+Input: Produk A mendapat 65% ulasan positif. Permintaan naik 12% dalam 7 hari. Siapkan stok tambahan.
+Output: Produk A mendapat respons positif dari 65% pelanggan dengan permintaan diprediksi naik 12% dalam seminggu ke depan. Disarankan segera menyiapkan stok tambahan untuk mengantisipasi kenaikan ini.
 
-Sekarang:
-Input: {rule_text} {top_recommendation}
+Input: {rule_text} {rec_text}
 Output:"""
 
     return prompt
