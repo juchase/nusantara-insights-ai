@@ -3,6 +3,7 @@ import json
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from datetime import datetime
 
 from database import get_db
 from app.services.aggregation_service import aggregate_product_metrics, calculate_sentiment_trend
@@ -10,16 +11,14 @@ from app.services.health_score_service import calculate_health_score, get_health
 from app.services.prompt_builder import build_prompt
 from app.services.llm_service import safe_generate
 from app.services.insight_engine import generate_structured_insights, generate_executive_summary
-from datetime import datetime
 
 router = APIRouter()
 
 @router.get("/generate-insight/{product_id}")
 def generate_insight(product_id: str, db: Session = Depends(get_db)):
-
     current_time = datetime.now()
 
-    product_row  = db.execute(text("""
+    product_row = db.execute(text("""
         SELECT name FROM "Product" WHERE id = :pid
     """), {"pid": product_id}).fetchone()
     product_name = product_row[0] if product_row else "Produk ini"
@@ -31,6 +30,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     neutral  = float(data.get("neutral_percentage")  or 0)
     growth   = float(data.get("growth_percentage")   or 0)
     keyword  = data.get("top_keyword")
+    category = data.get("top_category")
     trend    = data.get("forecast_trend") or "stable"
 
     score      = calculate_health_score(positive, negative, growth)
@@ -38,22 +38,27 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     risk_level = "high" if score < 35 else "medium" if score < 55 else "low"
 
     insights, recommendations, raw_sentences = generate_structured_insights(
+        product_id=product_id,
         positive=positive,
         negative=negative,
         neutral=neutral,
         keyword=keyword,
+        category=category,
         growth=growth,
         trend=trend,
         product_name=product_name,
     )
 
+    dominant_issue = category or "lainnya"
+
     executive_summary = generate_executive_summary(
+        product_id=product_id,
         product_name=product_name,
         positive=positive,
         negative=negative,
         trend=trend,
         risk_level=risk_level,
-        dominant_issue=keyword or "",
+        dominant_issue=dominant_issue,
         growth=growth,
     )
 
@@ -67,7 +72,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     )
     llm_used = final_summary != rule_summary
 
-    # ── Hitung confidence dari interval Prophet ───────────────────────────────
+    # ── Hitung confidence ──────────────────────────────────────────────────────
     data_points_row = db.execute(text("""
         SELECT COUNT(*) FROM "Sales" WHERE "productId" = :pid
     """), {"pid": product_id}).scalar() or 0
@@ -83,11 +88,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
           AND "lowerBound" IS NOT NULL
     """), {"pid": product_id}).fetchone()
 
-    if (
-        confidence_row
-        and confidence_row[0] is not None
-        and confidence_row[1] is not None
-    ):
+    if confidence_row and confidence_row[0] is not None and confidence_row[1] is not None:
         avg_pred     = float(confidence_row[0])
         avg_interval = float(confidence_row[1])
         rel_width    = avg_interval / avg_pred if avg_pred > 0 else 1.0
@@ -128,63 +129,68 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
                 "Tambah data hingga 90 hari untuk hasil lebih akurat."
             )
 
-    # ── Simpan ke DB — DELETE + INSERT (aman tanpa butuh unique constraint) ──
+    # ── Siapkan parameter untuk INSERT ────────────────────────────────────────
+    # Pastikan insights dan recommendations adalah JSON string
+    insights_json = json.dumps(insights, ensure_ascii=False)
+    recommendations_json = json.dumps(recommendations, ensure_ascii=False)
+
+    insert_params = {
+        "id": str(uuid.uuid4()),
+        "product_id": product_id,
+        "summary": final_summary,
+        "executive_summary": executive_summary,
+        "insights": insights_json,           # string JSON
+        "recommendations": recommendations_json,
+        "sentiment": float(positive),
+        "issue": dominant_issue,
+        "trend": trend,
+        "growth": float(growth),
+        "risk": risk_level,
+        "health_score": float(score),
+        "llm_used": llm_used,
+        "model": "qwen2.5" if llm_used else None,
+        "confidence": float(confidence),
+        "confidence_label": confidence_label,
+        "confidence_message": confidence_message,
+        "confidence_color": confidence_color,
+        "created_at": current_time,
+        "updated_at": current_time,
+    }
+
+    insert_sql = """
+        INSERT INTO "Insight" (
+            id, "productId",
+            summary, "executiveSummary",
+            insights, recommendations,
+            "sentimentScore", "dominantIssue", "demandTrend",
+            "demandGrowthPct", "riskLevel", "healthScore",
+            "llmUsed", "llmModel",
+            "confidence", "confidenceLabel", "confidenceMessage", "confidenceColor",
+            "createdAt", "updatedAt"
+        ) VALUES (
+            :id, :product_id,
+            :summary, :executive_summary,
+            :insights, :recommendations,
+            :sentiment, :issue, :trend,
+            :growth, :risk, :health_score,
+            :llm_used, :model,
+            :confidence, :confidence_label, :confidence_message, :confidence_color,
+            :created_at, :updated_at
+        )
+    """
+
     try:
-        db.execute(text("""
-            DELETE FROM "Insight" WHERE "productId" = :product_id
-        """), {"product_id": product_id})
-
-        db.execute(text("""
-            INSERT INTO "Insight" (
-                id, "productId",
-                summary, "executiveSummary",
-                insights, recommendations,
-                "sentimentScore", "dominantIssue", "demandTrend",
-                "demandGrowthPct", "riskLevel", "healthScore",
-                "llmUsed", "llmModel",
-                "confidence", "confidenceLabel", "confidenceMessage", "confidenceColor",
-                "createdAt", "updatedAt"
-            ) VALUES (
-                :id, :product_id,
-                :summary, :executive_summary,
-                CAST(:insights AS jsonb), CAST(:recommendations AS jsonb),
-                :sentiment, :issue, :trend,
-                :growth, :risk, :health_score,
-                :llm_used, :model,
-                :confidence, :confidence_label, :confidence_message, :confidence_color,
-                :created_at, :updated_at
-            )
-        """), {
-            "id":                 str(uuid.uuid4()),
-            "product_id":         product_id,
-            "summary":            final_summary,
-            "executive_summary":  executive_summary,
-            "insights":           json.dumps(insights),
-            "recommendations":    json.dumps(recommendations),
-            "sentiment":          float(positive),
-            "issue":              keyword or "none",
-            "trend":              trend,
-            "growth":             float(growth),
-            "risk":               risk_level,
-            "health_score":       float(score),
-            "llm_used":           llm_used,
-            "model":              "qwen2.5" if llm_used else None,
-            "confidence":         float(confidence),
-            "confidence_label":   confidence_label,
-            "confidence_message": confidence_message,
-            "confidence_color":   confidence_color,
-            "created_at":         current_time,
-            "updated_at":         current_time,
-        })
+        db.execute(text(insert_sql), insert_params)
         db.commit()
-        print(f"✅ Insight saved — {product_name} | confidence: {confidence}% ({confidence_label}) | data: {data_points} hari")
-
+        print(f"✅ Insight saved — {product_name} | confidence: {confidence}%")
     except Exception as e:
         db.rollback()
-        print(f"⚠ Gagal simpan insight: {e}")
+        print(f"❌ INSERT ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        raise  # re-raise agar error terlihat di script
 
-    sentiment_trend = calculate_sentiment_trend(product_id, db)
-
+    # ── Kembalikan response ──────────────────────────────────────────────────
     return {
         "executive_summary":  executive_summary,
         "summary":            final_summary,
@@ -192,11 +198,11 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "health_label":       label,
         "insights":           insights,
         "recommendations":    recommendations,
-        "dominant_issue":     keyword,
+        "dominant_issue":     dominant_issue,
         "risk_level":         risk_level,
         "llm_used":           llm_used,
         "metrics":            data,
-        "sentiment_trend":    sentiment_trend,
+        "sentiment_trend":    calculate_sentiment_trend(product_id, db),
         "confidence":         confidence,
         "confidence_context": {
             "label":   confidence_label,

@@ -122,14 +122,13 @@ model AiLog {
 }
 
 model KeywordSummary {
-  id String @id @default(uuid())
-
+  id        String   @id @default(uuid())
   productId String
+  word      String
+  count     Int
+  category  String   @default("lainnya")   // ← tambahkan ini
 
-  word  String
-  count Int
-
-  product Product @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 
   @@unique([productId, word])
 }

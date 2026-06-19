@@ -1,3 +1,5 @@
+// app/api/upload/route.ts (Next.js)
+
 import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
@@ -38,7 +40,6 @@ export async function POST(req: NextRequest) {
 
     let success = 0;
     let skipped = 0;
-    let duplicateReviews = 0;
 
     const normalize = (obj: any) => {
       const newObj: any = {};
@@ -138,19 +139,14 @@ export async function POST(req: NextRequest) {
                 sentiment = "neutral";
               }
 
-              // ── findFirst + create — aman dari duplikat tanpa bergantung nama constraint ──
-              // Cek apakah review dengan kombinasi productId + reviewText + reviewDate sudah ada
-              // Kalau sudah ada → skip (tidak insert, tidak update)
-              // Kalau belum ada → insert baru
-              // Upload CSV yang sama dua kali → semua di-skip
-              // Upload CSV minggu baru → baris baru masuk karena reviewDate berbeda
+              // ── Cek duplikat review ──────────────────────────────────────
               const existingReview = await prisma.review.findFirst({
                 where: {
                   productId: cachedProductId,
                   reviewText: reviewText,
                   reviewDate: reviewDate,
                 },
-                select: { id: true }, // hanya ambil id, lebih efisien
+                select: { id: true },
               });
 
               if (!existingReview) {
@@ -166,9 +162,7 @@ export async function POST(req: NextRequest) {
                 });
               }
 
-              // ── UPSERT Sales — sudah aman dari sebelumnya ────────────────
-              // Constraint unik: productId + date
-              // Data penjualan minggu baru otomatis ditambahkan
+              // ── UPSERT Sales ──────────────────────────────────────────────
               const salesValue = Number(normalized.sales);
               const salesDate = dateValue ? new Date(dateValue) : reviewDate;
 
@@ -201,101 +195,40 @@ export async function POST(req: NextRequest) {
           }),
         );
 
-        // ── Update keyword summary setelah setiap chunk ─────────────────────
-        for (const [, cachedProductId] of productCache.entries()) {
-          const allReviews = await prisma.review.findMany({
-            where: { productId: cachedProductId },
-            select: { reviewText: true },
-          });
-
-          // ── WHITELIST keluhan valid — sama persis dengan keyword_service.py ──
-          // Hanya kata yang benar-benar mengindikasikan masalah spesifik yang dihitung
-          // Kata generik seperti "produk", "sangat", "kualitas" (tanpa konteks negatif)
-          // TIDAK dihitung karena tidak actionable bagi UMKM
-          const VALID_COMPLAINT_KEYWORDS = new Set([
-            "pengiriman",
-            "kualitas",
-            "harga",
-            "kemasan",
-            "pelayanan",
-            "expired",
-            "bocor",
-            "tumpah",
-            "plastik",
-            "rusak",
-            "cacat",
-            "lambat",
-            "lama",
-            "mahal",
-            "apek",
-            "basi",
-            "kotor",
-            "lecet",
-            "pecah",
-            "retak",
-            "penyok",
-            "basah",
-            "robek",
-            "kurang",
-            "salah",
-            "palsu",
-            "tiruan",
-            "berbeda",
-          ]);
-
-          const wordCounts: { [key: string]: number } = {};
-
-          // Hanya hitung kata dari ulasan NEGATIVE atau NEUTRAL
-          // (ulasan positif tidak relevan untuk analisis keluhan)
-          const negativeOrNeutralReviews = await prisma.review.findMany({
-            where: {
-              productId: cachedProductId,
-              sentiment: { in: ["negative", "neutral"] },
-            },
-            select: { reviewText: true },
-          });
-
-          negativeOrNeutralReviews.forEach((rev) => {
-            const words = rev.reviewText
-              .toLowerCase()
-              .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-              .split(/\s+/);
-
-            words.forEach((word) => {
-              const cleanWord = word.trim();
-              // WAJIB ada di whitelist — bukan sekadar lolos dari stopword
-              if (VALID_COMPLAINT_KEYWORDS.has(cleanWord)) {
-                wordCounts[cleanWord] = (wordCounts[cleanWord] || 0) + 1;
-              }
-            });
-          });
-
-          const sortedWords = Object.entries(wordCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5); // top 5 keluhan spesifik, bukan top 10 kata generik
-
-          for (const [word, count] of sortedWords) {
-            await prisma.keywordSummary.upsert({
-              where: { productId_word: { productId: cachedProductId, word } },
-              update: { count },
-              create: { productId: cachedProductId, word, count },
-            });
-          }
-        }
-
+        // ── Setelah setiap chunk, panggil update-keyword per produk ──────
+        // Namun lebih baik panggil setelah semua review selesai, di luar loop chunk.
+        // Di sini kita hanya kumpulkan productId, nanti proses di akhir.
         success += results.filter(Boolean).length;
         skipped += results.length - results.filter(Boolean).length;
       }
     }
 
-    // ── TRIGGER PROPHET + INSIGHT SETELAH SEMUA BATCH SELESAI ────────────
-    // Prophet: paralel (tidak pakai LLM, aman dijalankan bersamaan)
-    // Insight: sequential (LLM hanya bisa handle 1 request, harus bergiliran)
-    console.log("🤖 Memulai pipeline AI untuk semua produk yang diupload...");
+    // ── Setelah SEMUA review tersimpan, update keyword summary untuk setiap produk ──
+    console.log("🔄 Memperbarui Keyword Summary untuk semua produk...");
+    for (const [productName, productId] of productCache.entries()) {
+      try {
+        const response = await fetch(
+          `${AI_URL}/update-keyword-summary/${productId}`,
+          {
+            method: "POST",
+          },
+        );
+        if (!response.ok) {
+          console.warn(
+            `⚠️ Gagal update keyword untuk ${productName} (${response.status})`,
+          );
+        } else {
+          console.log(`✅ Keyword summary updated: ${productName}`);
+        }
+      } catch (err) {
+        console.error(`❌ Error update keyword ${productName}:`, err);
+      }
+    }
 
+    // ── TRIGGER PROPHET + INSIGHT ────────────────────────────────────────────
     const products = Array.from(productCache.entries());
 
-    // TAHAP 1 — Prophet paralel
+    // Prophet paralel
     console.log(
       `📈 [1/2] Prophet untuk ${products.length} produk secara paralel...`,
     );
@@ -324,7 +257,7 @@ export async function POST(req: NextRequest) {
       }),
     );
 
-    // TAHAP 2 — Insight bergiliran (sequential) agar LLM tidak tabrakan
+    // Insight sequential
     console.log(
       `💡 [2/2] Insight bergiliran untuk ${products.length} produk...`,
     );

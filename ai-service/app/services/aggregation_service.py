@@ -1,81 +1,52 @@
 from sqlalchemy import text
 
 def aggregate_product_metrics(product_id, db):
-
     positive = db.execute(text("""
         SELECT COUNT(*) FROM "Review"
-        WHERE sentiment = 'positive'
-        AND "productId" = :pid
+        WHERE sentiment = 'positive' AND "productId" = :pid
     """), {"pid": product_id}).scalar() or 0
 
     negative = db.execute(text("""
         SELECT COUNT(*) FROM "Review"
-        WHERE sentiment = 'negative'
-        AND "productId" = :pid
+        WHERE sentiment = 'negative' AND "productId" = :pid
     """), {"pid": product_id}).scalar() or 0
 
     neutral = db.execute(text("""
         SELECT COUNT(*) FROM "Review"
-        WHERE sentiment = 'neutral'
-        AND "productId" = :pid
+        WHERE sentiment = 'neutral' AND "productId" = :pid
     """), {"pid": product_id}).scalar() or 0
 
-    # KeywordSummary tidak punya productId — ambil global
-    top_keyword = db.execute(text("""
-        SELECT word
+    # Ambil kata kunci dan kategori teratas
+    row = db.execute(text("""
+        SELECT word, category
         FROM "KeywordSummary"
         WHERE "productId" = :pid
         ORDER BY count DESC
         LIMIT 1
-    """), {
-        "pid": product_id
-    }).scalar()
+    """), {"pid": product_id}).fetchone()
+
+    top_keyword = row[0] if row else "umum"
+    top_category = row[1] if row else "lainnya"
 
     total = positive + negative + neutral
-
-    pos_pct = (
-        round((positive / total) * 100, 1)
-        if total > 0
-        else 0
-    )
-
-    neg_pct = (
-        round((negative / total) * 100, 1)
-        if total > 0
-        else 0
-    )
-
-    neu_pct = (
-        round((neutral / total) * 100, 1)
-        if total > 0
-        else 0
-    )
+    pos_pct = round((positive / total) * 100, 1) if total > 0 else 0
+    neg_pct = round((negative / total) * 100, 1) if total > 0 else 0
+    neu_pct = round((neutral / total) * 100, 1) if total > 0 else 0
 
     last_sale = db.execute(text("""
-        SELECT quantity
-        FROM "Sales"
+        SELECT quantity FROM "Sales"
         WHERE "productId" = :pid
-        ORDER BY date DESC
-        LIMIT 1
-    """), {
-        "pid": product_id
-    }).scalar()
+        ORDER BY date DESC LIMIT 1
+    """), {"pid": product_id}).scalar()
 
     avg_prediction = db.execute(text("""
-        SELECT AVG("predictedSales")
-        FROM "Prediction"
+        SELECT AVG("predictedSales") FROM "Prediction"
         WHERE "productId" = :pid
-    """), {
-        "pid": product_id
-    }).scalar()
+    """), {"pid": product_id}).scalar()
 
     growth_pct = 0
-
     if last_sale and avg_prediction:
-        growth_pct = round(
-            ((avg_prediction - last_sale) / last_sale) * 100,
-            1
-        )
+        growth_pct = round(((avg_prediction - last_sale) / last_sale) * 100, 1)
 
     if growth_pct > 5:
         trend = "up"
@@ -90,7 +61,8 @@ def aggregate_product_metrics(product_id, db):
         "neutral_percentage":  neu_pct,
         "total_reviews":       total,
         "growth_percentage":   growth_pct,
-        "top_keyword":         top_keyword or "umum",
+        "top_keyword":         top_keyword,
+        "top_category":        top_category,
         "forecast_trend":      trend,
     }
 

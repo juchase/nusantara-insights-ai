@@ -1,17 +1,97 @@
+# insight_engine.py
+
+from sqlalchemy import text
+from app.utils.db import SessionLocal
+
+# ---------------------------------------------------------------------
+# Konfigurasi rekomendasi berbasis KATEGORI (dari KeywordSummary)
+# ---------------------------------------------------------------------
+CATEGORY_CONFIG = {
+    "pengiriman": {
+        "sentence": "Keluhan utama pelanggan berfokus pada layanan pengiriman yang lambat atau bermasalah.",
+        "rec": "Evaluasi performa mitra ekspedisi dan pertimbangkan opsi pengiriman ekspres untuk meningkatkan kepuasan pelanggan.",
+    },
+    "kemasan": {
+        "sentence": "Terdapat keluhan terkait kondisi atau kualitas kemasan produk yang diterima pelanggan.",
+        "rec": "Perbaiki standar pengemasan dan tambahkan lapisan pelindung untuk meminimalkan risiko kerusakan saat pengiriman.",
+    },
+    "produk": {
+        "sentence": "Keluhan signifikan terkait kualitas produk yang tidak sesuai ekspektasi pelanggan.",
+        "rec": "Perketat proses quality control sebelum produk dikemas dan dikirim ke pelanggan.",
+    },
+    "pelayanan": {
+        "sentence": "Pelanggan mengeluhkan responsivitas atau kualitas layanan yang kurang memuaskan.",
+        "rec": "Tingkatkan standar layanan pelanggan dengan mempercepat waktu respons terhadap pertanyaan dan keluhan.",
+    },
+    "lainnya": {
+        "sentence": "Terdapat keluhan beragam yang tidak masuk kategori utama, perlu analisis lebih lanjut.",
+        "rec": "Lakukan analisis lebih mendalam terhadap ulasan pelanggan untuk mengidentifikasi pola keluhan spesifik.",
+    }
+}
+
+# ---------------------------------------------------------------------
+# Helper: ambil kata kunci dominan & kategorinya dari database
+# ---------------------------------------------------------------------
+def get_dominant_keyword(product_id: str):
+    """
+    Mengambil satu kata kunci dengan count tertinggi beserta kategorinya
+    dari tabel KeywordSummary untuk product_id tertentu.
+    Return: (word, category) atau (None, None) jika tidak ada data.
+    """
+    db = SessionLocal()
+    try:
+        row = db.execute(text("""
+            SELECT word, category
+            FROM "KeywordSummary"
+            WHERE "productId" = :product_id
+            ORDER BY count DESC
+            LIMIT 1
+        """), {"product_id": product_id}).fetchone()
+        return (row.word, row.category) if row else (None, None)
+    finally:
+        db.close()
+
+# ---------------------------------------------------------------------
+# Fungsi utama: generate structured insights
+# ---------------------------------------------------------------------
 def generate_structured_insights(
-    positive, negative, neutral, keyword, growth, trend, product_name
+    product_id: str,           # ← harus ada
+    positive: float,
+    negative: float,
+    neutral: float,
+    growth: float,
+    trend: str,
+    product_name: str,
+    keyword: str = None,
+    category: str = None,
 ):
-    insights      = []
+    # ...
+    """
+    Menghasilkan insights terstruktur (list of dict), rekomendasi (list),
+    dan kalimat naratif (list) berdasarkan sentimen, demand, dan keluhan utama.
+    - keyword & category: jika tidak diberikan, akan diambil dari KeywordSummary.
+    """
+    insights = []
     recommendations = []
     raw_sentences = []
 
-    # ── SENTIMEN ─────────────────────────────────────────────────────────────
+    # ---- Ambil keyword dominan dari database jika tidak diberikan ----
+    if keyword is None or category is None:
+        db_keyword, db_category = get_dominant_keyword(product_id)
+        if db_keyword:
+            keyword = keyword or db_keyword
+            category = category or db_category
+        else:
+            keyword = keyword or ""
+            category = category or "lainnya"
+
+    # ---- SENTIMEN ----
     if negative >= 50:
         insights.append({
-            "type":        "warning",
-            "title":       "Sentimen Negatif Sangat Tinggi",
+            "type": "warning",
+            "title": "Sentimen Negatif Sangat Tinggi",
             "description": f"Lebih dari separuh pelanggan ({negative:.0f}%) memberikan ulasan negatif.",
-            "priority":    "HIGH",
+            "priority": "HIGH",
         })
         raw_sentences.append(
             f"{product_name} menerima {negative:.0f}% ulasan negatif dari total pelanggan, "
@@ -19,10 +99,10 @@ def generate_structured_insights(
         )
     elif negative > 30:
         insights.append({
-            "type":        "warning",
-            "title":       "Sentimen Negatif Tinggi",
+            "type": "warning",
+            "title": "Sentimen Negatif Tinggi",
             "description": f"Sentimen negatif mencapai {negative:.0f}%, perlu perhatian.",
-            "priority":    "HIGH",
+            "priority": "HIGH",
         })
         raw_sentences.append(
             f"{product_name} menerima {negative:.0f}% ulasan negatif dari total pelanggan, "
@@ -30,43 +110,43 @@ def generate_structured_insights(
         )
     elif positive >= 70:
         insights.append({
-            "type":        "positive",
-            "title":       "Sentimen Pelanggan Sangat Positif",
+            "type": "positive",
+            "title": "Sentimen Pelanggan Sangat Positif",
             "description": f"Sebanyak {positive:.0f}% pelanggan memberikan ulasan positif.",
-            "priority":    "LOW",
+            "priority": "LOW",
         })
         raw_sentences.append(
             f"Sebanyak {positive:.0f}% pelanggan memberikan ulasan positif terhadap produk {product_name}."
         )
     elif positive >= 50:
         insights.append({
-            "type":        "positive",
-            "title":       "Sentimen Pelanggan Positif",
+            "type": "positive",
+            "title": "Sentimen Pelanggan Positif",
             "description": f"Mayoritas pelanggan ({positive:.0f}%) memberikan ulasan positif.",
-            "priority":    "LOW",
+            "priority": "LOW",
         })
         raw_sentences.append(
             f"Mayoritas pelanggan ({positive:.0f}%) memberikan ulasan positif terhadap {product_name}."
         )
     else:
         insights.append({
-            "type":        "neutral",
-            "title":       "Sentimen Pelanggan Netral",
+            "type": "neutral",
+            "title": "Sentimen Pelanggan Netral",
             "description": f"Sentimen pelanggan bervariasi ({positive:.0f}% positif, {negative:.0f}% negatif).",
-            "priority":    "MEDIUM",
+            "priority": "MEDIUM",
         })
         raw_sentences.append(
             f"Sentimen pelanggan terhadap {product_name} bervariasi dengan "
             f"{positive:.0f}% ulasan positif dan {negative:.0f}% ulasan negatif."
         )
 
-    # ── DEMAND ───────────────────────────────────────────────────────────────
+    # ---- DEMAND ----
     if trend == "up":
         insights.append({
-            "type":        "opportunity",
-            "title":       "Permintaan Produk Meningkat",
+            "type": "opportunity",
+            "title": "Permintaan Produk Meningkat",
             "description": f"Permintaan diprediksi meningkat {growth:.0f}% dalam 7 hari ke depan.",
-            "priority":    "MEDIUM",
+            "priority": "MEDIUM",
         })
         raw_sentences.append(
             f"Permintaan produk diprediksi meningkat sebesar {growth:.0f}% "
@@ -78,10 +158,10 @@ def generate_structured_insights(
         )
     elif trend == "down":
         insights.append({
-            "type":        "warning",
-            "title":       "Permintaan Produk Menurun",
+            "type": "warning",
+            "title": "Permintaan Produk Menurun",
             "description": f"Permintaan diprediksi turun {abs(growth):.0f}% dalam 7 hari ke depan.",
-            "priority":    "HIGH",
+            "priority": "HIGH",
         })
         raw_sentences.append(
             f"Permintaan produk diprediksi menurun sebesar {abs(growth):.0f}% "
@@ -93,95 +173,44 @@ def generate_structured_insights(
         )
     else:
         insights.append({
-            "type":        "positive",
-            "title":       "Permintaan Produk Stabil",
+            "type": "positive",
+            "title": "Permintaan Produk Stabil",
             "description": "Permintaan produk cenderung stabil dalam 7 hari ke depan.",
-            "priority":    "LOW",
+            "priority": "LOW",
         })
-        raw_sentences.append(
-            "Permintaan produk relatif stabil dalam periode mendatang."
-        )
+        raw_sentences.append("Permintaan produk relatif stabil dalam periode mendatang.")
         recommendations.append(
             "Pertahankan kualitas layanan dan pantau performa produk secara berkala."
         )
 
-    # ── KEYWORD — rekomendasi spesifik berdasarkan keluhan ───────────────────
-    keyword_config = {
-        "pengiriman": {
-            "sentence": "Keluhan utama pelanggan berfokus pada layanan pengiriman yang lambat atau bermasalah.",
-            "rec":      "Evaluasi performa mitra ekspedisi dan pertimbangkan penambahan opsi pengiriman ekspres untuk meningkatkan kepuasan pelanggan.",
-        },
-        "kualitas": {
-            "sentence": "Terdapat keluhan signifikan terkait kualitas produk yang tidak sesuai ekspektasi pelanggan.",
-            "rec":      "Perketat proses quality control sebelum produk dikemas dan dikirim ke pelanggan.",
-        },
-        "harga": {
-            "sentence": "Beberapa pelanggan menilai harga produk kurang kompetitif dibanding alternatif lain.",
-            "rec":      "Pertimbangkan program bundling, diskon loyalitas, atau penyesuaian harga untuk meningkatkan daya saing.",
-        },
-        "kemasan": {
-            "sentence": "Terdapat keluhan terkait kondisi atau kualitas kemasan produk yang diterima pelanggan.",
-            "rec":      "Perbaiki standar pengemasan dan tambahkan lapisan pelindung untuk meminimalkan risiko kerusakan saat pengiriman.",
-        },
-        "pelayanan": {
-            "sentence": "Pelanggan mengeluhkan responsivitas atau kualitas layanan yang kurang memuaskan.",
-            "rec":      "Tingkatkan standar layanan pelanggan dengan mempercepat waktu respons terhadap pertanyaan dan keluhan.",
-        },
-        "rusak": {
-            "sentence": "Terdapat laporan produk yang diterima dalam kondisi rusak atau cacat.",
-            "rec":      "Evaluasi proses pengemasan dan penanganan produk selama pengiriman untuk mengurangi tingkat kerusakan.",
-        },
-        "bocor": {
-            "sentence": "Terdapat laporan produk bocor yang menyebabkan ketidakpuasan pelanggan.",
-            "rec":      "Perbarui standar pengemasan dan lakukan uji kebocoran sebelum produk dikirimkan.",
-        },
-        "expired": {
-            "sentence": "Terdapat laporan produk yang diterima dalam kondisi mendekati atau melewati tanggal kedaluwarsa.",
-            "rec":      "Terapkan sistem FIFO (First In First Out) pada manajemen stok untuk memastikan produk segar sampai ke pelanggan.",
-        },
-        "lambat": {
-            "sentence": "Pelanggan mengeluhkan waktu pengiriman yang terlalu lama.",
-            "rec":      "Pertimbangkan bermitra dengan ekspedisi yang menawarkan layanan pengiriman same-day atau next-day.",
-        },
-        "mahal": {
-            "sentence": "Pelanggan menilai harga produk terlalu tinggi dibanding produk sejenis.",
-            "rec":      "Evaluasi struktur harga dan pertimbangkan program promosi atau voucher diskon untuk menarik lebih banyak pembeli.",
-        },
-    }
+    # ---- KELUHAN UTAMA (berdasarkan KATEGORI) ----
+    if category and category in CATEGORY_CONFIG:
+        cfg = CATEGORY_CONFIG[category]
+    else:
+        cfg = CATEGORY_CONFIG["lainnya"]  # fallback
 
-    kw = (keyword or "").lower().strip()
-    if kw in keyword_config:
-        cfg = keyword_config[kw]
-        raw_sentences.append(cfg["sentence"])
-        recommendations.append(cfg["rec"])
-        insights.append({
-            "type":        "warning",
-            "title":       f"Keluhan Utama: {keyword.capitalize()}",
-            "description": cfg["sentence"],
-            "priority":    "HIGH",
-        })
-    elif kw and kw not in ("umum", "none", "tidak diketahui", ""):
-        # Keyword tidak ada di map tapi tetap perlu ditampilkan
-        sentence = f"Keluhan yang paling sering muncul dari pelanggan adalah terkait '{keyword}'."
-        raw_sentences.append(sentence)
-        recommendations.append(
-            f"Lakukan investigasi lebih lanjut terhadap keluhan '{keyword}' "
-            "yang paling banyak dilaporkan pelanggan."
-        )
-        insights.append({
-            "type":        "warning",
-            "title":       f"Keluhan Utama: {keyword.capitalize()}",
-            "description": sentence,
-            "priority":    "MEDIUM",
-        })
+    # Tambahkan insight dan rekomendasi dari kategori
+    # (jika ada keyword, kita tampilkan juga kata spesifiknya)
+    title = f"Keluhan Utama: {category.capitalize()}" if category else "Keluhan Utama"
+    if keyword:
+        title += f" (contoh: '{keyword}')"
 
-    # ── FALLBACK ─────────────────────────────────────────────────────────────
+    insights.append({
+        "type": "warning",
+        "title": title,
+        "description": cfg["sentence"],
+        "priority": "HIGH" if category != "lainnya" else "MEDIUM",
+    })
+    raw_sentences.append(cfg["sentence"])
+    recommendations.append(cfg["rec"])
+
+    # ---- FALLBACK jika tidak ada insight sama sekali ----
     if not insights:
         insights.append({
-            "type":        "positive",
-            "title":       "Performa Produk Stabil",
+            "type": "positive",
+            "title": "Performa Produk Stabil",
             "description": "Tidak ditemukan masalah signifikan pada produk saat ini.",
-            "priority":    "LOW",
+            "priority": "LOW",
         })
         raw_sentences.append("Tidak ditemukan masalah signifikan pada produk saat ini.")
 
@@ -193,17 +222,39 @@ def generate_structured_insights(
     return insights, recommendations, raw_sentences
 
 
+# ---------------------------------------------------------------------
+# Fungsi: executive summary (ringkasan satu paragraf)
+# ---------------------------------------------------------------------
 def generate_executive_summary(
-    product_name: str,
+    product_id: str,
     positive: float,
     negative: float,
     trend: str,
     risk_level: str,
-    dominant_issue: str,
-    growth: float,
-) -> str:
+    product_name: str,
+    growth: float = 0.0,
+    dominant_issue: str = None,   # opsional, jika diberikan akan dipakai
+):
+    """
+    Menghasilkan ringkasan eksekutif dalam bentuk paragraf pendek.
+    - dominant_issue: jika tidak diberikan, akan diambil dari KeywordSummary (kategori).
+    """
+    # ---- Ambil kategori dominan dari database jika tidak diberikan ----
+    if dominant_issue is None:
+        _, db_category = get_dominant_keyword(product_id)
+        dominant_issue = db_category if db_category else "lainnya"
 
-    # ── Sentimen ──────────────────────────────────────────────────────────────
+    # ---- Mapping kategori ke prioritas bisnis ----
+    issue_map = {
+        "pengiriman": "peningkatan kualitas dan kecepatan layanan pengiriman",
+        "kemasan": "perbaikan standar pengemasan produk",
+        "produk": "pengendalian dan peningkatan kualitas produk",
+        "pelayanan": "peningkatan responsivitas layanan pelanggan",
+        "lainnya": "monitoring performa produk secara berkala",
+    }
+    prioritas = issue_map.get(dominant_issue, issue_map["lainnya"])
+
+    # ---- Deskripsi sentimen ----
     if negative >= 50:
         sentimen = f"lebih dari separuh pelanggan ({negative:.0f}%) memberikan ulasan negatif"
     elif negative >= 30:
@@ -218,7 +269,7 @@ def generate_executive_summary(
             f"({positive:.0f}% positif, {negative:.0f}% negatif)"
         )
 
-    # ── Demand ────────────────────────────────────────────────────────────────
+    # ---- Deskripsi demand ----
     if trend == "up":
         demand = f"Permintaan diprediksi meningkat {growth:.0f}% dalam 7 hari ke depan."
     elif trend == "down":
@@ -226,30 +277,15 @@ def generate_executive_summary(
     else:
         demand = "Permintaan relatif stabil dalam periode mendatang."
 
-    # ── Prioritas berdasarkan dominant issue ──────────────────────────────────
-    issue_map = {
-        "pengiriman": "peningkatan kualitas dan kecepatan layanan pengiriman",
-        "kualitas":   "pengendalian dan peningkatan kualitas produk",
-        "harga":      "evaluasi strategi penetapan harga dan program promosi",
-        "kemasan":    "perbaikan standar pengemasan produk",
-        "pelayanan":  "peningkatan responsivitas layanan pelanggan",
-        "rusak":      "pengendalian kerusakan produk selama pengiriman",
-        "expired":    "pengendalian masa kedaluwarsa dengan sistem FIFO",
-        "bocor":      "perbaikan kualitas segel dan kemasan produk",
-        "lambat":     "percepatan proses pengiriman ke pelanggan",
-        "mahal":      "evaluasi strategi harga dan program diskon",
-    }
-    kw       = (dominant_issue or "").lower().strip()
-    prioritas = issue_map.get(kw, "monitoring performa produk secara berkala")
-
-    # ── Opening berdasarkan risk level ────────────────────────────────────────
+    # ---- Opening berdasarkan risk level ----
     risk_map = {
-        "high":   f"{product_name} memerlukan penanganan segera",
+        "high": f"{product_name} memerlukan penanganan segera",
         "medium": f"{product_name} memerlukan perhatian",
-        "low":    f"{product_name} dalam kondisi baik",
+        "low": f"{product_name} dalam kondisi baik",
     }
     opening = risk_map.get(risk_level, f"{product_name} perlu dipantau")
 
+    # ---- Gabungkan menjadi satu paragraf ----
     return (
         f"{opening} dengan {sentimen}. "
         f"{demand} "
