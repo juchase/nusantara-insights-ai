@@ -8,7 +8,7 @@ sqlalchemy
 psycopg2-binary
 sastrawi
 joblib
-scikit-learn
+scikit-learn==1.8.0
 prophet
 spacy==3.7.0
 spacy-pkuseg
