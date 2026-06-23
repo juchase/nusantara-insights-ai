@@ -1,5 +1,6 @@
 import re
 import spacy
+import os
 from sqlalchemy import text
 from app.utils.db import SessionLocal
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
@@ -8,12 +9,14 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFacto
 # spaCy di sini HANYA dipakai untuk lemmatisasi (kata dasar), BUKAN untuk
 # menentukan relevansi kata. POS tagging terlalu permisif karena meloloskan
 # semua NOUN/ADJ termasuk kata netral seperti "aroma", "harum", "rasa".
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "id_core_news_sm", "id_core_news_sm-0.0.4")
+
 try:
-    nlp = spacy.load("id_core_news_sm")
+    nlp = spacy.load(MODEL_PATH)
 except OSError:
-    import os
-    os.system("python -m spacy download id_core_news_sm")
-    nlp = spacy.load("id_core_news_sm")
+    raise RuntimeError(f"Gagal memuat model. Pastikan folder model ada di: {MODEL_PATH}")
 
 factory = StopWordRemoverFactory()
 SASTRAWI_STOPWORDS = set(factory.get_stop_words())
