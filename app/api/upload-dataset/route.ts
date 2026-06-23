@@ -140,27 +140,25 @@ export async function POST(req: NextRequest) {
               }
 
               // ── Cek duplikat review ──────────────────────────────────────
-              const existingReview = await prisma.review.findFirst({
+              await prisma.review.upsert({
                 where: {
-                  productId: cachedProductId,
-                  reviewText: reviewText,
-                  reviewDate: reviewDate,
-                },
-                select: { id: true },
-              });
-
-              if (!existingReview) {
-                await prisma.review.create({
-                  data: {
+                  // The unique index name is generated as: productId_reviewText_reviewDate
+                  productId_reviewText_reviewDate: {
                     productId: cachedProductId,
                     reviewText,
-                    rating,
                     reviewDate,
-                    sentiment,
-                    aspect,
                   },
-                });
-              }
+                },
+                update: {}, // no change needed if it already exists
+                create: {
+                  productId: cachedProductId,
+                  reviewText,
+                  rating,
+                  reviewDate,
+                  sentiment,
+                  aspect,
+                },
+              });
 
               // ── UPSERT Sales ──────────────────────────────────────────────
               const salesValue = Number(normalized.sales);

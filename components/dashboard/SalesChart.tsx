@@ -1,5 +1,3 @@
-// components/dashboard/SalesChart.tsx
-
 "use client";
 
 import {
@@ -12,6 +10,7 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
+import SalesChartSkeleton from "@/components/dashboard/skeleton/SalesChartSkeleton";
 
 type ForecastPoint = {
   date: string;
@@ -79,7 +78,17 @@ export default function SalesChart({
   modelUsed?: string;
   loading?: boolean;
 }) {
-  // Pisahkan actual dan predicted — predicted mulai dari titik actual berakhir
+  // ── LOADING ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return <SalesChartSkeleton />;
+  }
+
+  // ── EMPTY — sembunyikan komponen sepenuhnya ─────────────────────────────
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // ── DATA ADA — render normal ────────────────────────────────────────────
   const lastActualIndex = data.reduce(
     (last, d, i) => (d.actual != null ? i : last),
     -1,
@@ -96,34 +105,6 @@ export default function SalesChart({
     .filter(Boolean) as number[];
   const maxVal = Math.max(...allValues, 0);
 
-  const hasData = data.length > 0;
-
-  if (loading) {
-    return (
-      <div
-        className="min-w-0 px-4 py-5 sm:px-6"
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 16,
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "center", padding: 20 }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              border: "4px solid #e5e7eb",
-              borderTop: "4px solid #3b82f6",
-              borderRadius: "50%",
-              animation: "spin 1s linear infinite",
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className="min-w-0 px-4 py-5 sm:px-6"
@@ -133,7 +114,6 @@ export default function SalesChart({
         borderRadius: 16,
       }}
     >
-      {/* Header */}
       <div
         className="flex-col gap-3 sm:flex-row sm:items-start"
         style={{
@@ -151,7 +131,6 @@ export default function SalesChart({
           </p>
         </div>
 
-        {/* Legend manual */}
         <div
           className="flex-wrap"
           style={{ display: "flex", gap: 16, alignItems: "center" }}
@@ -183,103 +162,84 @@ export default function SalesChart({
         </div>
       </div>
 
-      {!hasData ? (
-        <div
-          style={{
-            height: 280,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+      <ResponsiveContainer width="100%" height={260}>
+        <ComposedChart
+          data={chartData}
+          margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
         >
-          <p style={{ fontSize: 13, color: "#9ca3af" }}>
-            Data penjualan belum tersedia
-          </p>
-        </div>
-      ) : (
-        <ResponsiveContainer width="100%" height={260}>
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
-          >
-            <CartesianGrid
-              stroke="#f3f4f6"
-              strokeDasharray="4 8"
-              vertical={false}
-            />
+          <CartesianGrid
+            stroke="#f3f4f6"
+            strokeDasharray="4 8"
+            vertical={false}
+          />
 
-            <XAxis
-              dataKey="date"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#9ca3af", fontSize: 11 }}
-              interval="preserveStartEnd"
-              minTickGap={40}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#9ca3af", fontSize: 11 }}
-              domain={[0, Math.ceil(maxVal * 1.2)]}
-              width={36}
-            />
+          <XAxis
+            dataKey="date"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "#9ca3af", fontSize: 11 }}
+            interval="preserveStartEnd"
+            minTickGap={40}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "#9ca3af", fontSize: 11 }}
+            domain={[0, Math.ceil(maxVal * 1.2)]}
+            width={36}
+          />
 
-            <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} />
 
-            {/* Garis pemisah actual vs predicted */}
-            {lastActualIndex >= 0 && (
-              <ReferenceLine
-                x={chartData[lastActualIndex]?.date}
-                stroke="#e5e7eb"
-                strokeDasharray="4 4"
-                label={{
-                  value: "Hari ini",
-                  position: "top",
-                  fontSize: 10,
-                  fill: "#9ca3af",
-                }}
-              />
-            )}
-
-            {/* Actual — solid line */}
-            <Line
-              type="monotone"
-              dataKey="actual"
-              name="Aktual"
-              stroke="#4f46e5"
-              strokeWidth={2.5}
-              dot={false}
-              connectNulls={false}
-              activeDot={{
-                r: 5,
-                fill: "#4f46e5",
-                stroke: "#fff",
-                strokeWidth: 2,
+          {lastActualIndex >= 0 && (
+            <ReferenceLine
+              x={chartData[lastActualIndex]?.date}
+              stroke="#e5e7eb"
+              strokeDasharray="4 4"
+              label={{
+                value: "Hari ini",
+                position: "top",
+                fontSize: 10,
+                fill: "#9ca3af",
               }}
             />
+          )}
 
-            {/* Predicted — dashed line */}
-            <Line
-              type="monotone"
-              dataKey="predicted"
-              name="Prediksi"
-              stroke="#1D9E75"
-              strokeWidth={2}
-              strokeDasharray="6 4"
-              dot={false}
-              connectNulls={false}
-              activeDot={{
-                r: 5,
-                fill: "#1D9E75",
-                stroke: "#fff",
-                strokeWidth: 2,
-              }}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      )}
+          <Line
+            type="monotone"
+            dataKey="actual"
+            name="Aktual"
+            stroke="#4f46e5"
+            strokeWidth={2.5}
+            dot={false}
+            connectNulls={false}
+            activeDot={{
+              r: 5,
+              fill: "#4f46e5",
+              stroke: "#fff",
+              strokeWidth: 2,
+            }}
+          />
 
-      {/* Footer info */}
+          <Line
+            type="monotone"
+            dataKey="predicted"
+            name="Prediksi"
+            stroke="#1D9E75"
+            strokeWidth={2}
+            strokeDasharray="6 4"
+            dot={false}
+            connectNulls={false}
+            activeDot={{
+              r: 5,
+              fill: "#1D9E75",
+              stroke: "#fff",
+              strokeWidth: 2,
+            }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+
       <div
         className="items-start sm:items-center"
         style={{

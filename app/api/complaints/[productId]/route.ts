@@ -33,7 +33,7 @@ export async function GET(
     take: 5,
   });
 
-  const topKeywords = keywords.map((k) => [k.word, k.count]);
+  const topKeywords = keywords.map((k) => [k.category, k.count]);
 
   return NextResponse.json({ topKeywords });
 }

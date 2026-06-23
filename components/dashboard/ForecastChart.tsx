@@ -1,11 +1,13 @@
 "use client";
 
+import ForecastChartSkeleton from "@/components/dashboard/skeleton/ForecastChartSkeleton";
+
 type ForecastPoint = {
   date: string;
   actual?: number | null;
   predicted?: number | null;
-  upper?: number | null; // yhat_upper Prophet
-  lower?: number | null; // yhat_lower Prophet
+  upper?: number | null;
+  lower?: number | null;
 };
 
 type ConfidenceContext = {
@@ -14,7 +16,6 @@ type ConfidenceContext = {
   color: "green" | "amber" | "red";
 };
 
-// Tipe untuk forecast_summary yang dikembalikan demand_service.py
 type ForecastSummary = {
   avg: number;
   min: number;
@@ -53,7 +54,6 @@ function getDemandAlert(growth: number): {
   };
 }
 
-// ── Komponen mini: bar uncertainty interval ───────────────────────────────
 function IntervalBar({
   lower,
   upper,
@@ -63,14 +63,12 @@ function IntervalBar({
   upper: number;
   avg: number;
 }) {
-  // Hitung posisi relatif dalam bar (0–100%)
   const range = upper - lower;
   const pct = range > 0 ? ((avg - lower) / range) * 100 : 50;
   const clamped = Math.max(0, Math.min(100, pct));
 
   return (
     <div style={{ marginTop: 10 }}>
-      {/* Label ujung */}
       <div
         style={{
           display: "flex",
@@ -86,7 +84,6 @@ function IntervalBar({
         </span>
       </div>
 
-      {/* Track */}
       <div
         style={{
           position: "relative",
@@ -96,7 +93,6 @@ function IntervalBar({
           overflow: "visible",
         }}
       >
-        {/* Fill dari lower ke upper */}
         <div
           style={{
             position: "absolute",
@@ -109,7 +105,6 @@ function IntervalBar({
               "linear-gradient(90deg, rgba(93,202,165,0.25) 0%, rgba(93,202,165,0.55) 50%, rgba(93,202,165,0.25) 100%)",
           }}
         />
-        {/* Titik prediksi rata-rata */}
         <div
           style={{
             position: "absolute",
@@ -140,7 +135,6 @@ function IntervalBar({
   );
 }
 
-// ── Komponen utama ────────────────────────────────────────────────────────
 export default function ForecastChart({
   data,
   growth,
@@ -155,13 +149,23 @@ export default function ForecastChart({
   confidence: number;
   confidenceContext?: ConfidenceContext | null;
   modelUsed?: string;
-  forecastSummary?: ForecastSummary | null; // dari Prophet forecast_summary
+  forecastSummary?: ForecastSummary | null;
   loading: boolean;
 }) {
+  // ── LOADING ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return <ForecastChartSkeleton />;
+  }
+
+  // ── EMPTY — null ATAU array kosong dianggap kondisi yang sama,
+  // sembunyikan komponen sepenuhnya ──────────────────────────────────────
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // ── DATA ADA — render normal ────────────────────────────────────────────
   const latestActual = [...data].reverse().find((d) => d.actual)?.actual;
 
-  // Gunakan forecastSummary dari Prophet jika tersedia,
-  // fallback ke kalkulasi manual dari data array
   const avgPredicted =
     forecastSummary?.avg ??
     (() => {
@@ -197,49 +201,6 @@ export default function ForecastChart({
 
   const ctxMessage = confidenceContext?.message ?? "";
 
-  if (!data) {
-    return (
-      <div
-        className="min-w-0 p-5 sm:p-6 lg:p-7"
-        style={{
-          minHeight: 420,
-          borderRadius: 20,
-          background: "#1a1a2e",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          color: "#fff",
-        }}
-      >
-        <p className="text-sm text-[#AFA9EC]">Tidak ada data prediksi</p>
-      </div>
-    );
-  }
-
-  // ── Loading state ──────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div
-        className="min-w-0 p-5 sm:p-6 lg:p-7"
-        style={{
-          minHeight: 420,
-          borderRadius: 20,
-          background: "#1a1a2e",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          color: "#fff",
-        }}
-      >
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5DCAA5]" />
-        <p className="mt-4 text-sm text-[#AFA9EC]">Memuat prediksi...</p>
-      </div>
-    );
-  }
-
-  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div
       className="min-w-0 p-5 sm:p-6 lg:p-7"
@@ -254,7 +215,6 @@ export default function ForecastChart({
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* ── Title ── */}
         <div>
           <p style={{ fontSize: 15, fontWeight: 500, color: "#fff" }}>
             Prediksi Permintaan
@@ -270,7 +230,6 @@ export default function ForecastChart({
           </p>
         </div>
 
-        {/* ── Growth ── */}
         <div>
           <p
             style={{
@@ -314,7 +273,6 @@ export default function ForecastChart({
           </div>
         </div>
 
-        {/* ── Confidence ── */}
         <div
           style={{
             background: "rgba(255,255,255,0.07)",
@@ -364,7 +322,6 @@ export default function ForecastChart({
           )}
         </div>
 
-        {/* ── Stats: Penjualan Terakhir + Rata-rata Prediksi ── */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]">
           <div
             style={{
@@ -433,7 +390,6 @@ export default function ForecastChart({
           </div>
         </div>
 
-        {/* ── Uncertainty Interval Prophet — hanya tampil jika data tersedia ── */}
         {hasInterval && forecastSummary && (
           <div
             style={{
@@ -480,7 +436,6 @@ export default function ForecastChart({
               </span>
             </div>
 
-            {/* Bar visual */}
             <IntervalBar
               lower={forecastSummary.lower}
               upper={forecastSummary.upper}
@@ -490,7 +445,6 @@ export default function ForecastChart({
         )}
       </div>
 
-      {/* ── Footer ── */}
       <p
         style={{
           fontSize: 11,

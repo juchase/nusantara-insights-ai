@@ -1,8 +1,8 @@
-// components/dashboard/SentimentTrendCard.tsx
 "use client";
 
 import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { SentimentTrend } from "@/types/insight";
+import SentimentTrendCardSkeleton from "@/components/dashboard/skeleton/SentimentTrendCardSkeleton";
 
 const TREND_CONFIG = {
   improving: {
@@ -38,40 +38,21 @@ export default function SentimentTrendCard({
   data?: SentimentTrend;
   loading?: boolean;
 }) {
-  // 1. Kondisi Loading
+  // ── LOADING ──────────────────────────────────────────────────────────────
   if (loading) {
-    return (
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          padding: "16px 20px",
-        }}
-      >
-        <div
-          style={{
-            height: 12,
-            width: 160,
-            background: "#f3f4f6",
-            borderRadius: 4,
-            marginBottom: 12,
-          }}
-          className="animate-pulse"
-        />
-        <div
-          style={{ height: 40, background: "#f9fafb", borderRadius: 8 }}
-          className="animate-pulse"
-        />
-      </div>
-    );
+    return <SentimentTrendCardSkeleton />;
   }
 
-  // 2. Ambil status dengan aman (ubah ke lowercase untuk menghindari salah ketik dari backend)
-  const dataStatus = data?.status?.toLowerCase();
+  // ── EMPTY TOTAL — belum ada produk/data sama sekali -> sembunyikan ─────
+  if (!data) {
+    return null;
+  }
 
-  // 3. Kondisi jika data TIDAK VALID atau statusnya 'insufficient_data'
-  if (!data || dataStatus === "insufficient_data" || dataStatus !== "ok") {
+  // ── DATA TIDAK CUKUP — bukan "kosong total", tapi status bermakna yang
+  // perlu disampaikan ke user ("butuh lebih banyak ulasan"). Tetap tampilkan
+  // pesan singkat, JANGAN return null, karena ini bukan empty state biasa.
+  const dataStatus = data.status?.toLowerCase();
+  if (dataStatus === "insufficient_data" || dataStatus !== "ok") {
     return (
       <div
         style={{
@@ -92,15 +73,14 @@ export default function SentimentTrendCard({
           Tren Sentimen
         </p>
         <p style={{ fontSize: 12, color: "#9ca3af" }}>
-          {data?.message ?? "Belum ada data tren"}
+          {data.message ?? "Belum ada data tren"}
         </p>
       </div>
     );
   }
 
-  // 4. Jika lolos validasi di atas, baru render sisa kode ke bawah...
+  // ── DATA ADA — render normal ────────────────────────────────────────────
   const cfg = TREND_CONFIG[data.trend] ?? TREND_CONFIG.stable;
-
   const delta = data.delta > 0 ? `+${data.delta}%` : `${data.delta}%`;
 
   return (
@@ -112,7 +92,6 @@ export default function SentimentTrendCard({
         padding: "16px 20px",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -147,25 +126,23 @@ export default function SentimentTrendCard({
         </span>
       </div>
 
-      {/* Comparison visual */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           gap: 8,
           marginBottom: 14,
-          minWidth: 0, // ← tambah ini
-          overflow: "hidden", // ← tambah ini
+          minWidth: 0,
+          overflow: "hidden",
         }}
       >
-        {/* Periode awal */}
         <div
           style={{
             flex: 1,
-            minWidth: 0, // ← tambah ini
+            minWidth: 0,
             background: "#f9fafb",
             borderRadius: 10,
-            padding: "10px 10px", // ← kurangi padding horizontal
+            padding: "10px 10px",
             textAlign: "center",
           }}
         >
@@ -207,15 +184,14 @@ export default function SentimentTrendCard({
           </p>
         </div>
 
-        {/* Arrow + delta — lebar fixed */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             gap: 4,
-            flexShrink: 0, // ← jangan dikecilkan
-            width: 44, // ← lebar fixed
+            flexShrink: 0,
+            width: 44,
           }}
         >
           <span style={{ fontSize: 18, color: cfg.color }}>{cfg.arrow}</span>
@@ -224,14 +200,13 @@ export default function SentimentTrendCard({
           </span>
         </div>
 
-        {/* Periode akhir */}
         <div
           style={{
             flex: 1,
-            minWidth: 0, // ← tambah ini
+            minWidth: 0,
             background: "#f9fafb",
             borderRadius: 10,
-            padding: "10px 10px", // ← kurangi padding horizontal
+            padding: "10px 10px",
             textAlign: "center",
           }}
         >
@@ -273,7 +248,7 @@ export default function SentimentTrendCard({
           </p>
         </div>
       </div>
-      {/* Message */}
+
       <div
         style={{
           background: cfg.bg,

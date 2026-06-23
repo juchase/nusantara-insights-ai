@@ -1,10 +1,8 @@
-// components/dashboard/RiskOverview.tsx
-
 "use client";
 
 import { InsightResponse } from "@/types/insight";
 import { Check, Minus, TrendingDown, TrendingUp, X } from "lucide-react";
-import CardSkeleton from "@/components/dashboard/skeleton/CardSkeleton";
+import RiskOverviewSkeleton from "@/components/dashboard/skeleton/RiskOverviewSkeleton";
 
 interface Props {
   insight: InsightResponse | null;
@@ -19,29 +17,17 @@ const RISK_STYLE: Record<string, { bg: string; color: string; label: string }> =
   };
 
 export default function RiskOverview({ insight, loading }: Props) {
-  if (loading || !insight) {
-    return (
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          padding: "16px 20px",
-        }}
-      >
-        <p style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
-          Risk Overview
-        </p>
-        <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 14 }}>
-          Status keseluruhan produk
-        </p>
-        <div style={{ textAlign: "center", padding: "32px 0" }}>
-          <p style={{ fontSize: 13, color: "#9ca3af" }}>Belum ada data</p>
-        </div>
-      </div>
-    );
+  // ── LOADING ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return <RiskOverviewSkeleton />;
   }
 
+  // ── EMPTY — sembunyikan komponen sepenuhnya ─────────────────────────────
+  if (!insight) {
+    return null;
+  }
+
+  // ── DATA ADA — render normal ────────────────────────────────────────────
   const risk = RISK_STYLE[insight.risk_level ?? "low"];
   const trend = insight.metrics?.forecast_trend ?? "stable";
   const llmUsed = insight.llm_used;

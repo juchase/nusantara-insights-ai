@@ -55,6 +55,7 @@ export default function DashboardPage() {
   const [topKeywords, setTopKeywords] = useState<[string, number][]>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoaded, setProductsLoaded] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [insight, setInsight] = useState<InsightResponse | null>(null);
 
@@ -104,9 +105,31 @@ export default function DashboardPage() {
       try {
         const data = await safeFetch<Product[]>("/api/products", []);
         setProducts(data);
-        if (data.length > 0) setSelectedProduct(data[0].id);
+        if (data.length > 0) {
+          setSelectedProduct(data[0].id);
+        } else {
+          // ── FIX: user baru tanpa produk sama sekali ────────────────────
+          // Tanpa selectedProduct, semua useEffect lain (analytics, insight,
+          // forecast, complaints) TIDAK PERNAH jalan karena early-return
+          // `if (!selectedProduct) return;`. Akibatnya setXxxLoading(false)
+          // di blok finally masing-masing juga tidak pernah terpanggil, dan
+          // semua komponen anak STUCK selamanya di skeleton loading.
+          // Set semua loading ke false secara eksplisit di sini supaya
+          // komponen-komponen itu lanjut ke pengecekan empty state (null).
+          setAnalyticsLoading(false);
+          setForecastLoading(false);
+          setInsightLoading(false);
+          setComplaintsLoading(false);
+        }
       } catch (err) {
         console.error(err);
+        // Fetch produk gagal -> jangan biarkan UI nyangkut loading selamanya
+        setAnalyticsLoading(false);
+        setForecastLoading(false);
+        setInsightLoading(false);
+        setComplaintsLoading(false);
+      } finally {
+        setProductsLoaded(true);
       }
     };
     fetchProducts();
@@ -145,7 +168,6 @@ export default function DashboardPage() {
   }, [selectedProduct, products.length]);
 
   // ── INSIGHT — baca dari DB saja, tidak call AI service ───────────────────
-  // AI hanya dipanggil saat upload dataset (upload-dataset/route.ts)
   useEffect(() => {
     if (!selectedProduct) return;
 
@@ -159,7 +181,6 @@ export default function DashboardPage() {
         );
 
         if (!insightData) {
-          // Belum ada insight — produk baru diupload atau pipeline AI belum selesai
           setInsight(null);
           return;
         }
@@ -179,12 +200,10 @@ export default function DashboardPage() {
           sentiment_trend: insightData.sentiment_trend,
         });
 
-        // forecastSummary sudah tersedia dari response insights
         if (insightData.forecastSummary) {
           setForecastSummary(insightData.forecastSummary);
         }
 
-        // Confidence dan growth dari metrics
         const growthPct = insightData.metrics?.growth_percentage ?? 0;
         setGrowth(growthPct);
 
@@ -199,7 +218,6 @@ export default function DashboardPage() {
   }, [selectedProduct]);
 
   // ── FORECAST — baca prediksi dari DB saja ────────────────────────────────
-  // Prophet sudah dijalankan saat upload, hasilnya sudah ada di tabel Prediction
   useEffect(() => {
     if (!selectedProduct) return;
 
@@ -219,8 +237,6 @@ export default function DashboardPage() {
           ) as ForecastPoint[],
         );
 
-        // Confidence dari prediksi yang tersimpan
-        // (sudah di-set dari loadInsight via metrics)
         setModelUsed("prophet");
       } finally {
         setForecastLoading(false);
@@ -259,7 +275,7 @@ export default function DashboardPage() {
           products={products}
           selectedProduct={selectedProduct}
           onProductChange={setSelectedProduct}
-          loading={insightLoading}
+          loading={!productsLoaded || insightLoading}
         />
 
         <ProductRanking />
@@ -273,18 +289,27 @@ export default function DashboardPage() {
         />
 
         {/* ROW A: Sentiment Distribution + Forecast */}
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
-            <SentimentDistribution
-              positive={Math.round(insight?.metrics?.positive_percentage ?? 0)}
-              neutral={Math.round(insight?.metrics?.neutral_percentage ?? 0)}
-              negative={Math.round(insight?.metrics?.negative_percentage ?? 0)}
-              loading={insightLoading}
-            />
-            <SentimentTrendCard
-              data={insight?.sentiment_trend}
-              loading={insightLoading}
-            />
+        <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4">
+            {/* Mengapus xl:grid-cols-2 agar pembungkus luar tetap 1 kolom penuh */}
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
+              {/* Layout 2 kolom ini sekarang akan bertahan dari ukuran 'sm' hingga layar paling besar */}
+              <SentimentDistribution
+                positive={Math.round(
+                  insight?.metrics?.positive_percentage ?? 0,
+                )}
+                neutral={Math.round(insight?.metrics?.neutral_percentage ?? 0)}
+                negative={Math.round(
+                  insight?.metrics?.negative_percentage ?? 0,
+                )}
+                loading={insightLoading}
+              />
+              <SentimentTrendCard
+                data={insight?.sentiment_trend}
+                loading={insightLoading}
+              />
+            </div>
           </div>
 
           <ForecastChart
