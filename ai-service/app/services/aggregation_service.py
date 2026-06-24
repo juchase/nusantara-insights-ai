@@ -1,4 +1,5 @@
 from sqlalchemy import text
+from datetime import timedelta
 
 def aggregate_product_metrics(product_id, db):
     positive = db.execute(text("""
@@ -67,72 +68,50 @@ def aggregate_product_metrics(product_id, db):
     }
 
 def calculate_sentiment_trend(product_id: str, db) -> dict:
-    """
-    Bandingkan sentimen periode awal vs periode akhir.
-    Pakai first-half vs second-half dari semua review.
-    """
     rows = db.execute(text("""
         SELECT sentiment, "reviewDate"
         FROM "Review"
         WHERE "productId" = :pid
-        ORDER BY "reviewDate" ASC
+        ORDER BY "reviewDate" DESC
     """), {"pid": product_id}).fetchall()
 
-    # Minimal 10 review untuk perbandingan bermakna
     if len(rows) < 10:
-        return {
-            "status":               "insufficient_data",
-            "first_period_positive":  0,
-            "second_period_positive": 0,
-            "delta":                  0,
-            "trend":                  "insufficient_data",
-            "label":                  "Data belum cukup",
-            "message":                "Minimal 10 ulasan diperlukan untuk analisis tren",
-        }
+        return {"status": "insufficient_data", "label": "Data belum cukup"}
 
-    mid    = len(rows) // 2
-    first  = rows[:mid]
-    second = rows[mid:]
+    # Tanggal terbaru sebagai patokan
+    latest_date = rows[0][1]
+    cutoff_date = latest_date - timedelta(days=30)               # 30 hari terakhir
+    second_cutoff = cutoff_date - timedelta(days=30)             # 30 hari sebelumnya
+
+    # Filter berdasarkan waktu (bukan berdasarkan count)
+    second_period = [r for r in rows if r[1] >= cutoff_date]
+    first_period = [r for r in rows if second_cutoff <= r[1] < cutoff_date]
+
+    # Fallback jika data di salah satu periode kosong
+    if not first_period or not second_period:
+        mid = len(rows) // 2
+        first_period = rows[:mid]
+        second_period = rows[mid:]
 
     def pos_pct(data):
-        if not data:
-            return 0
+        if not data: return 0
         pos = sum(1 for r in data if r[0] == "positive")
         return round(pos / len(data) * 100, 1)
 
-    first_pos  = pos_pct(first)
-    second_pos = pos_pct(second)
-    delta      = round(second_pos - first_pos, 1)
+    first_pos = pos_pct(first_period)
+    second_pos = pos_pct(second_period)
+    delta = round(second_pos - first_pos, 1)
 
-    # Ambil rentang tanggal tiap periode
-    first_start  = str(first[0][1])[:10]   if first  else "—"
-    first_end    = str(first[-1][1])[:10]  if first  else "—"
-    second_start = str(second[0][1])[:10]  if second else "—"
-    second_end   = str(second[-1][1])[:10] if second else "—"
-
-    if delta > 5:
-        trend   = "improving"
-        label   = "Membaik"
-        message = f"Sentimen positif naik {delta:.1f}% pada periode akhir"
-    elif delta < -5:
-        trend   = "declining"
-        label   = "Menurun"
-        message = f"Sentimen positif turun {abs(delta):.1f}% pada periode akhir"
-    else:
-        trend   = "stable"
-        label   = "Stabil"
-        message = "Sentimen pelanggan relatif konsisten antar periode"
+    if delta > 5:   trend, label = "improving", "Membaik"
+    elif delta < -5: trend, label = "declining", "Menurun"
+    else:           trend, label = "stable", "Stabil"
 
     return {
-        "status":                 "ok",
-        "first_period_positive":  first_pos,
+        "status": "ok",
+        "first_period_positive": first_pos,
         "second_period_positive": second_pos,
-        "delta":                  delta,
-        "trend":                  trend,
-        "label":                  label,
-        "message":                message,
-        "first_period_range":     f"{first_start} — {first_end}",
-        "second_period_range":    f"{second_start} — {second_end}",
-        "first_period_count":     len(first),
-        "second_period_count":    len(second),
+        "delta": delta,
+        "trend": trend,
+        "label": label,
+        "message": f"Sentimen positif {trend} {abs(delta):.1f}% pada 30 hari terakhir",
     }

@@ -6,7 +6,7 @@ import { NextRequest } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ productId: string }> }, // ← tambah Promise
+  { params }: { params: Promise<{ productId: string }> },
 ) {
   const userPayload = getUserFromRequest(req);
 
@@ -14,26 +14,27 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { productId } = await params; // ← await dulu
+  const { productId } = await params;
 
-  const product = await prisma.product.findFirst({
-    where: {
-      id: productId,
-      userId: userPayload.userId,
-    },
-  });
-
-  if (!product) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const keywords = await prisma.keywordSummary.findMany({
+  // GROUP BY Category & SUM count untuk hilangkan duplikasi
+  const groupedKeywords = await prisma.keywordSummary.groupBy({
+    by: ["category"],
     where: { productId },
-    orderBy: { count: "desc" },
-    take: 5,
+    _sum: { count: true },
   });
 
-  const topKeywords = keywords.map((k) => [k.category, k.count]);
+  // Sorting manual untuk ambil 5 teratas
+  const sorted = groupedKeywords
+    .map((item) => ({
+      category: item.category,
+      totalCount: item._sum.count ?? 0,
+    }))
+    .sort((a, b) => b.totalCount - a.totalCount);
+
+  // Kembalikan format [category, count] seperti yang diharapkan frontend
+  const topKeywords = sorted
+    .slice(0, 5)
+    .map((item) => [item.category, item.totalCount]);
 
   return NextResponse.json({ topKeywords });
 }

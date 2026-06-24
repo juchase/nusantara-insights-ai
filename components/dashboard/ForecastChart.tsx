@@ -289,14 +289,55 @@ export default function ForecastChart({
           >
             Tingkat Kepercayaan Model
           </p>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 8,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Angka SELALU ditampilkan, warnanya disesuaikan */}
+            <span
+              style={{
+                fontSize: 22,
+                fontWeight: 500,
+                color: confidence < 20 ? "rgba(255,255,255,0.6)" : "#fff",
+              }}
+            >
               {confidence.toFixed(1)}%
             </span>
-            <span style={{ fontSize: 11, color: ctxColor, fontWeight: 500 }}>
-              {ctxLabel}
-            </span>
+
+            {/* Label status berubah tergantung confidence */}
+            {confidence >= 70 ? (
+              <span style={{ fontSize: 11, color: "#5DCAA5", fontWeight: 500 }}>
+                Akurasi Tinggi
+              </span>
+            ) : confidence >= 40 ? (
+              <span style={{ fontSize: 11, color: "#EF9F27", fontWeight: 500 }}>
+                Akurasi Sedang
+              </span>
+            ) : confidence >= 20 ? (
+              <span style={{ fontSize: 11, color: "#E24B4A", fontWeight: 500 }}>
+                Akurasi Rendah
+              </span>
+            ) : (
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "rgba(255,255,255,0.5)",
+                  fontWeight: 500,
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 4,
+                  padding: "0px 6px",
+                }}
+              >
+                Data Terbatas
+              </span>
+            )}
           </div>
+
           {ctxMessage && (
             <p
               style={{

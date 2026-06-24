@@ -190,10 +190,7 @@ def generate_structured_insights(
         cfg = CATEGORY_CONFIG["lainnya"]  # fallback
 
     # Tambahkan insight dan rekomendasi dari kategori
-    # (jika ada keyword, kita tampilkan juga kata spesifiknya)
     title = f"Keluhan Utama: {category.capitalize()}" if category else "Keluhan Utama"
-    if keyword:
-        title += f" (contoh: '{keyword}')"
 
     insights.append({
         "type": "warning",

@@ -50,6 +50,7 @@ NEGATIVE_STANDALONE = {
     "expired", "kadaluarsa", "basi", "apek", "kotor", "berjamur", "berbau",
     "palsu", "tiruan", "beda", "berbeda", "salah", "hancur", "melempem",
     "cuek", "kecewa", "marah", "kesal", "menyengat",
+    "buruk", "ampas", "kasar", "hambar",
 }
 
 # ── KATEGORISASI ────────────────────────────────────────────────────────────────

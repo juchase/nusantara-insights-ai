@@ -115,7 +115,7 @@ export default function InsightCard({
           </div>
 
           <Link
-            href="/upload"
+            href="/dashboard/upload"
             style={{
               display: "inline-flex",
               alignItems: "center",

@@ -346,27 +346,43 @@ export default function ProductRanking() {
           marginBottom: 16,
         }}
       >
-        <TopCard
-          label="Terbaik"
-          icon={<Trophy size={14} />}
-          iconColor="#3B6D11"
-          iconBg="#EAF3DE"
-          product={data.best}
-        />
-        <TopCard
-          label="Perlu Perhatian"
-          icon={<AlertTriangle size={14} />}
-          iconColor="#854F0B"
-          iconBg="#FAEEDA"
-          product={data.worst}
-        />
-        <TopCard
-          label="Keluhan Terbanyak"
-          icon={<MessageSquareWarning size={14} />}
-          iconColor="#A32D2D"
-          iconBg="#FCEBEB"
-          product={data.mostComplaints}
-        />
+        {data.total === 1 ? (
+          // ── FIX UX: Jika cuma 1 produk, tampilkan 1 kartu ringkasan ──
+          <div className="md:col-span-3">
+            <TopCard
+              label="Ringkasan Produk"
+              icon={<Trophy size={14} />}
+              iconColor="#3B6D11"
+              iconBg="#EAF3DE"
+              product={data.best}
+            />
+          </div>
+        ) : (
+          // ── Jika lebih dari 1 produk, tampilkan 3 kartu peringkat ──
+          <>
+            <TopCard
+              label="Terbaik"
+              icon={<Trophy size={14} />}
+              iconColor="#3B6D11"
+              iconBg="#EAF3DE"
+              product={data.best}
+            />
+            <TopCard
+              label="Perlu Perhatian"
+              icon={<AlertTriangle size={14} />}
+              iconColor="#854F0B"
+              iconBg="#FAEEDA"
+              product={data.worst}
+            />
+            <TopCard
+              label="Keluhan Terbanyak"
+              icon={<MessageSquareWarning size={14} />}
+              iconColor="#A32D2D"
+              iconBg="#FCEBEB"
+              product={data.mostComplaints}
+            />
+          </>
+        )}
       </div>
 
       {/* Modal daftar produk */}
