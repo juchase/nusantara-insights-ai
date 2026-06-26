@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // 2. Ambil insight terbaru dari database
+    // 2. Ambil insight terbaru
     const insight = await prisma.insight.findFirst({
       where: { productId, product: { userId: userPayload.userId } },
       orderBy: { createdAt: "desc" },
@@ -34,27 +34,47 @@ export async function GET(
       return NextResponse.json(null, { status: 200 });
     }
 
-    // 3. Ambil data agregat ulasan dan prediksi secara paralel
-    const [reviewStats, allReviews, predictions] = await Promise.all([
+    // 3. Tentukan frekuensi prediksi dari tabel Prediction
+    const latestPrediction = await prisma.prediction.findFirst({
+      where: { productId },
+      orderBy: { predictionDate: "desc" },
+      select: { modelVersion: true },
+    });
+
+    let freq: "D" | "W" = "D";
+    let modelVersion = latestPrediction?.modelVersion ?? "prophet";
+
+    if (
+      modelVersion &&
+      (modelVersion.toLowerCase().includes("weekly") ||
+        modelVersion.toLowerCase().includes("moving_average") ||
+        modelVersion.toLowerCase().includes("week"))
+    ) {
+      freq = "W";
+    }
+
+    const takeCount = freq === "W" ? 4 : 7;
+    const predictions = await prisma.prediction.findMany({
+      where: { productId },
+      orderBy: { predictionDate: "asc" },
+      take: takeCount,
+    });
+
+    // 4. Ambil data review untuk sentimen
+    const [reviewStats, allReviews] = await Promise.all([
       prisma.review.groupBy({
         by: ["sentiment"],
         where: { productId },
         _count: { sentiment: true },
       }),
-      // Ambil data tanggal dan sentimen ulasan secara berurutan (PENTING untuk Tren Sentimen)
       prisma.review.findMany({
         where: { productId },
-        select: { sentiment: true, reviewDate: true }, // Menggunakan reviewDate sesuai skema DB
+        select: { sentiment: true, reviewDate: true },
         orderBy: { reviewDate: "asc" },
-      }),
-      prisma.prediction.findMany({
-        where: { productId },
-        orderBy: { predictionDate: "asc" },
-        take: 7,
       }),
     ]);
 
-    // 4. Hitung Persentase Sentimen Global
+    // ── Hitung persentase sentimen global ──
     const totalReviews = reviewStats.reduce(
       (sum, r) => sum + r._count.sentiment,
       0,
@@ -75,7 +95,7 @@ export async function GET(
     const neutralPercentage =
       totalReviews > 0 ? (neutralCount / totalReviews) * 100 : 0;
 
-    // 5. KALKULASI TREN PERIODE (COCOK DENGAN KARTU DISPLAY DI TENGAH DASHBOARD)
+    // ── Hitung tren sentimen (periode) ──
     let sentimentTrendResponse;
 
     if (allReviews.length < 10) {
@@ -105,7 +125,6 @@ export async function GET(
       const secondPos = calcPosPct(secondPeriod);
       const delta = Math.round((secondPos - firstPos) * 10) / 10;
 
-      // Format string tanggal YYYY-MM-DD dengan aman dari object reviewDate
       const formatDate = (dateInput: any) => {
         if (!dateInput) return "—";
         const d = new Date(dateInput);
@@ -150,7 +169,47 @@ export async function GET(
       };
     }
 
-    // 6. Return Data JSON Terstruktur ke Frontend
+    // 6. Siapkan forecastSummary dari prediksi
+    const forecastSummary =
+      predictions.length > 0
+        ? {
+            avg: Math.round(
+              predictions.reduce((s, p) => s + p.predictedSales, 0) /
+                predictions.length,
+            ),
+            min: Math.min(...predictions.map((p) => p.predictedSales)),
+            max: Math.max(...predictions.map((p) => p.predictedSales)),
+            lower: Math.min(
+              ...predictions.map(
+                (p) => (p as any).lowerBound ?? p.predictedSales,
+              ),
+            ),
+            upper: Math.max(
+              ...predictions.map(
+                (p) => (p as any).upperBound ?? p.predictedSales,
+              ),
+            ),
+          }
+        : null;
+
+    // ── HITUNG GROWTH DAN DETEKSI LOW-VOLUME ──────────────────────────────
+    const rawGrowth = Number(insight.demandGrowthPct ?? 0);
+    const avgPred = forecastSummary?.avg ?? 0;
+    const isLowVolume = avgPred < 10 && Math.abs(rawGrowth) > 50;
+
+    let growthPercentage = rawGrowth;
+    let forecastTrend = insight.demandTrend ?? "stable";
+
+    if (isLowVolume) {
+      // Set growth ke 0 agar rekomendasi tidak menulis angka gila
+      growthPercentage = 0;
+      // Tapi trend tetap mengikuti arah asli
+      if (rawGrowth > 0) forecastTrend = "up";
+      else if (rawGrowth < 0) forecastTrend = "down";
+      else forecastTrend = "stable";
+    }
+
+    // 7. Return JSON lengkap
     return NextResponse.json({
       executive_summary: insight.executiveSummary ?? "",
       summary: insight.summary ?? "",
@@ -161,18 +220,18 @@ export async function GET(
       dominant_issue: insight.dominantIssue ?? "—",
       risk_level: insight.riskLevel ?? "low",
       llm_used: insight.llmUsed ?? false,
+      freq,
+      modelVersion,
       metrics: {
         positive_percentage: Math.round(positivePercentage * 10) / 10,
         negative_percentage: Math.round(negativePercentage * 10) / 10,
         neutral_percentage: Math.round(neutralPercentage * 10) / 10,
         total_reviews: totalReviews,
-        growth_percentage: Number(insight.demandGrowthPct ?? 0),
-        forecast_trend: insight.demandTrend ?? "stable",
+        growth_percentage: growthPercentage,
+        forecast_trend: forecastTrend,
         top_keyword: insight.dominantIssue ?? "",
       },
       sentiment_trend: sentimentTrendResponse,
-
-      // ✅ PASANG DATA CONFIDENCE HASIL MIGRASI BARU DI SINI
       confidence: (insight as any).confidence ?? 0,
       confidence_context: (insight as any).confidence
         ? {
@@ -183,28 +242,7 @@ export async function GET(
               "red",
           }
         : null,
-
-      forecastSummary:
-        predictions.length > 0
-          ? {
-              avg: Math.round(
-                predictions.reduce((s, p) => s + p.predictedSales, 0) /
-                  predictions.length,
-              ),
-              min: Math.min(...predictions.map((p) => p.predictedSales)),
-              max: Math.max(...predictions.map((p) => p.predictedSales)),
-              lower: Math.min(
-                ...predictions.map(
-                  (p) => (p as any).lowerBound ?? p.predictedSales,
-                ),
-              ),
-              upper: Math.max(
-                ...predictions.map(
-                  (p) => (p as any).upperBound ?? p.predictedSales,
-                ),
-              ),
-            }
-          : null,
+      forecastSummary,
     });
   } catch (error) {
     console.error("Error inside GET insights route:", error);

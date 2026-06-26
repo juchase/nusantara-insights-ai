@@ -142,6 +142,7 @@ export default function ForecastChart({
   confidenceContext,
   modelUsed,
   forecastSummary,
+  freq = "D",
   loading,
 }: {
   data: ForecastPoint[];
@@ -150,6 +151,7 @@ export default function ForecastChart({
   confidenceContext?: ConfidenceContext | null;
   modelUsed?: string;
   forecastSummary?: ForecastSummary | null;
+  freq?: "D" | "W";
   loading: boolean;
 }) {
   // ── LOADING ──────────────────────────────────────────────────────────────
@@ -157,8 +159,7 @@ export default function ForecastChart({
     return <ForecastChartSkeleton />;
   }
 
-  // ── EMPTY — null ATAU array kosong dianggap kondisi yang sama,
-  // sembunyikan komponen sepenuhnya ──────────────────────────────────────
+  // ── EMPTY ──────────────────────────────────────────────────────────────────
   if (!data || data.length === 0) {
     return null;
   }
@@ -180,10 +181,6 @@ export default function ForecastChart({
     forecastSummary.upper > forecastSummary.lower;
 
   const alert = getDemandAlert(growth);
-  const growthDisplay = growth > 0 ? `+${growth}%` : `${growth}%`;
-  const growthColor =
-    growth > 0 ? "#5DCAA5" : growth < 0 ? "#E24B4A" : "#AFA9EC";
-
   const ctxColor =
     confidenceContext?.color === "green"
       ? "#5DCAA5"
@@ -200,6 +197,39 @@ export default function ForecastChart({
         : "Akurasi Rendah");
 
   const ctxMessage = confidenceContext?.message ?? "";
+
+  // ── Dinamis unit ──────────────────────────────────────────────────────────
+  const unitLabel = freq === "W" ? "minggu" : "hari";
+  const period = freq === "W" ? 4 : 7;
+
+  // ── FIX: Logika Pertumbuhan (Persentase vs Unit Absolut) ──────────────
+  const shouldShowAbsUnit = (latestActual ?? 0) < 10 || avgPredicted < 10;
+
+  let growthDisplay = "";
+  let growthColor = "#AFA9EC"; // Default warna stabil
+
+  if (growth > 0) {
+    if (shouldShowAbsUnit) {
+      const unitIncrease = Math.round(avgPredicted - (latestActual ?? 0));
+      growthDisplay = `+${unitIncrease} unit`;
+      growthColor = "#5DCAA5";
+    } else {
+      growthDisplay = `+${growth}%`;
+      growthColor = "#5DCAA5";
+    }
+  } else if (growth < 0) {
+    if (shouldShowAbsUnit) {
+      const unitDecrease = Math.round((latestActual ?? 0) - avgPredicted);
+      growthDisplay = `-${unitDecrease} unit`;
+      growthColor = "#E24B4A";
+    } else {
+      growthDisplay = `${growth}%`;
+      growthColor = "#E24B4A";
+    }
+  } else {
+    growthDisplay = `0%`;
+    growthColor = "#AFA9EC";
+  }
 
   return (
     <div
@@ -426,7 +456,7 @@ export default function ForecastChart({
                 marginTop: 2,
               }}
             >
-              unit/hari
+              {unitLabel === "minggu" ? "unit/minggu" : "unit/hari"}
             </p>
           </div>
         </div>
@@ -447,7 +477,7 @@ export default function ForecastChart({
                 marginBottom: 2,
               }}
             >
-              Rentang Prediksi 7 Hari
+              Rentang Prediksi {period} {unitLabel}
             </p>
             <div
               style={{
@@ -473,7 +503,7 @@ export default function ForecastChart({
                   marginLeft: 2,
                 }}
               >
-                unit/hari
+                {unitLabel === "minggu" ? "unit/minggu" : "unit/hari"}
               </span>
             </div>
 
@@ -486,6 +516,7 @@ export default function ForecastChart({
         )}
       </div>
 
+      {/* ── FIX: Footer Model dinamis ──────────────────────────────────────── */}
       <p
         style={{
           fontSize: 11,
@@ -495,8 +526,12 @@ export default function ForecastChart({
         }}
       >
         Prediksi menggunakan{" "}
-        {modelUsed ? modelUsed.replace(/_/g, " ") : "Prophet"} berdasarkan data
-        historis penjualan produk ini
+        {modelUsed
+          ? modelUsed.replace(/_/g, " ") === "moving average"
+            ? "rata-rata tertimbang (Moving Average)"
+            : modelUsed.replace(/_/g, " ")
+          : "Prophet"}{" "}
+        berdasarkan data historis penjualan produk ini
       </p>
     </div>
   );

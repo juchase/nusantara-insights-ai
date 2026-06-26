@@ -140,25 +140,37 @@ export async function POST(req: NextRequest) {
               }
 
               // ── Cek duplikat review ──────────────────────────────────────
-              await prisma.review.upsert({
-                where: {
-                  // The unique index name is generated as: productId_reviewText_reviewDate
-                  productId_reviewText_reviewDate: {
+              try {
+                await prisma.review.upsert({
+                  where: {
+                    productId_reviewText_reviewDate: {
+                      productId: cachedProductId,
+                      reviewText,
+                      reviewDate,
+                    },
+                  },
+                  update: {}, // no change needed if it already exists
+                  create: {
                     productId: cachedProductId,
                     reviewText,
+                    rating,
                     reviewDate,
+                    sentiment,
+                    aspect,
                   },
-                },
-                update: {}, // no change needed if it already exists
-                create: {
-                  productId: cachedProductId,
-                  reviewText,
-                  rating,
-                  reviewDate,
-                  sentiment,
-                  aspect,
-                },
-              });
+                });
+              } catch (err: any) {
+                // Jika error unik constraint (P2002), lewati saja agar proses tidak berhenti
+                if (err.code === "P2002") {
+                  console.warn(
+                    `⚠ Lewati duplikat review: "${reviewText.substring(0, 20)}..."`,
+                  );
+                  // Jangan di-throw, cukup return null agar tidak dihitung sebagai success
+                  return null;
+                }
+                // Jika error lain, lempar ke luar agar Promise.all menangkapnya
+                throw err;
+              }
 
               // ── UPSERT Sales ──────────────────────────────────────────────
               const salesValue = Number(normalized.sales);

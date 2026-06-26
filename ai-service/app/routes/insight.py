@@ -11,12 +11,16 @@ from app.services.health_score_service import calculate_health_score, get_health
 from app.services.prompt_builder import build_prompt
 from app.services.llm_service import safe_generate
 from app.services.insight_engine import generate_structured_insights, generate_executive_summary
+from app.services.keyword_service import NEGATIVE_STANDALONE
+from app.services.demand_service import predict_and_save
 
 router = APIRouter()
 
 @router.get("/generate-insight/{product_id}")
 def generate_insight(product_id: str, db: Session = Depends(get_db)):
     current_time = datetime.now()
+
+    forecast_result = predict_and_save(product_id)
 
     product_row = db.execute(text("""
         SELECT name FROM "Product" WHERE id = :pid
@@ -28,13 +32,41 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     positive = float(data.get("positive_percentage") or 0)
     negative = float(data.get("negative_percentage") or 0)
     neutral  = float(data.get("neutral_percentage")  or 0)
-    growth   = float(data.get("growth_percentage")   or 0)
     keyword  = data.get("top_keyword")
     category = data.get("top_category")
-    trend    = data.get("forecast_trend") or "stable"
 
-    score      = calculate_health_score(positive, negative, growth)
-    label      = get_health_label(score)
+    if forecast_result.get("status") == "success":
+        growth = float(forecast_result.get("growth", 0))
+        growth_display = forecast_result.get("growth_display", "meningkat")
+        confidence = float(forecast_result.get("confidence", 0))
+        confidence_context = forecast_result.get("confidence_context", {
+            "label": "Akurasi Rendah",
+            "message": "Data tidak cukup",
+            "color": "red"
+        })
+        forecast_summary = forecast_result.get("forecast_summary", {})
+        model_used = forecast_result.get("model_used", "prophet")
+        freq = forecast_result.get("freq", "D")
+    else:
+        growth = 0.0
+        growth_display = "meningkat"
+        confidence = 0.0
+        confidence_context = {
+            "label": "Gagal Prediksi",
+            "message": "Terjadi kesalahan pada forecasting.",
+            "color": "red"
+        }
+        forecast_summary = {}
+        model_used = "prophet"
+        freq = "D"
+
+    # Tentukan trend dari growth
+    trend = "up" if growth > 5 else "down" if growth < -5 else "stable"
+
+    print(f"📌 growth_display yang dikirim ke LLM: '{growth_display}'")
+
+    score = calculate_health_score(positive, negative, growth)
+    label = get_health_label(score)
     risk_level = "high" if score < 35 else "medium" if score < 55 else "low"
 
     insights, recommendations, raw_sentences = generate_structured_insights(
@@ -62,75 +94,51 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         growth=growth,
     )
 
-    rule_summary  = " ".join(raw_sentences[:3])
-    top_rec       = recommendations[0] if recommendations else ""
-    prompt        = build_prompt(raw_sentences=raw_sentences, top_recommendation=top_rec)
-    final_summary = safe_generate(
-        prompt=prompt,
-        fallback_text=rule_summary,
-        rule_text=rule_summary,
-    )
-    llm_used = final_summary != rule_summary
+    rule_summary = " ".join(raw_sentences[:3])
+    top_rec = recommendations[0] if recommendations else ""
 
-    # ── Hitung confidence ──────────────────────────────────────────────────────
-    data_points_row = db.execute(text("""
-        SELECT COUNT(*) FROM "Sales" WHERE "productId" = :pid
+    # ── Pre-filter LLM ──────────────────────────────────────────────────
+    total_neg_neutral = db.execute(text("""
+        SELECT COUNT(*) FROM "Review"
+        WHERE "productId" = :pid AND sentiment IN ('negative', 'neutral')
     """), {"pid": product_id}).scalar() or 0
-    data_points = int(data_points_row)
 
-    confidence_row = db.execute(text("""
-        SELECT
-            AVG("predictedSales")            AS avg_pred,
-            AVG("upperBound" - "lowerBound") AS avg_interval
-        FROM "Prediction"
-        WHERE "productId" = :pid
-          AND "upperBound" IS NOT NULL
-          AND "lowerBound" IS NOT NULL
-    """), {"pid": product_id}).fetchone()
+    sample_reviews = db.execute(text("""
+        SELECT "reviewText" FROM "Review"
+        WHERE "productId" = :pid AND sentiment IN ('negative', 'neutral')
+        ORDER BY "reviewDate" DESC LIMIT 10
+    """), {"pid": product_id}).fetchall()
 
-    if confidence_row and confidence_row[0] is not None and confidence_row[1] is not None:
-        avg_pred     = float(confidence_row[0])
-        avg_interval = float(confidence_row[1])
-        rel_width    = avg_interval / avg_pred if avg_pred > 0 else 1.0
-        raw_conf     = max(0.0, 1.0 - rel_width) * 100
+    found_strong = False
+    for row in sample_reviews:
+        text_lower = row[0].lower()
+        for word in NEGATIVE_STANDALONE:
+            if word in text_lower:
+                found_strong = True
+                break
+        if found_strong:
+            break
 
-        if data_points >= 90:
-            raw_conf = min(raw_conf * 1.1, 95.0)
-        elif data_points < 14:
-            raw_conf *= 0.75
+    should_call_llm = (total_neg_neutral >= 10) or found_strong
 
-        confidence = round(max(5.0, min(raw_conf, 95.0)), 2)
-    else:
-        confidence = 0.0
-
-    if confidence >= 70:
-        confidence_label   = "Akurasi Tinggi"
-        confidence_color   = "green"
-        confidence_message = "Pola penjualan konsisten, prediksi interval dapat diandalkan."
-    elif confidence >= 40:
-        confidence_label   = "Akurasi Sedang"
-        confidence_color   = "amber"
-        confidence_message = (
-            f"Prediksi cukup andal dengan {data_points} hari data. "
-            "Tambah data hingga 90 hari untuk akurasi lebih tinggi."
+    if should_call_llm:
+        prompt = build_prompt(
+            raw_sentences=raw_sentences,
+            top_recommendation=top_rec,
+            growth_display=growth_display
         )
+        final_summary = safe_generate(
+            prompt=prompt,
+            fallback_text=rule_summary,
+            rule_text=rule_summary,
+        )
+        llm_used = final_summary != rule_summary
     else:
-        confidence_label   = "Akurasi Rendah"
-        confidence_color   = "red"
-        if data_points < 14:
-            days_needed        = 14 - data_points
-            confidence_message = (
-                f"Data historis hanya {data_points} hari — minimal 14 hari diperlukan. "
-                f"Tambahkan {days_needed} hari data lagi untuk prediksi yang lebih baik."
-            )
-        else:
-            confidence_message = (
-                f"Pola penjualan masih fluktuatif dengan {data_points} hari data. "
-                "Tambah data hingga 90 hari untuk hasil lebih akurat."
-            )
+        print(f"⏭ Skip LLM untuk {product_name} (data terbatas)")
+        final_summary = rule_summary
+        llm_used = False
 
-    # ── Siapkan parameter untuk INSERT ────────────────────────────────────────
-    # Pastikan insights dan recommendations adalah JSON string
+    # ── Simpan ke tabel Insight ──────────────────────────────────────────
     insights_json = json.dumps(insights, ensure_ascii=False)
     recommendations_json = json.dumps(recommendations, ensure_ascii=False)
 
@@ -139,7 +147,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "product_id": product_id,
         "summary": final_summary,
         "executive_summary": executive_summary,
-        "insights": insights_json,           # string JSON
+        "insights": insights_json,
         "recommendations": recommendations_json,
         "sentiment": float(positive),
         "issue": dominant_issue,
@@ -150,9 +158,9 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "llm_used": llm_used,
         "model": "qwen2.5" if llm_used else None,
         "confidence": float(confidence),
-        "confidence_label": confidence_label,
-        "confidence_message": confidence_message,
-        "confidence_color": confidence_color,
+        "confidence_label": confidence_context.get("label", "Akurasi Rendah"),
+        "confidence_message": confidence_context.get("message", ""),
+        "confidence_color": confidence_context.get("color", "red"),
         "created_at": current_time,
         "updated_at": current_time,
     }
@@ -182,15 +190,14 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     try:
         db.execute(text(insert_sql), insert_params)
         db.commit()
-        print(f"✅ Insight saved — {product_name} | confidence: {confidence}%")
+        print(f"✅ Insight saved — {product_name} | confidence: {confidence}% | LLM Used: {llm_used}")
     except Exception as e:
         db.rollback()
         print(f"❌ INSERT ERROR: {e}")
         import traceback
         traceback.print_exc()
-        raise  # re-raise agar error terlihat di script
+        raise
 
-    # ── Kembalikan response ──────────────────────────────────────────────────
     return {
         "executive_summary":  executive_summary,
         "summary":            final_summary,
@@ -204,9 +211,6 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "metrics":            data,
         "sentiment_trend":    calculate_sentiment_trend(product_id, db),
         "confidence":         confidence,
-        "confidence_context": {
-            "label":   confidence_label,
-            "message": confidence_message,
-            "color":   confidence_color,
-        },
+        "confidence_context": confidence_context,
+        "forecast_summary":   forecast_summary,
     }

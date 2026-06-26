@@ -1,5 +1,3 @@
-# insight_engine.py
-
 from sqlalchemy import text
 from app.utils.db import SessionLocal
 
@@ -16,6 +14,11 @@ CATEGORY_CONFIG = {
         "rec": "Perbaiki standar pengemasan dan tambahkan lapisan pelindung untuk meminimalkan risiko kerusakan saat pengiriman.",
     },
     "produk": {
+        "sentence": "Keluhan signifikan terkait kualitas produk yang tidak sesuai ekspektasi pelanggan.",
+        "rec": "Perketat proses quality control sebelum produk dikemas dan dikirim ke pelanggan.",
+    },
+    # ── TAMBAHKAN ──
+    "kualitas produk": {  # alias untuk kategori dengan spasi
         "sentence": "Keluhan signifikan terkait kualitas produk yang tidak sesuai ekspektasi pelanggan.",
         "rec": "Perketat proses quality control sebelum produk dikemas dan dikirim ke pelanggan.",
     },
@@ -65,7 +68,6 @@ def generate_structured_insights(
     keyword: str = None,
     category: str = None,
 ):
-    # ...
     """
     Menghasilkan insights terstruktur (list of dict), rekomendasi (list),
     dan kalimat naratif (list) berdasarkan sentimen, demand, dan keluhan utama.
@@ -246,6 +248,7 @@ def generate_executive_summary(
         "pengiriman": "peningkatan kualitas dan kecepatan layanan pengiriman",
         "kemasan": "perbaikan standar pengemasan produk",
         "produk": "pengendalian dan peningkatan kualitas produk",
+        "kualitas produk": "pengendalian dan peningkatan kualitas produk",
         "pelayanan": "peningkatan responsivitas layanan pelanggan",
         "lainnya": "monitoring performa produk secara berkala",
     }

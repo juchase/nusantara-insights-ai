@@ -388,24 +388,47 @@ export default function InsightCard({
             marginTop: 12,
           }}
         >
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 500,
-              padding: "3px 10px",
-              borderRadius: 20,
-              background: "rgba(83,74,183,0.3)",
-              color: "#AFA9EC",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Cpu size={11} /> Qwen2.5 Enhanced
-          </span>
-          {insight?.llm_used === false && (
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+          {insight?.llm_used === true ? (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 500,
+                padding: "3px 10px",
+                borderRadius: 20,
+                background: "rgba(83,74,183,0.3)",
+                color: "#AFA9EC",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Cpu size={11} /> Qwen2.5 Enhanced
+            </span>
+          ) : (
+            <span
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.3)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
               Rule engine fallback
+            </span>
+          )}
+
+          {insight?.confidence !== undefined && insight.confidence > 0 && (
+            <span
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.4)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              Confidence: {insight.confidence.toFixed(1)}%
             </span>
           )}
         </div>

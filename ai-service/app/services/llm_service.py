@@ -4,13 +4,10 @@ import re
 LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions"
 MODEL_ID       = "qwen2.5-1.5b-instruct"
 
-# Naikkan limit — 600 terlalu ketat sampai memotong nama produk dan angka
-# System prompt + few-shot ~350 token, sisakan ~550 token untuk input + output
-MAX_PROMPT_CHARS = 900
+MAX_PROMPT_CHARS = 4000
 
 
 def generate_natural_insight(prompt: str) -> str:
-
     if len(prompt) > MAX_PROMPT_CHARS:
         prompt = prompt[:MAX_PROMPT_CHARS].rsplit(" ", 1)[0] + "..."
         print(f"⚠ Prompt dipotong ke {MAX_PROMPT_CHARS} karakter")
@@ -22,10 +19,11 @@ def generate_natural_insight(prompt: str) -> str:
                 "role": "system",
                 "content": (
                     "Kamu adalah analis bisnis UMKM Indonesia. "
-                    "Tulis narasi bisnis yang natural dan formal dalam Bahasa Indonesia. "
+                    "Tulis narasi bisnis yang natural, formal, dan mengalir dalam Bahasa Indonesia. "
                     "WAJIB sebutkan nama produk yang disebutkan dalam input. "
                     "Selalu selesaikan kalimat hingga tuntas. "
-                    "Maksimal 2 kalimat. "
+                    "Gunakan variasi kalimat, jangan terlalu kaku. "
+                    "Maksimal 3 kalimat. "
                     "Jangan tambahkan informasi yang tidak ada dalam input."
                 )
             },
@@ -35,9 +33,11 @@ def generate_natural_insight(prompt: str) -> str:
             }
         ],
         "temperature": 0.1,
-        "max_tokens":  150,   # naik sedikit dari 120 — beri ruang untuk nama produk + angka
+        "max_tokens":  500,   # ← dinaikkan agar narasi bisa lebih panjang
         "stream":      False,
     }
+
+    print(f"📤 SENDING PAYLOAD TO LLM:\n{payload}\n")
 
     response = requests.post(LM_STUDIO_URL, json=payload, timeout=60)
     response.raise_for_status()

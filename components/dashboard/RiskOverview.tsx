@@ -61,7 +61,8 @@ export default function RiskOverview({ insight, loading }: Props) {
             textTransform: "capitalize",
           }}
         >
-          {insight.metrics?.top_keyword ?? insight.dominant_issue ?? "—"}
+          {/* GANTI: pakai dominant_issue, bukan top_keyword */}
+          {insight.dominant_issue ?? "—"}
         </span>
       ),
     },

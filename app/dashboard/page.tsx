@@ -1,5 +1,3 @@
-// app/dashboard/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -79,6 +77,7 @@ export default function DashboardPage() {
     color: "green" | "amber" | "red";
   } | null>(null);
   const [modelUsed, setModelUsed] = useState<string>("");
+  const [freq, setFreq] = useState<"D" | "W">("D"); // ← Tambahan state frekuensi
 
   const router = useRouter();
 
@@ -108,14 +107,7 @@ export default function DashboardPage() {
         if (data.length > 0) {
           setSelectedProduct(data[0].id);
         } else {
-          // ── FIX: user baru tanpa produk sama sekali ────────────────────
-          // Tanpa selectedProduct, semua useEffect lain (analytics, insight,
-          // forecast, complaints) TIDAK PERNAH jalan karena early-return
-          // `if (!selectedProduct) return;`. Akibatnya setXxxLoading(false)
-          // di blok finally masing-masing juga tidak pernah terpanggil, dan
-          // semua komponen anak STUCK selamanya di skeleton loading.
-          // Set semua loading ke false secara eksplisit di sini supaya
-          // komponen-komponen itu lanjut ke pengecekan empty state (null).
+          // Fix loading state for empty product list
           setAnalyticsLoading(false);
           setForecastLoading(false);
           setInsightLoading(false);
@@ -123,7 +115,6 @@ export default function DashboardPage() {
         }
       } catch (err) {
         console.error(err);
-        // Fetch produk gagal -> jangan biarkan UI nyangkut loading selamanya
         setAnalyticsLoading(false);
         setForecastLoading(false);
         setInsightLoading(false);
@@ -167,7 +158,7 @@ export default function DashboardPage() {
     loadAnalytics();
   }, [selectedProduct, products.length]);
 
-  // ── INSIGHT — baca dari DB saja, tidak call AI service ───────────────────
+  // ── INSIGHT ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
 
@@ -198,6 +189,11 @@ export default function DashboardPage() {
           llm_used: insightData.llm_used ?? false,
           metrics: insightData.metrics,
           sentiment_trend: insightData.sentiment_trend,
+          // ── tambahan ──
+          confidence: insightData.confidence ?? 0,
+          confidence_context: insightData.confidence_context ?? null,
+          modelVersion: insightData.modelVersion || "prophet",
+          freq: insightData.freq || "D",
         });
 
         if (insightData.forecastSummary) {
@@ -209,6 +205,8 @@ export default function DashboardPage() {
 
         setConfidence(insightData.confidence ?? 0);
         setConfidenceContext(insightData.confidence_context ?? null);
+        setModelUsed(insightData.modelVersion || "prophet"); // ← ambil modelVersion
+        setFreq(insightData.freq || "D"); // ← ambil freq
       } finally {
         setInsightLoading(false);
       }
@@ -217,7 +215,7 @@ export default function DashboardPage() {
     loadInsight();
   }, [selectedProduct]);
 
-  // ── FORECAST — baca prediksi dari DB saja ────────────────────────────────
+  // ── FORECAST ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
 
@@ -237,14 +235,15 @@ export default function DashboardPage() {
           ) as ForecastPoint[],
         );
 
-        setModelUsed("prophet");
+        // modelUsed sudah diset di insight useEffect, tapi jika forecasting sendiri gagal, fallback
+        if (!modelUsed) setModelUsed("prophet");
       } finally {
         setForecastLoading(false);
       }
     };
 
     loadForecast();
-  }, [selectedProduct]);
+  }, [selectedProduct, modelUsed]);
 
   // ── COMPLAINTS ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -291,10 +290,7 @@ export default function DashboardPage() {
         {/* ROW A: Sentiment Distribution + Forecast */}
         <div className="grid grid-cols-1 gap-4">
           <div className="grid grid-cols-1 gap-4">
-            {/* Mengapus xl:grid-cols-2 agar pembungkus luar tetap 1 kolom penuh */}
-
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
-              {/* Layout 2 kolom ini sekarang akan bertahan dari ukuran 'sm' hingga layar paling besar */}
               <SentimentDistribution
                 positive={Math.round(
                   insight?.metrics?.positive_percentage ?? 0,
@@ -319,6 +315,7 @@ export default function DashboardPage() {
             confidenceContext={confidenceContext}
             modelUsed={modelUsed}
             forecastSummary={forecastSummary}
+            freq={freq} // ← FREKUENSI DINAMIS
             loading={forecastLoading}
           />
         </div>

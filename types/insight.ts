@@ -44,4 +44,12 @@ export interface InsightResponse {
     forecast_trend: "up" | "down" | "stable";
     top_keyword: string;
   };
+  confidence: number;
+  confidence_context: {
+    label: string;
+    message: string;
+    color: "green" | "amber" | "red";
+  } | null;
+  modelVersion: string;
+  freq: "D" | "W";
 }
