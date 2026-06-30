@@ -154,13 +154,16 @@ def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: s
         DELETE FROM "Prediction" WHERE "productId" = :product_id
     """), {"product_id": product_id})
     for _, row in forecast_future.iterrows():
+        # ── PERBAIKAN: Tambahkan modelVersion ──
         db.execute(text("""
             INSERT INTO "Prediction" (
                 "id", "productId", "predictionDate",
-                "predictedSales", "upperBound", "lowerBound", "createdAt"
+                "predictedSales", "upperBound", "lowerBound", "createdAt",
+                "modelVersion"
             ) VALUES (
                 gen_random_uuid(), :product_id, :pred_date,
-                :pred_value, :pred_upper, :pred_lower, NOW()
+                :pred_value, :pred_upper, :pred_lower, NOW(),
+                :model_version
             )
         """), {
             "product_id": product_id,
@@ -168,6 +171,7 @@ def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: s
             "pred_value": int(round(row["yhat"])),
             "pred_upper": int(round(row["yhat_upper"])),
             "pred_lower": int(round(row["yhat_lower"])),
+            "model_version": "moving_average"
         })
     db.commit()
 
@@ -295,13 +299,16 @@ def predict_and_save(product_id: str):
                 DELETE FROM "Prediction" WHERE "productId" = :product_id
             """), {"product_id": product_id})
             for _, row in forecast_daily_future.iterrows():
+                # ── PERBAIKAN: Tambahkan modelVersion ──
                 db.execute(text("""
                     INSERT INTO "Prediction" (
                         "id", "productId", "predictionDate",
-                        "predictedSales", "upperBound", "lowerBound", "createdAt"
+                        "predictedSales", "upperBound", "lowerBound", "createdAt",
+                        "modelVersion"
                     ) VALUES (
                         gen_random_uuid(), :product_id, :pred_date,
-                        :pred_value, :pred_upper, :pred_lower, NOW()
+                        :pred_value, :pred_upper, :pred_lower, NOW(),
+                        :model_version
                     )
                 """), {
                     "product_id": product_id,
@@ -309,6 +316,7 @@ def predict_and_save(product_id: str):
                     "pred_value": int(round(row["yhat"])),
                     "pred_upper": int(round(row["yhat_upper"])),
                     "pred_lower": int(round(row["yhat_lower"])),
+                    "model_version": "prophet"
                 })
             db.commit()
 
@@ -412,13 +420,16 @@ def _forecast_weekly_fallback(db, product_id: str, df_daily: pd.DataFrame):
         DELETE FROM "Prediction" WHERE "productId" = :product_id
     """), {"product_id": product_id})
     for _, row in forecast_weekly_future.iterrows():
+        # ── PERBAIKAN: modelVersion untuk Prophet mingguan ──
         db.execute(text("""
             INSERT INTO "Prediction" (
                 "id", "productId", "predictionDate",
-                "predictedSales", "upperBound", "lowerBound", "createdAt"
+                "predictedSales", "upperBound", "lowerBound", "createdAt",
+                "modelVersion"
             ) VALUES (
                 gen_random_uuid(), :product_id, :pred_date,
-                :pred_value, :pred_upper, :pred_lower, NOW()
+                :pred_value, :pred_upper, :pred_lower, NOW(),
+                :model_version
             )
         """), {
             "product_id": product_id,
@@ -426,6 +437,7 @@ def _forecast_weekly_fallback(db, product_id: str, df_daily: pd.DataFrame):
             "pred_value": int(round(row["yhat"])),
             "pred_upper": int(round(row["yhat_upper"])),
             "pred_lower": int(round(row["yhat_lower"])),
+            "model_version": "prophet"
         })
     db.commit()
 

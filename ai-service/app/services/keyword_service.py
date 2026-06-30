@@ -214,16 +214,17 @@ def update_all_products():
 
 
 def get_dominant_keyword(product_id: str):
-    """Ambil satu kata kunci dengan count tertinggi beserta kategorinya."""
     db = SessionLocal()
     try:
         row = db.execute(text("""
-            SELECT word, category
+            SELECT category, SUM(count) as total_count
             FROM "KeywordSummary"
             WHERE "productId" = :product_id
-            ORDER BY count DESC
+            GROUP BY category
+            ORDER BY total_count DESC, category ASC
             LIMIT 1
         """), {"product_id": product_id}).fetchone()
-        return (row.word, row.category) if row else (None, None)
+        # Karena yang kita butuhkan hanya kategorinya, return (None, category)
+        return (None, row[0]) if row else (None, None)
     finally:
         db.close()

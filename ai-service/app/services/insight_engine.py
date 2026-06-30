@@ -26,6 +26,10 @@ CATEGORY_CONFIG = {
         "sentence": "Pelanggan mengeluhkan responsivitas atau kualitas layanan yang kurang memuaskan.",
         "rec": "Tingkatkan standar layanan pelanggan dengan mempercepat waktu respons terhadap pertanyaan dan keluhan.",
     },
+    "harga": {
+        "sentence": "Pelanggan mengeluhkan harga produk yang dianggap tidak sesuai atau terlalu mahal.",
+        "rec": "Tinjau kembali strategi penetapan harga, pertimbangkan diskon atau promo untuk meningkatkan daya saing."
+    },
     "lainnya": {
         "sentence": "Terdapat keluhan beragam yang tidak masuk kategori utama, perlu analisis lebih lanjut.",
         "rec": "Lakukan analisis lebih mendalam terhadap ulasan pelanggan untuk mengidentifikasi pola keluhan spesifik.",

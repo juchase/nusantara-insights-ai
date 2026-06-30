@@ -21,15 +21,20 @@ def aggregate_product_metrics(product_id, db):
     """), {"pid": product_id}).scalar() or 0
 
     row = db.execute(text("""
-        SELECT word, category
+        SELECT category, SUM(count) as total_count
         FROM "KeywordSummary"
         WHERE "productId" = :pid
-        ORDER BY count DESC
+        GROUP BY category
+        ORDER BY total_count DESC, category ASC
         LIMIT 1
     """), {"pid": product_id}).fetchone()
 
-    top_keyword = row[0] if row else "umum"
-    top_category = row[1] if row else "lainnya"
+    if row:
+        top_category = row[0]  # Ambil nama kategori (misal: "harga")
+        top_keyword = "umum"    # Fallback kata kunci (karena query ini tidak mengambil kata spesifik)
+    else:
+        top_category = "lainnya"
+        top_keyword = "umum"
 
     total = positive + negative + neutral
     pos_pct = round((positive / total) * 100, 1) if total > 0 else 0

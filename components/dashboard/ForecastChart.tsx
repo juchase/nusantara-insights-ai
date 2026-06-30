@@ -164,9 +164,8 @@ export default function ForecastChart({
     return null;
   }
 
-  // ── DATA ADA — render normal ────────────────────────────────────────────
+  // ── DATA ADA — hitung nilai dasar ──────────────────────────────────────
   const latestActual = [...data].reverse().find((d) => d.actual)?.actual;
-
   const avgPredicted =
     forecastSummary?.avg ??
     (() => {
@@ -187,7 +186,6 @@ export default function ForecastChart({
       : confidenceContext?.color === "amber"
         ? "#EF9F27"
         : "#E24B4A";
-
   const ctxLabel =
     confidenceContext?.label ??
     (confidence >= 70
@@ -195,42 +193,264 @@ export default function ForecastChart({
       : confidence >= 40
         ? "Akurasi Sedang"
         : "Akurasi Rendah");
-
   const ctxMessage = confidenceContext?.message ?? "";
 
   // ── Dinamis unit ──────────────────────────────────────────────────────────
   const unitLabel = freq === "W" ? "minggu" : "hari";
   const period = freq === "W" ? 4 : 7;
 
-  // ── FIX: Logika Pertumbuhan (Persentase vs Unit Absolut) ──────────────
+  // ── Logika Pertumbuhan (Persentase vs Unit Absolut) ──────────────────────
   const shouldShowAbsUnit = (latestActual ?? 0) < 10 || avgPredicted < 10;
-
   let growthDisplay = "";
-  let growthColor = "#AFA9EC"; // Default warna stabil
+  let growthColor = "#AFA9EC";
 
-  if (growth > 0) {
-    if (shouldShowAbsUnit) {
-      const unitIncrease = Math.round(avgPredicted - (latestActual ?? 0));
-      growthDisplay = `+${unitIncrease} unit`;
+  if (shouldShowAbsUnit) {
+    const unitDifference = Math.round(avgPredicted - (latestActual ?? 0));
+    if (unitDifference > 0) {
+      growthDisplay = `+${unitDifference} unit`;
       growthColor = "#5DCAA5";
-    } else {
-      growthDisplay = `+${growth}%`;
-      growthColor = "#5DCAA5";
-    }
-  } else if (growth < 0) {
-    if (shouldShowAbsUnit) {
-      const unitDecrease = Math.round((latestActual ?? 0) - avgPredicted);
-      growthDisplay = `-${unitDecrease} unit`;
+    } else if (unitDifference < 0) {
+      growthDisplay = `${unitDifference} unit`;
       growthColor = "#E24B4A";
     } else {
-      growthDisplay = `${growth}%`;
-      growthColor = "#E24B4A";
+      growthDisplay = `0 unit`;
+      growthColor = "#AFA9EC";
     }
   } else {
-    growthDisplay = `0%`;
-    growthColor = "#AFA9EC";
+    if (growth > 0) {
+      growthDisplay = `+${growth}%`;
+      growthColor = "#5DCAA5";
+    } else if (growth < 0) {
+      growthDisplay = `${growth}%`;
+      growthColor = "#E24B4A";
+    } else {
+      growthDisplay = `0%`;
+      growthColor = "#AFA9EC";
+    }
   }
 
+  // ── TAMPILAN KHUSUS UNTUK MOVING AVERAGE ────────────────────────────────
+  if (modelUsed === "moving_average") {
+    return (
+      <div
+        className="min-w-0 p-5 sm:p-6 lg:p-7"
+        style={{
+          minHeight: 420,
+          borderRadius: 20,
+          background: "#1a1a2e",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          color: "#fff",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {/* Header */}
+          <div>
+            <p style={{ fontSize: 15, fontWeight: 500, color: "#fff" }}>
+              Estimasi Permintaan (Data Terbatas)
+            </p>
+            <p
+              style={{
+                fontSize: 12,
+                color: "rgba(255,255,255,0.5)",
+                marginTop: 4,
+              }}
+            >
+              Karena data penjualan sangat minim, sistem menggunakan metode
+              rata-rata tertimbang dari 3 data terakhir.
+            </p>
+          </div>
+
+          {/* Angka Estimasi */}
+          <div>
+            <p
+              style={{
+                fontSize: 11,
+                color: "rgba(255,255,255,0.5)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                marginBottom: 6,
+              }}
+            >
+              Rata-rata Prediksi
+            </p>
+            <p
+              className="text-[36px] sm:text-[44px]"
+              style={{
+                fontWeight: 500,
+                color: "#5DCAA5",
+                lineHeight: 1,
+                display: "flex",
+                alignItems: "baseline",
+                gap: 8,
+              }}
+            >
+              {avgPredicted
+                ? Math.round(avgPredicted).toLocaleString("id-ID")
+                : "—"}
+              <span
+                style={{
+                  fontSize: 16,
+                  color: "rgba(255,255,255,0.5)",
+                  fontWeight: 400,
+                }}
+              >
+                unit/{unitLabel}
+              </span>
+            </p>
+          </div>
+
+          {/* Rentang Estimasi */}
+          {hasInterval && forecastSummary && (
+            <div
+              style={{
+                background: "rgba(255,255,255,0.07)",
+                borderRadius: 12,
+                padding: "12px 14px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 11,
+                  color: "rgba(255,255,255,0.5)",
+                  marginBottom: 6,
+                }}
+              >
+                Rentang Estimasi
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 14,
+                  color: "#fff",
+                }}
+              >
+                <span>
+                  {Math.round(forecastSummary.lower).toLocaleString("id-ID")}
+                </span>
+                <span style={{ color: "rgba(255,255,255,0.3)" }}>—</span>
+                <span>
+                  {Math.round(forecastSummary.upper).toLocaleString("id-ID")}
+                </span>
+              </div>
+              <div
+                style={{
+                  height: 4,
+                  borderRadius: 2,
+                  background: "rgba(93,202,165,0.3)",
+                  marginTop: 6,
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: "100%",
+                    borderRadius: 2,
+                    background: "#5DCAA5",
+                  }}
+                />
+              </div>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.35)",
+                  marginTop: 4,
+                  textAlign: "center",
+                }}
+              >
+                Rentang estimasi 80% (MVA sederhana)
+              </p>
+            </div>
+          )}
+
+          {/* Card Penjualan Terakhir & Rata-rata (sama seperti sebelumnya) */}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]">
+            <div
+              style={{
+                background: "rgba(255,255,255,0.07)",
+                borderRadius: 12,
+                padding: "12px 14px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.45)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  marginBottom: 6,
+                }}
+              >
+                Penjualan Terakhir
+              </p>
+              <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+                {latestActual ? latestActual.toLocaleString("id-ID") : "—"}
+              </p>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.35)",
+                  marginTop: 2,
+                }}
+              >
+                unit terjual
+              </p>
+            </div>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.07)",
+                borderRadius: 12,
+                padding: "12px 14px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.45)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  marginBottom: 6,
+                }}
+              >
+                Rata-rata Prediksi
+              </p>
+              <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+                {avgPredicted
+                  ? Math.round(avgPredicted).toLocaleString("id-ID")
+                  : "—"}
+              </p>
+              <p
+                style={{
+                  fontSize: 10,
+                  color: "rgba(255,255,255,0.35)",
+                  marginTop: 2,
+                }}
+              >
+                unit/{unitLabel}
+              </p>
+            </div>
+          </div>
+
+          {/* Footer info model */}
+          <p
+            style={{
+              fontSize: 11,
+              color: "rgba(255,255,255,0.35)",
+              marginTop: 8,
+              lineHeight: 1.5,
+            }}
+          >
+            Estimasi menggunakan rata-rata tertimbang (Moving Average) dari data
+            penjualan terakhir karena data historis masih sangat terbatas.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TAMPILAN NORMAL (PROPHET) ─────────────────────────────────────────────
   return (
     <div
       className="min-w-0 p-5 sm:p-6 lg:p-7"
@@ -260,6 +480,7 @@ export default function ForecastChart({
           </p>
         </div>
 
+        {/* Pertumbuhan */}
         <div>
           <p
             style={{
@@ -303,6 +524,7 @@ export default function ForecastChart({
           </div>
         </div>
 
+        {/* Confidence */}
         <div
           style={{
             background: "rgba(255,255,255,0.07)",
@@ -319,7 +541,6 @@ export default function ForecastChart({
           >
             Tingkat Kepercayaan Model
           </p>
-
           <div
             style={{
               display: "flex",
@@ -328,7 +549,6 @@ export default function ForecastChart({
               flexWrap: "wrap",
             }}
           >
-            {/* Angka SELALU ditampilkan, warnanya disesuaikan */}
             <span
               style={{
                 fontSize: 22,
@@ -338,8 +558,6 @@ export default function ForecastChart({
             >
               {confidence.toFixed(1)}%
             </span>
-
-            {/* Label status berubah tergantung confidence */}
             {confidence >= 70 ? (
               <span style={{ fontSize: 11, color: "#5DCAA5", fontWeight: 500 }}>
                 Akurasi Tinggi
@@ -367,7 +585,6 @@ export default function ForecastChart({
               </span>
             )}
           </div>
-
           {ctxMessage && (
             <p
               style={{
@@ -393,6 +610,7 @@ export default function ForecastChart({
           )}
         </div>
 
+        {/* Penjualan Terakhir & Rata-rata */}
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]">
           <div
             style={{
@@ -425,7 +643,6 @@ export default function ForecastChart({
               unit terjual
             </p>
           </div>
-
           <div
             style={{
               background: "rgba(255,255,255,0.07)",
@@ -461,6 +678,7 @@ export default function ForecastChart({
           </div>
         </div>
 
+        {/* Interval Bar (Prophet) */}
         {hasInterval && forecastSummary && (
           <div
             style={{
@@ -506,7 +724,6 @@ export default function ForecastChart({
                 {unitLabel === "minggu" ? "unit/minggu" : "unit/hari"}
               </span>
             </div>
-
             <IntervalBar
               lower={forecastSummary.lower}
               upper={forecastSummary.upper}
@@ -516,7 +733,7 @@ export default function ForecastChart({
         )}
       </div>
 
-      {/* ── FIX: Footer Model dinamis ──────────────────────────────────────── */}
+      {/* Footer model (Prophet) */}
       <p
         style={{
           fontSize: 11,
