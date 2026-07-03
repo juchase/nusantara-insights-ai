@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getUserFromRequest } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { getUserFromRequest } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
@@ -9,10 +9,7 @@ export async function GET(request: NextRequest) {
     const userPayload = getUserFromRequest(request);
 
     if (!userPayload) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
@@ -21,23 +18,28 @@ export async function GET(request: NextRequest) {
         id: true,
         name: true,
         email: true,
+        role: true,
         createdAt: true,
-      }
+      },
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error("Get user error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

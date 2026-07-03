@@ -20,6 +20,9 @@ model User {
   role      UserRole @default(USER)
   createdAt DateTime @default(now())
 
+  isDemo    Boolean? @default(false)
+  expiresAt DateTime?
+
   products Product[]
 }
 

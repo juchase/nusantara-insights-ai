@@ -1,62 +1,75 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { TrendingUp, ArrowRight, Shield, Zap, Sparkles } from "lucide-react";
+import {
+  TrendingUp,
+  ArrowRight,
+  Shield,
+  Zap,
+  Sparkles,
+  Loader2,
+} from "lucide-react";
 import Link from "next/link";
 import SVGComponent from "../svg/logo";
-import axios from "axios";
-import { useRouter } from "next/navigation";
 
 export default function Hero() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleDemo = async () => {
+    setLoading(true);
+    setError(null);
+
     try {
-      const response = await fetch("/api/auth/login", {
+      const res = await fetch("/api/demo/spawn", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: "demo@nusantarainsight.ai",
-          password: "demo123",
-        }),
+        headers: { "Content-Type": "application/json" },
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Gagal memulai sesi demo.");
       }
 
-      localStorage.setItem(
-        "demoExpireAt",
-        (Date.now() + 15 * 60 * 1000).toString(),
-      );
+      const data = await res.json();
+
+      if (data.expiresAt) {
+        // Ubah format tanggal ISO menjadi angka milidetik agar valid
+        localStorage.setItem(
+          "demoExpireAt",
+          new Date(data.expiresAt).getTime().toString(),
+        );
+      }
 
       router.push("/dashboard");
-    } catch (err) {
+      router.refresh();
+    } catch (err: any) {
       console.error(err);
+      setError(err.message || "Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    // Mengunci tinggi maksimal seksi agar pas satu layar penuh tanpa memicu scroll
     <section className="relative w-full h-[calc(100vh-76px)] min-h-[580px] bg-white overflow-hidden flex items-center mt-10">
       {/* Dekorasi Grid Linier AI di Latar Belakang */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-size-[4rem_4rem] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-60 pointer-events-none" />
 
       <div className="relative w-full max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-8 items-center z-10">
-        {/* SISI KIRI: Konten Penawaran & CTA Bebas Risiko */}
+        {/* SISI KIRI: Konten Penawaran & CTA */}
         <div className="max-w-xl">
-          {/* Badge Atas dengan Efek Animasi Pulsa */}
+          {/* Badge Atas */}
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-bold uppercase tracking-wider mb-4 border border-indigo-100/80 shadow-sm">
             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
             Platform Kecerdasan Bisnis
           </div>
 
-          {/* Logo + Nama Platform (Ukuran & susunan dijamin TIDAK diubah) */}
+          {/* Logo + Nama Platform */}
           <div className="flex items-center gap-3 mb-4">
             <SVGComponent width={65} height={65} viewBox="0 0 200 200" />
             <div>
@@ -69,7 +82,7 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Headline Utama — Ukuran disesuaikan sedikit agar lebih ringkas vertikal */}
+          {/* Headline */}
           <h1 className="text-3xl lg:text-4xl font-black text-slate-900 leading-[1.15] mb-4 tracking-tight">
             Ubah Ulasan Pelanggan
             <br />
@@ -79,14 +92,13 @@ export default function Hero() {
             </span>
           </h1>
 
-          {/* Subtext Pendukung */}
           <p className="text-xs lg:text-sm text-slate-500 mb-6 max-w-md leading-relaxed">
             Analisis sentimen otomatis, prediksi permintaan, dan rekomendasi
             bisnis berbasis kecerdasan buatan — dirancang khusus untuk kemajuan
             UMKM Indonesia.
           </p>
 
-          {/* Parameter Keunggulan Riil — Jarak margin dipersempit */}
+          {/* Parameter Keunggulan */}
           <div className="grid grid-cols-3 gap-2 mb-6 pb-6 border-b border-slate-100">
             {[
               { value: "3 Model AI", desc: "Sentimen, Prediksi, Insight" },
@@ -107,18 +119,28 @@ export default function Hero() {
             ))}
           </div>
 
-          {/* Area CTA Bebas Risiko (Low-Friction) langsung terlihat */}
+          {/* Area CTA */}
           <div className="space-y-3">
             <div className="flex flex-wrap gap-3">
               <Button
                 onClick={handleDemo}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 h-11 rounded-xl text-xs font-bold shadow-lg shadow-indigo-100 transition-all hover:scale-[1.01] flex items-center gap-2"
+                disabled={loading}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 h-11 rounded-xl text-xs font-bold shadow-lg shadow-indigo-100 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Coba Demo Gratis - 5 Menit Selesai
-                <ArrowRight
-                  size={14}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={14} />
+                    Membuat Sandbox...
+                  </>
+                ) : (
+                  <>
+                    Coba Demo Gratis - 5 Menit Selesai
+                    <ArrowRight
+                      size={14}
+                      className="transition-transform group-hover:translate-x-0.5"
+                    />
+                  </>
+                )}
               </Button>
               <Link href="/login">
                 <Button
@@ -130,7 +152,14 @@ export default function Hero() {
               </Link>
             </div>
 
-            {/* Teks Penjamin Mikro di Bawah Tombol */}
+            {/* Error message */}
+            {error && (
+              <div className="text-xs text-red-600 font-medium bg-red-50 p-2 rounded-lg">
+                {error}
+              </div>
+            )}
+
+            {/* Teks Penjamin Mikro */}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 font-medium pl-0.5">
               <span className="flex items-center gap-1">
                 <Zap size={12} className="text-indigo-500" /> Tanpa Kartu Kredit
@@ -143,9 +172,8 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* SISI KANAN: Pratinjau Dasbor Modern & Kartu Mengambang */}
+        {/* SISI KANAN: Pratinjau Dashboard */}
         <div className="relative hidden lg:block justify-self-center w-full max-w-[500px]">
-          {/* Gambar Pratinjau Dashboard */}
           <div className="relative bg-white p-2 rounded-[2rem] shadow-[0_20px_50px_rgba(79,70,229,0.15)] border border-indigo-50/50 z-10 transition-transform duration-500 hover:scale-[1.01]">
             <img
               src="/dashboard-preview.png"
@@ -154,7 +182,7 @@ export default function Hero() {
             />
           </div>
 
-          {/* Kartu Mengambang Atas (Rule Engine + LLM) */}
+          {/* Kartu Mengambang Atas */}
           <motion.div
             animate={{ y: [0, -6, 0] }}
             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
@@ -202,7 +230,4 @@ export default function Hero() {
       </div>
     </section>
   );
-}
-function login(arg0: { email: string; password: string }) {
-  throw new Error("Function not implemented.");
 }

@@ -1,45 +1,69 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose"; // or your JWT library
+import { jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("token")?.value;
 
-  // 1. If on auth pages (login/register) and token exists,
-  //    check if user is still valid before redirecting.
+  // Helper untuk membersihkan cookie dan redirect
+  const clearAndRedirect = (url: string) => {
+    const response = NextResponse.redirect(new URL(url, request.url));
+    response.cookies.delete("token");
+    return response;
+  };
+
+  // 1. Jika berada di halaman auth (login/register) dan sudah punya token
   if (token && (pathname === "/login" || pathname === "/register")) {
     const user = await getUserFromToken(token);
     if (user) {
-      // Valid user → redirect to dashboard
+      // Valid user → redirect ke dashboard
       return NextResponse.redirect(new URL("/dashboard", request.url));
     } else {
-      // Invalid/expired token or user deleted → clear cookie and let them stay
+      // Token invalid atau user sudah dihapus → hapus cookie dan biarkan tetap di halaman login
       const response = NextResponse.next();
       response.cookies.delete("token");
       return response;
     }
   }
 
-  // 2. Protect dashboard routes
-  if (pathname.startsWith("/dashboard") && !token) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-  if (pathname.startsWith("/dashboard") && token) {
+  // 2. Proteksi halaman dashboard
+  if (pathname.startsWith("/dashboard")) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    // Verifikasi token dan cek apakah user masih valid
     const user = await getUserFromToken(token);
     if (!user) {
-      // User no longer exists → clear cookie and redirect to login
-      const response = NextResponse.redirect(new URL("/login", request.url));
-      response.cookies.delete("token");
-      return response;
+      return clearAndRedirect("/login");
+    }
+
+    // ── TAMBAHAN: Cek apakah user demo sudah expired ──
+    try {
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+      const { payload } = await jwtVerify(token, secret);
+
+      const isDemo = payload.isDemo === true;
+      const expiresAt = payload.expiresAt
+        ? new Date(payload.expiresAt as string)
+        : null;
+
+      // Jika user demo dan sudah lewat waktu, logout paksa
+      if (isDemo && expiresAt && new Date() > expiresAt) {
+        // Hapus cookie dan arahkan ke home
+        return clearAndRedirect("/");
+      }
+    } catch {
+      // Jika gagal verifikasi token, biarkan flow normal (akan redirect ke login)
     }
   }
 
   return NextResponse.next();
 }
 
-// Helper to verify token and fetch user
+// Helper untuk memverifikasi token dan mengambil user dari database
 async function getUserFromToken(token: string) {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
@@ -50,7 +74,7 @@ async function getUserFromToken(token: string) {
     }
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true }, // only need existence
+      select: { id: true }, // hanya perlu keberadaan
     });
     return user;
   } catch {

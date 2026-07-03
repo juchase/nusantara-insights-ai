@@ -156,7 +156,6 @@ export async function POST(req: NextRequest) {
                     rating,
                     reviewDate,
                     sentiment,
-                    aspect,
                   },
                 });
               } catch (err: any) {
