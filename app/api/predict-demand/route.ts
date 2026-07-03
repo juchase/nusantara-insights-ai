@@ -1,51 +1,76 @@
+// app/api/predict-demand/route.ts
+
 import { prisma } from "@/lib/prisma";
-import { predictDemand } from "@/lib/ai-client";
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: Request) {
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
+
+export async function POST(req: NextRequest) {
+  const userPayload = getUserFromRequest(req);
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { productId } = await req.json();
+  if (!productId) {
+    return NextResponse.json({ error: "productId required" }, { status: 400 });
+  }
 
-  // 1. ambil sales dari DB
-  const salesData = await prisma.sales.findMany({
-    where: { productId },
-    orderBy: { date: "asc" },
-  });
+  // ── 1. Panggil Python AI Service ────────────────────────────────────────
+  // demand_service.py sudah menangani:
+  //   - Ambil data dari DB
+  //   - Train Prophet
+  //   - Simpan prediksi + upperBound + lowerBound ke tabel Prediction
+  //   - Return forecast_summary, confidence, growth, dll
+  let aiResult: any;
+  try {
+    const aiRes = await fetch(`${AI_SERVICE_URL}/predict-demand/${productId}`, {
+      method: "POST",
+    });
 
-  if (salesData.length < 3) {
-    return Response.json(
-      {
-        error: "Not enough data for prediction",
-      },
-      { status: 400 },
+    if (!aiRes.ok) {
+      const errText = await aiRes.text();
+      console.error("AI Service error:", errText);
+      return NextResponse.json(
+        { error: "AI service gagal memproses prediksi", detail: errText },
+        { status: 502 },
+      );
+    }
+
+    aiResult = await aiRes.json();
+  } catch (err) {
+    console.error("Gagal menghubungi AI service:", err);
+    return NextResponse.json(
+      { error: "AI service tidak dapat dijangkau" },
+      { status: 503 },
     );
   }
 
-  const sales = salesData.map((s) => s.quantity);
+  // ── 2. Tangani error dari Python ────────────────────────────────────────
+  if (aiResult.error) {
+    return NextResponse.json({ error: aiResult.error }, { status: 500 });
+  }
 
-  // 2. call AI service
-  const aiResult = await predictDemand(sales);
+  if (aiResult.status === "insufficient_data") {
+    return NextResponse.json(
+      { error: aiResult.message, status: "insufficient_data" },
+      { status: 422 },
+    );
+  }
 
-  const lastActual = sales[sales.length - 1];
-
-  const avgPrediction =
-    aiResult.predictions.reduce((sum: number, p: any) => {
-      return sum + p.predictedSales;
-    }, 0) / aiResult.predictions.length;
-
-  const growth = ((avgPrediction - lastActual) / lastActual) * 100;
-
-  // 3. simpan ke DB
-  await prisma.prediction.createMany({
-    data: aiResult.predictions.map((p: any) => ({
-      productId,
-      predictedSales: p.predictedSales,
-      predictionDate: new Date(p.date),
-      modelVersion: "v1-linear",
-    })),
-  });
-
-  return Response.json({
+  // ── 3. Return ke frontend ────────────────────────────────────────────────
+  // demand_service.py sudah menyimpan ke DB — tidak perlu simpan ulang di sini.
+  // Cukup teruskan response ke client.
+  return NextResponse.json({
     success: true,
-    predictions: aiResult.predictions,
-    growth: Number(growth.toFixed(1)),
+    growth: aiResult.growth ?? 0,
+    confidence: aiResult.confidence ?? 0,
+    confidence_context: aiResult.confidence_context ?? null,
+    model_used: aiResult.model_used ?? "prophet",
+    data_points: aiResult.data_points ?? 0,
+    // forecast_summary berisi { avg, min, max, lower, upper }
+    // digunakan oleh ForecastChart untuk menampilkan uncertainty interval
+    forecastSummary: aiResult.forecast_summary ?? null,
   });
 }

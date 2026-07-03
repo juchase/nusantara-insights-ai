@@ -2,15 +2,30 @@ import requests
 import re
 
 LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions"
-MODEL_ID      = "qwen2.5-1.5b-instruct"  # dari hasil /v1/models
+MODEL_ID       = "qwen2.5-1.5b-instruct"
+
+MAX_PROMPT_CHARS = 4000
+
 
 def generate_natural_insight(prompt: str) -> str:
+    if len(prompt) > MAX_PROMPT_CHARS:
+        prompt = prompt[:MAX_PROMPT_CHARS].rsplit(" ", 1)[0] + "..."
+        print(f"⚠ Prompt dipotong ke {MAX_PROMPT_CHARS} karakter")
+
     payload = {
         "model": MODEL_ID,
         "messages": [
             {
                 "role": "system",
-                "content": "Kamu adalah analis bisnis UMKM Indonesia. Tulis kalimat bisnis yang natural dan formal dalam Bahasa Indonesia. Jangan tambah informasi yang tidak ada."
+                "content": (
+                    "Kamu adalah analis bisnis UMKM Indonesia. "
+                    "Tulis narasi bisnis yang natural, formal, dan mengalir dalam Bahasa Indonesia. "
+                    "WAJIB sebutkan nama produk yang disebutkan dalam input. "
+                    "Selalu selesaikan kalimat hingga tuntas. "
+                    "Gunakan variasi kalimat, jangan terlalu kaku. "
+                    "Maksimal 3 kalimat. "
+                    "Jangan tambahkan informasi yang tidak ada dalam input."
+                )
             },
             {
                 "role": "user",
@@ -18,9 +33,11 @@ def generate_natural_insight(prompt: str) -> str:
             }
         ],
         "temperature": 0.1,
-        "max_tokens": 80,
-        "stream": False
+        "max_tokens":  500,   # ← dinaikkan agar narasi bisa lebih panjang
+        "stream":      False,
     }
+
+    print(f"📤 SENDING PAYLOAD TO LLM:\n{payload}\n")
 
     response = requests.post(LM_STUDIO_URL, json=payload, timeout=60)
     response.raise_for_status()
@@ -33,15 +50,25 @@ def generate_natural_insight(prompt: str) -> str:
 def clean_output(text: str) -> str:
     if not text:
         return ""
+
+    text = re.sub(r'[^\w\s.,!?%():-]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-    sentences = [s for s in sentences if len(s) > 15]
-    result = " ".join(sentences[:2])
-    result = re.sub(r'[^\w\s.,!?%():-]', '', result)
-    return re.sub(r'\s+', ' ', result).strip()
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
+
+    complete = []
+    for s in sentences[:3]:
+        if s and s[-1] in ".!?":
+            complete.append(s)
+        else:
+            complete.append(s + ".")
+
+    return " ".join(complete)
 
 
 def validate_output(text: str, rule_text: str) -> bool:
-    if not text or len(text) < 20:
+    if not text or len(text) < 30:
         return False
 
     INVALID_WORDS = ["produktif", "konsumen kami", "perusahaan kami"]
@@ -50,7 +77,6 @@ def validate_output(text: str, rule_text: str) -> bool:
             print(f"⚠ Output mengandung kata tidak valid: '{word}'")
             return False
 
-    # Angka dari rule engine harus tetap ada di output
     numbers_in_rule = re.findall(r'\d+', rule_text)
     if numbers_in_rule:
         if not re.findall(r'\d+', text):

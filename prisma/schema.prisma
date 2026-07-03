@@ -7,12 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER @map("user")
+  DEMO @map("demo")
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
   password  String
+  role      UserRole @default(USER)
   createdAt DateTime @default(now())
+
+  isDemo    Boolean? @default(false)
+  expiresAt DateTime?
 
   products Product[]
 }
@@ -20,7 +29,7 @@ model User {
 model Product {
   id        String   @id @default(uuid())
   userId    String
-  name      String   @unique
+  name      String
   category  String?
   createdAt DateTime @default(now())
 
@@ -38,10 +47,13 @@ model Review {
   reviewText String
   rating     Int
   sentiment  String?
-  aspect     String   @default("lainnya")
   reviewDate DateTime
 
+  createdAt DateTime @default(now())
+
   product Product @relation(fields: [productId], references: [id])
+  
+  @@unique([productId, reviewText, reviewDate])
 }
 
 model Sales {
@@ -49,6 +61,7 @@ model Sales {
   productId String
   date      DateTime
   quantity  Int
+  promotionFlag Boolean? @default(false)
 
   product Product @relation(fields: [productId], references: [id])
   
@@ -61,6 +74,11 @@ model Prediction {
   predictedSales Int
   predictionDate DateTime
   modelVersion   String?
+
+  upperBound      Int?
+  lowerBound      Int?
+
+  createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
 }
@@ -82,6 +100,14 @@ model Prediction {
   riskLevel        String
   healthScore      Int
 
+  confidence        Float?
+  confidenceLabel   String?
+  confidenceMessage String?
+  confidenceColor   String?
+
+  freq         String?  @default("D")
+  modelVersion String?
+
   llmUsed  Boolean  @default(false)
   llmModel String?
 
@@ -100,35 +126,14 @@ model AiLog {
   createdAt   DateTime @default(now())
 }
 
-model DashboardSummary {
-  id            String   @id @default("main")
-  totalReviews  Int
-  positiveCount Int
-  neutralCount  Int
-  negativeCount Int
-  totalRating   Float
-  avgRating     Float
-  updatedAt     DateTime @updatedAt
-}
-
-model DailyReviewSummary {
-  id        String   @id @default(uuid())
-  date      DateTime
-  total     Int
-  createdAt DateTime @default(now())
-
-  @@unique([date])
-}
-
 model KeywordSummary {
-  id String @id @default(uuid())
-
+  id        String   @id @default(uuid())
   productId String
+  word      String
+  count     Int
+  category  String   @default("lainnya")   // ← tambahkan ini
 
-  word  String
-  count Int
-
-  product Product @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 
   @@unique([productId, word])
 }

@@ -1,60 +1,98 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-  const [summary, totalProducts] = await Promise.all([
-    prisma.dashboardSummary.findUnique({
-      where: { id: "main" },
-    }),
-    prisma.product.count(), // 🔥 ini tambahan
-  ]);
+export async function GET(req: NextRequest) {
+  const userPayload = getUserFromRequest(req);
 
-  if (!summary) {
-    return NextResponse.json({
-      totalReviews: 0,
-      avgRating: 0,
-      sentimentStats: {
-        positive: 0,
-        neutral: 0,
-        negative: 0,
-      },
-    });
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const avgRating =
-    summary.totalReviews > 0 ? summary.totalRating / summary.totalReviews : 0;
+  const productId = req.nextUrl.searchParams.get("productId");
 
-  const sentimentStats = {
-    positive: Math.round((summary.positiveCount / summary.totalReviews) * 100),
-    neutral: Math.round((summary.neutralCount / summary.totalReviews) * 100),
-    negative: Math.round((summary.negativeCount / summary.totalReviews) * 100),
-  };
+  if (!productId) {
+    return NextResponse.json({ error: "Product ID required" }, { status: 400 });
+  }
 
-  const daily = await prisma.dailyReviewSummary.findMany({
-    orderBy: { date: "asc" },
+  const product = await prisma.product.findFirst({
+    where: {
+      id: productId,
+      userId: userPayload.userId,
+    },
   });
 
-  const chartData = daily.map((d) => ({
-    date: new Date(d.date).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-    }),
-    total: d.total,
-  }));
+  if (!product) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const reviews = await prisma.review.findMany({
+    where: {
+      productId,
+    },
+    orderBy: {
+      reviewDate: "asc",
+    },
+  });
 
   const keywords = await prisma.keywordSummary.findMany({
-    orderBy: { count: "desc" },
+    where: {
+      productId,
+    },
+    orderBy: {
+      count: "desc",
+    },
     take: 10,
   });
 
-  const topKeywords = keywords.map((k) => [k.word, k.count]);
+  const totalReviews = reviews.length;
+
+  const positiveCount = reviews.filter(
+    (r) => r.sentiment === "positive",
+  ).length;
+
+  const neutralCount = reviews.filter((r) => r.sentiment === "neutral").length;
+
+  const negativeCount = reviews.filter(
+    (r) => r.sentiment === "negative",
+  ).length;
+
+  const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+
+  const avgRating = totalReviews > 0 ? totalRating / totalReviews : 0;
+
+  const sentimentStats = {
+    positive:
+      totalReviews > 0 ? Math.round((positiveCount / totalReviews) * 100) : 0,
+
+    neutral:
+      totalReviews > 0 ? Math.round((neutralCount / totalReviews) * 100) : 0,
+
+    negative:
+      totalReviews > 0 ? Math.round((negativeCount / totalReviews) * 100) : 0,
+  };
+
+  const chartMap = new Map<string, number>();
+
+  reviews.forEach((r) => {
+    const key = new Date(r.reviewDate).toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    chartMap.set(key, (chartMap.get(key) || 0) + 1);
+  });
+
+  const chartData = Array.from(chartMap).map(([date, total]) => ({
+    date,
+    total,
+  }));
 
   return NextResponse.json({
-    totalReviews: summary.totalReviews,
+    totalReviews,
     avgRating,
-    totalProducts,
     sentimentStats,
     chartData,
-    topKeywords,
+    topKeywords: keywords.map((k) => [k.word, k.count]),
   });
 }

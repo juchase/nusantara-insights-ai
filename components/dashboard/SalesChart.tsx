@@ -1,10 +1,9 @@
-// components/dashboard/SalesChart.tsx
-
 "use client";
 
 import {
   ComposedChart,
   Line,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -12,11 +11,14 @@ import {
   CartesianGrid,
   ReferenceLine,
 } from "recharts";
+import SalesChartSkeleton from "@/components/dashboard/skeleton/SalesChartSkeleton";
 
 type ForecastPoint = {
   date: string;
   actual?: number | null;
   predicted?: number | null;
+  upper?: number | null;
+  lower?: number | null;
 };
 
 type TooltipProps = {
@@ -73,11 +75,24 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
 export default function SalesChart({
   data,
   modelUsed,
+  loading,
 }: {
   data: ForecastPoint[];
   modelUsed?: string;
+  loading?: boolean;
 }) {
-  // Pisahkan actual dan predicted — predicted mulai dari titik actual berakhir
+  // ── LOADING ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return <SalesChartSkeleton />;
+  }
+
+  // ── EMPTY — sembunyikan komponen sepenuhnya ─────────────────────────────
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // ── DATA ADA — render normal ────────────────────────────────────────────
+  const isMVA = modelUsed === "moving_average";
   const lastActualIndex = data.reduce(
     (last, d, i) => (d.actual != null ? i : last),
     -1,
@@ -87,14 +102,14 @@ export default function SalesChart({
     date: d.date,
     actual: d.actual ?? null,
     predicted: i >= lastActualIndex ? (d.predicted ?? null) : null,
+    upper: d.upper ?? null,
+    lower: d.lower ?? null,
   }));
 
   const allValues = data
     .flatMap((d) => [d.actual, d.predicted])
     .filter(Boolean) as number[];
   const maxVal = Math.max(...allValues, 0);
-
-  const hasData = data.length > 0;
 
   return (
     <div
@@ -105,7 +120,6 @@ export default function SalesChart({
         borderRadius: 16,
       }}
     >
-      {/* Header */}
       <div
         className="flex-col gap-3 sm:flex-row sm:items-start"
         style={{
@@ -119,11 +133,10 @@ export default function SalesChart({
             Penjualan Aktual vs Prediksi
           </p>
           <p style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
-            Tren penjualan historis dan proyeksi 7 hari ke depan
+            Tren penjualan historis dan proyeksi ke depan
           </p>
         </div>
 
-        {/* Legend manual */}
         <div
           className="flex-wrap"
           style={{ display: "flex", gap: 16, alignItems: "center" }}
@@ -144,114 +157,122 @@ export default function SalesChart({
               style={{
                 width: 24,
                 height: 3,
-                background: "#1D9E75",
+                background: isMVA ? "#5DCAA5" : "#1D9E75",
                 borderRadius: 2,
-                borderTop: "2px dashed #1D9E75",
-                backgroundColor: "transparent",
+                borderTop: isMVA ? "none" : "2px dashed #1D9E75",
+                backgroundColor: isMVA ? "#5DCAA5" : "transparent",
               }}
             />
-            <span style={{ fontSize: 11, color: "#6b7280" }}>Prediksi</span>
+            <span style={{ fontSize: 11, color: "#6b7280" }}>
+              {isMVA ? "Estimasi (MVA)" : "Prediksi"}
+            </span>
           </div>
         </div>
       </div>
 
-      {!hasData ? (
-        <div
-          style={{
-            height: 280,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+      <ResponsiveContainer width="100%" height={260}>
+        <ComposedChart
+          data={chartData}
+          margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
         >
-          <p style={{ fontSize: 13, color: "#9ca3af" }}>
-            Data penjualan belum tersedia
-          </p>
-        </div>
-      ) : (
-        <ResponsiveContainer width="100%" height={260}>
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
-          >
-            <CartesianGrid
-              stroke="#f3f4f6"
-              strokeDasharray="4 8"
-              vertical={false}
-            />
+          <CartesianGrid
+            stroke="#f3f4f6"
+            strokeDasharray="4 8"
+            vertical={false}
+          />
 
-            <XAxis
-              dataKey="date"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#9ca3af", fontSize: 11 }}
-              interval="preserveStartEnd"
-              minTickGap={40}
-            />
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#9ca3af", fontSize: 11 }}
-              domain={[0, Math.ceil(maxVal * 1.2)]}
-              width={36}
-            />
+          <XAxis
+            dataKey="date"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "#9ca3af", fontSize: 11 }}
+            interval="preserveStartEnd"
+            minTickGap={40}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "#9ca3af", fontSize: 11 }}
+            domain={[0, Math.ceil(maxVal * 1.2)]}
+            width={36}
+          />
 
-            <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={<CustomTooltip />} />
 
-            {/* Garis pemisah actual vs predicted */}
-            {lastActualIndex >= 0 && (
-              <ReferenceLine
-                x={chartData[lastActualIndex]?.date}
-                stroke="#e5e7eb"
-                strokeDasharray="4 4"
-                label={{
-                  value: "Hari ini",
-                  position: "top",
-                  fontSize: 10,
-                  fill: "#9ca3af",
-                }}
+          {lastActualIndex >= 0 && (
+            <ReferenceLine
+              x={chartData[lastActualIndex]?.date}
+              stroke="#e5e7eb"
+              strokeDasharray="4 4"
+              label={{
+                value: "Hari ini",
+                position: "top",
+                fontSize: 10,
+                fill: "#9ca3af",
+              }}
+            />
+          )}
+
+          {/* ── MVA Area (Jika model Moving Average) ── */}
+          {isMVA && (
+            <>
+              <Area
+                type="monotone"
+                dataKey="upper"
+                stroke="none"
+                fill="rgba(93,202,165,0.15)"
+                fillOpacity={1}
+                stackId="mva_band"
+                connectNulls={true}
               />
-            )}
+              <Area
+                type="monotone"
+                dataKey="lower"
+                stroke="none"
+                fill="transparent"
+                stackId="mva_band"
+                connectNulls={true}
+              />
+            </>
+          )}
 
-            {/* Actual — solid line */}
-            <Line
-              type="monotone"
-              dataKey="actual"
-              name="Aktual"
-              stroke="#4f46e5"
-              strokeWidth={2.5}
-              dot={false}
-              connectNulls={false}
-              activeDot={{
-                r: 5,
-                fill: "#4f46e5",
-                stroke: "#fff",
-                strokeWidth: 2,
-              }}
-            />
+          {/* ── Garis Aktual ── */}
+          <Line
+            type="monotone"
+            dataKey="actual"
+            name="Aktual"
+            stroke="#4f46e5"
+            strokeWidth={2.5}
+            dot={false}
+            connectNulls={false}
+            activeDot={{
+              r: 5,
+              fill: "#4f46e5",
+              stroke: "#fff",
+              strokeWidth: 2,
+            }}
+          />
 
-            {/* Predicted — dashed line */}
-            <Line
-              type="monotone"
-              dataKey="predicted"
-              name="Prediksi"
-              stroke="#1D9E75"
-              strokeWidth={2}
-              strokeDasharray="6 4"
-              dot={false}
-              connectNulls={false}
-              activeDot={{
-                r: 5,
-                fill: "#1D9E75",
-                stroke: "#fff",
-                strokeWidth: 2,
-              }}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      )}
+          {/* ── Garis Prediksi / Estimasi ── */}
+          <Line
+            type={isMVA ? "step" : "monotone"}
+            dataKey="predicted"
+            name={isMVA ? "Estimasi" : "Prediksi"}
+            stroke={isMVA ? "#5DCAA5" : "#1D9E75"}
+            strokeWidth={isMVA ? 2.5 : 2}
+            strokeDasharray={isMVA ? "none" : "6 4"}
+            dot={false}
+            connectNulls={false}
+            activeDot={{
+              r: 5,
+              fill: isMVA ? "#5DCAA5" : "#1D9E75",
+              stroke: "#fff",
+              strokeWidth: 2,
+            }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
 
-      {/* Footer info */}
       <div
         className="items-start sm:items-center"
         style={{
@@ -268,13 +289,15 @@ export default function SalesChart({
             width: 6,
             height: 6,
             borderRadius: "50%",
-            background: "#1D9E75",
+            background: isMVA ? "#5DCAA5" : "#1D9E75",
           }}
         />
         <p style={{ fontSize: 11, color: "#6b7280" }}>
-          Prediksi menggunakan{" "}
-          {modelUsed ? modelUsed.replace(/_/g, " ") : "Linear Regression"}
-          {""}berdasarkan data historis penjualan
+          {isMVA
+            ? "Estimasi menggunakan rata-rata tertimbang (Moving Average) dari data terbatas."
+            : `Prediksi menggunakan ${
+                modelUsed ? modelUsed.replace(/_/g, " ") : "Linear Regression"
+              } berdasarkan data historis penjualan.`}
         </p>
       </div>
     </div>

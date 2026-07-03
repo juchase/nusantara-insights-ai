@@ -1,140 +1,230 @@
-# app/services/keyword_service.py
-
-from app.utils.db import SessionLocal
-from sqlalchemy import text
-from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 import re
+import spacy
+import os
+from sqlalchemy import text
+from app.utils.db import SessionLocal
+from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+
+# ── Muat model spaCy Indonesia ────────────────────────────────────────────────
+# spaCy di sini HANYA dipakai untuk lemmatisasi (kata dasar), BUKAN untuk
+# menentukan relevansi kata. POS tagging terlalu permisif karena meloloskan
+# semua NOUN/ADJ termasuk kata netral seperti "aroma", "harum", "rasa".
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "id_core_news_sm", "id_core_news_sm-0.0.4")
+
+try:
+    nlp = spacy.load(MODEL_PATH)
+except OSError:
+    raise RuntimeError(f"Gagal memuat model. Pastikan folder model ada di: {MODEL_PATH}")
 
 factory = StopWordRemoverFactory()
 SASTRAWI_STOPWORDS = set(factory.get_stop_words())
 
 CUSTOM_STOPWORDS = {
-    # slang positif — bukan keluhan
     "joss", "spesial", "mantap", "mantul", "top", "sip", "jos",
-    "puas", "keren", "oke", "okay", "siap", "setuju",
-    "terjangkau", "autentik", "original", "asli", "rapi",
-    "harum", "wangi", "lezat", "nikmat", "gurih",
-
-    # kata deskripsi produk — terlalu generik
-    "cemilan", "camilan", "makanan", "minuman", "kopi", "teh",
-    "produk", "barang", "item", "beli", "dapat",
-
-    # kata dengan sufiks yang tidak bermakna sebagai keluhan
-    "harganya", "aromanya", "rasanya", "baunya", "isinya",
-    "kemasannya", "pelayanannya", "tampilannya",
-
-    # kata umum yang lolos Sastrawi
-    "recommended", "recommend", "good", "great", "nice",
-    "best", "worst", "love", "like", "hate", "fine", "well",
-    "thanks", "thank", "terimakasih", "makasih",
-
-    # kata opini netral
-    "standar", "biasa", "hambar", "teliti",
+    "puas", "keren", "oke", "okay", "siap", "setuju", "terjangkau",
+    "sangat", "banget", "bgt", "sekali", "terlalu", "amat", "nih", "kok",
+    "recommended", "recommend", "good", "great", "nice", "best", "thanks",
+    "terimakasih", "makasih", "toko", "seller", "admin", "aplikasi", "beli",
+    "pesan", "order", "bintang", "ulasan", "review", "kak", "gan", "sis", "ya", "yg",
 }
-
 STOPWORDS = SASTRAWI_STOPWORDS | CUSTOM_STOPWORDS
 
-# Keyword yang dianggap valid sebagai keluhan UMKM
-VALID_COMPLAINT_KEYWORDS = {
-    "pengiriman", "kualitas", "harga", "kemasan", "pelayanan",
-    "expired", "bocor", "tumpah", "plastik", "rusak", "cacat",
-    "lambat", "lama", "mahal", "apek", "basi", "kotor", "lecet",
-    "pecah", "retak", "penyok", "basah", "robek", "kurang",
-    "salah", "tidak_sesuai", "palsu", "tiruan", "berbeda",
+# ── NEGATION WORDS ─────────────────────────────────────────────────────────────
+# Kata yang mengindikasikan bahwa kata SETELAHNYA BISA jadi keluhan/kekurangan,
+# bukan pujian. Contoh: "kurang renyah", "tidak segar", "gak enak"
+# PENTING: trigger ini hanya jadi GERBANG KEDUA -- kata setelahnya TETAP harus
+# ada di whitelist kategori (_WORD_TO_CATEGORY) agar lolos. Tanpa syarat ini,
+# kata umum/typo apapun setelah "kurang"/"tidak" akan ikut lolos (lihat bug
+# yang ditemukan: "kurang tau", "kurang pankai", "kurang perlu" semuanya
+# tertangkap padahal bukan keluhan produk).
+NEGATION_TRIGGERS = {"kurang", "tidak", "gak", "ga", "bukan", "tanpa", "minim", "kekurangan"}
+
+# ── INTENSIFIER NEGATIF ────────────────────────────────────────────────────────
+# Kata yang SELALU bermakna negatif tanpa perlu negasi tambahan
+NEGATIVE_STANDALONE = {
+    "rusak", "robek", "penyok", "bocor", "pecah", "retak", "tumpah",
+    "lambat", "lama", "telat", "terlambat", "lelet",
+    "mahal", "kemahalan",
+    "expired", "kadaluarsa", "basi", "apek", "kotor", "berjamur", "berbau",
+    "palsu", "tiruan", "beda", "berbeda", "salah", "hancur", "melempem",
+    "cuek", "kecewa", "marah", "kesal", "menyengat",
+    "buruk", "ampas", "kasar", "hambar",
 }
 
-def extract_keywords(text: str) -> list[str]:
-    words = re.sub(r'[^a-zA-Z\s]', '', text.lower()).split()
-    return [
-        w for w in words
-        if len(w) > 3 and w not in STOPWORDS
-    ]
+# ── KATEGORISASI ────────────────────────────────────────────────────────────────
+# Hanya kata yang LOLOS sebagai keluhan (lihat is_complaint_word) yang akan
+# dipetakan ke kategori ini. Kategori dipakai untuk PENGELOMPOKAN tampilan,
+# bukan untuk filter awal.
+#
+# Kata sifat netral/positif (bagus, enak, fresh, cocok, rapi, sedap, aman, dst)
+# DITAMBAHKAN di sini secara sengaja -- bukan supaya mereka lolos begitu saja,
+# tapi supaya KETIKA mereka muncul lewat jalur negasi ("kurang bagus",
+# "kurang fresh", "tidak rapi"), hasilnya jatuh ke kategori bermakna
+# ("Kualitas Tidak Sesuai") bukan "lainnya".
+CATEGORY_MAPS = {
+    "pengiriman": [
+        "kirim", "kurir", "paket", "lambat", "lama", "ongkir",
+        "sampe", "sampai", "ekspedisi", "resi", "antar", "telat",
+        "terlambat", "lelet",
+    ],
+    "kemasan": [
+        "kemas", "bungkus", "bocor", "tumpah", "plastik", "kotak",
+        "dus", "segel", "pecah", "robek", "penyok", "basah", "rusak",
+        "karton",
+    ],
+    "kualitas produk": [
+        "rasa", "kualitas", "expired", "basi", "apek", "kotor", "berjamur",
+        "berbau", "palsu", "tiruan", "beda", "berbeda", "sesuai", "hancur",
+        "melempem", "salah", "kadaluarsa",
+        # kata sifat netral/positif -- hanya bermakna keluhan saat didahului
+        # negasi ("kurang enak", "tidak fresh", "tidak rapi")
+        "enak", "bagus", "fresh", "cocok", "rapi", "rapih", "sedap",
+        "renyah", "segar", "lengket", "licin",
+    ],
+    "harga": ["harga", "mahal", "kemahalan"],
+    "pelayanan": [
+        "pelayanan", "respon", "balas", "chat", "admin", "cuek",
+        "ramah", "kecewa", "marah", "kesal", "menyengat",
+    ],
+}
 
-# keyword_service.py
+_WORD_TO_CATEGORY: dict[str, str] = {}
+for cat, words in CATEGORY_MAPS.items():
+    for w in words:
+        _WORD_TO_CATEGORY[w] = cat
 
-def get_product_name_tokens(db) -> set:
-    """Ambil semua nama produk dari DB, pecah jadi kata-kata untuk stopwords."""
-    rows = db.execute(text("""
-        SELECT name FROM "Product"
-    """)).fetchall()
 
-    tokens = set()
-    for row in rows:
-        words = row[0].lower().split()
-        for word in words:
-            clean = re.sub(r'[^a-z]', '', word)
-            if len(clean) > 2:
-                tokens.add(clean)
+def determine_category(word: str) -> str:
+    """Exact match — bukan substring match. 'aroma' tidak match 'roma' dsb."""
+    return _WORD_TO_CATEGORY.get(word, "lainnya")
 
-    print(f"🏷️ Product name tokens as stopwords: {tokens}")
-    return tokens
+
+def is_complaint_word(lemma: str, prev_lemma: str | None) -> bool:
+    """
+    Tentukan apakah sebuah kata (setelah lemmatisasi) benar-benar
+    mengindikasikan KELUHAN, bukan deskripsi netral/positif, kata umum,
+    atau typo yang tidak relevan.
+
+    Dua jalur kata dianggap keluhan:
+    1. Kata itu sendiri SELALU negatif (NEGATIVE_STANDALONE)
+       contoh: "rusak", "lambat", "mahal" — tidak butuh konteks tambahan
+    2. Kata itu didahului oleh negation trigger DAN kata itu sendiri
+       ADA di whitelist kategori (_WORD_TO_CATEGORY)
+       contoh: "kurang renyah" -> lolos KARENA "renyah" terdaftar di kategori
+       Tanpa syarat whitelist ini, SEMUA kata setelah "kurang"/"tidak" akan
+       lolos -- termasuk kata umum ("kurang tau", "kurang perlu") dan typo
+       ("kurang pankai") yang bukan keluhan produk sama sekali. Ini adalah
+       fix untuk bug di mana 48% hasil ekstraksi jatuh ke kategori "lainnya".
+    """
+    if lemma in NEGATIVE_STANDALONE:
+        return True
+    if prev_lemma in NEGATION_TRIGGERS and lemma in _WORD_TO_CATEGORY:
+        return True
+    return False
 
 
 def update_keyword_summary(product_id: str):
     db = SessionLocal()
     try:
-        # ✅ Stopwords dinamis = Sastrawi + custom + nama produk dari DB
-        product_tokens = get_product_name_tokens(db)
-        dynamic_stopwords = STOPWORDS | product_tokens  # gabungkan
+        product_row = db.execute(
+            text('SELECT name FROM "Product" WHERE id = :pid'),
+            {"pid": product_id},
+        ).fetchone()
+        current_product_tokens = set()
+        if product_row and product_row[0]:
+            current_product_tokens = set(
+                re.sub(r'[^a-z\s]', '', product_row[0].lower()).split()
+            )
+
+        dynamic_stopwords = STOPWORDS | current_product_tokens
 
         rows = db.execute(text("""
             SELECT "reviewText" FROM "Review"
-            WHERE "productId" = :product_id
+            WHERE "productId" = :product_id AND "sentiment" IN ('negative', 'neutral')
         """), {"product_id": product_id}).fetchall()
 
         word_count: dict[str, int] = {}
+
         for row in rows:
-            # Pakai dynamic_stopwords bukan STOPWORDS
-            words = re.sub(r'[^a-zA-Z\s]', '', row[0].lower()).split()
-            for word in words:
-                normalized = word.lower().strip()
-                if len(normalized) > 3 and normalized not in dynamic_stopwords:
+            if not row or not row[0]:
+                continue
+
+            doc = nlp(row[0].lower())
+            tokens = list(doc)
+
+            for i, token in enumerate(tokens):
+                normalized = re.sub(r'[^a-z]', '', token.lemma_.strip())
+
+                if len(normalized) <= 2:
+                    continue
+                if normalized in dynamic_stopwords:
+                    continue
+
+                # Ambil lemma kata SEBELUMNYA untuk cek negasi
+                prev_lemma = None
+                if i > 0:
+                    prev_lemma = re.sub(r'[^a-z]', '', tokens[i - 1].lemma_.strip())
+
+                # ── FILTER UTAMA — hanya kata yang benar-benar keluhan ────────
+                if is_complaint_word(normalized, prev_lemma):
                     word_count[normalized] = word_count.get(normalized, 0) + 1
 
-        # Prioritaskan keyword yang ada di VALID_COMPLAINT_KEYWORDS
-        # Sisanya tetap masuk tapi di belakang
-        def sort_key(item):
-            word, count = item
-            priority = 0 if word in VALID_COMPLAINT_KEYWORDS else 1
-            return (priority, -count)
+        top_words = sorted(word_count.items(), key=lambda x: -x[1])[:5]
 
-        top_words = sorted(word_count.items(), key=sort_key)[:20]
+        db.execute(
+            text('DELETE FROM "KeywordSummary" WHERE "productId" = :product_id'),
+            {"product_id": product_id},
+        )
 
-        db.execute(text("""
-            DELETE FROM "KeywordSummary"
-            WHERE "productId" = :product_id
-        """), {"product_id": product_id})
-
-        # ✅ Loop yang benar — word sudah normalized dari dict
         for word, count in top_words:
+            category = determine_category(word)
             db.execute(text("""
-                INSERT INTO "KeywordSummary" (id, "productId", word, count)
-                VALUES (gen_random_uuid(), :product_id, :word, :count)
+                INSERT INTO "KeywordSummary" (id, "productId", word, count, category)
+                VALUES (gen_random_uuid(), :product_id, :word, :count, :category)
             """), {
                 "product_id": product_id,
-                "word": word,
-                "count": count
+                "word":       word,
+                "count":      count,
+                "category":   category,
             })
 
         db.commit()
-        print(f"✅ Keyword updated untuk produk {product_id}: {[w for w, _ in top_words[:5]]}")
+        print(f"🎯 Keluhan valid untuk {product_id}: {[w for w, _ in top_words]}")
 
     except Exception as e:
         db.rollback()
-        print(f"🔥 Keyword update error: {e}")
+        print(f"🔥 Error: {e}")
     finally:
         db.close()
+
 
 def update_all_products():
     db = SessionLocal()
     try:
-        product_ids = db.execute(text("""
-            SELECT DISTINCT "productId" FROM "Review"
-        """)).fetchall()
+        product_ids = db.execute(text('SELECT id FROM "Product"')).fetchall()
+        for (pid,) in product_ids:
+            update_keyword_summary(pid)
+        print("✅ Semua produk telah diperbarui keyword summary-nya.")
+    except Exception as e:
+        print(f"❌ Error update_all_products: {e}")
+    finally:
+        db.close()
 
-        print(f"🔄 Update keyword untuk {len(product_ids)} produk...")
-        for (product_id,) in product_ids:
-            update_keyword_summary(product_id)
-        print("✅ Semua keyword berhasil diupdate")
+
+def get_dominant_keyword(product_id: str):
+    db = SessionLocal()
+    try:
+        row = db.execute(text("""
+            SELECT category, SUM(count) as total_count
+            FROM "KeywordSummary"
+            WHERE "productId" = :product_id
+            GROUP BY category
+            ORDER BY total_count DESC, category ASC
+            LIMIT 1
+        """), {"product_id": product_id}).fetchone()
+        # Karena yang kita butuhkan hanya kategorinya, return (None, category)
+        return (None, row[0]) if row else (None, None)
     finally:
         db.close()

@@ -1,9 +1,9 @@
-// components/dashboard/InsightCard.tsx
-
 "use client";
 
 import { InsightResponse } from "@/types/insight";
-import { Cpu, Sparkles } from "lucide-react";
+import { Cpu, Sparkles, Upload } from "lucide-react";
+import Link from "next/link";
+import InsightCardSkeleton from "@/components/dashboard/skeleton/InsightCardSkeleton";
 
 interface Props {
   insight: InsightResponse | null;
@@ -50,6 +50,96 @@ export default function InsightCard({
 
   const risk = riskBadge(insight?.risk_level);
 
+  // ── LOADING ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return <InsightCardSkeleton />;
+  }
+
+  // ── EMPTY TOTAL — user baru, belum punya satu produk pun. Ini SATU-SATUNYA
+  // komponen yang tampil mencolok dengan CTA besar saat kosong; komponen
+  // dashboard lainnya sembunyikan diri sepenuhnya (return null) supaya tidak
+  // berisik mengulang CTA yang sama di banyak tempat. ──────────────────────
+  if (products.length === 0) {
+    return (
+      <div
+        className="mt-4 overflow-hidden rounded-2xl sm:mt-5 lg:mt-6"
+        style={{ background: "#1a1a2e" }}
+      >
+        <div
+          style={{
+            padding: "48px 24px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              background: "rgba(127,119,221,0.25)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Sparkles size={26} style={{ color: "#AFA9EC" }} />
+          </div>
+
+          <div>
+            <p
+              style={{
+                fontSize: 18,
+                fontWeight: 500,
+                color: "#fff",
+                marginBottom: 6,
+              }}
+            >
+              Belum ada data untuk dianalisis
+            </p>
+            <p
+              style={{
+                fontSize: 13,
+                color: "rgba(255,255,255,0.55)",
+                lineHeight: 1.6,
+                maxWidth: 420,
+              }}
+            >
+              Upload dataset ulasan dan penjualan produk Anda untuk mulai
+              melihat insight bisnis, prediksi permintaan, dan analisis sentimen
+              pelanggan.
+            </p>
+          </div>
+
+          <Link
+            href="/dashboard/upload"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 20px",
+              borderRadius: 10,
+              background: "#7F77DD",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 500,
+              textDecoration: "none",
+            }}
+          >
+            <Upload size={15} />
+            Upload Dataset Pertama
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PRODUK ADA TAPI INSIGHT BELUM SIAP (misal pipeline AI masih proses) ──
+  // Bukan empty total -- tetap tampilkan layout penuh + product selector,
+  // hanya bagian summary yang menunjukkan status "belum siap".
   return (
     <div
       className="mt-4 overflow-hidden rounded-2xl sm:mt-5 lg:mt-6"
@@ -98,7 +188,6 @@ export default function InsightCard({
             >
               Business Status
             </p>
-            {/* Risk badge */}
             {insight && (
               <span
                 style={{
@@ -152,6 +241,7 @@ export default function InsightCard({
               onChange={(e) => onProductChange(e.target.value)}
               style={{
                 width: "100%",
+                maxWidth: "350px", // Tetap batasi select utamanya
                 background: "rgba(255,255,255,0.08)",
                 border: "0.5px solid rgba(255,255,255,0.15)",
                 borderRadius: 8,
@@ -159,17 +249,30 @@ export default function InsightCard({
                 color: "#fff",
                 fontSize: 13,
                 outline: "none",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
-              {products.map((p) => (
-                <option
-                  key={p.id}
-                  value={p.id}
-                  style={{ background: "#1a1a2e" }}
-                >
-                  {p.name}
-                </option>
-              ))}
+              {products.map((p) => {
+                // POTONG TEKS DI SINI: Jika lebih dari 40 karakter, potong dan tambahkan "..."
+                const maxLength = 40;
+                const truncatedName =
+                  p.name.length > maxLength
+                    ? p.name.substring(0, maxLength) + "..."
+                    : p.name;
+
+                return (
+                  <option
+                    key={p.id}
+                    value={p.id}
+                    style={{ background: "#1a1a2e" }}
+                    title={p.name} // Atribut ini agar nama lengkap tetap muncul saat user mengarahkan kursor (hover)
+                  >
+                    {truncatedName}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -212,76 +315,67 @@ export default function InsightCard({
         </div>
       </div>
 
-      {/* EXECUTIVE SUMMARY — ini bagian utama */}
+      {/* EXECUTIVE SUMMARY */}
       <div style={{ padding: "16px 24px 20px" }}>
-        {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div
-              style={{
-                height: 14,
-                width: "90%",
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 4,
-              }}
-              className="animate-pulse"
-            />
-            <div
-              style={{
-                height: 14,
-                width: "75%",
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 4,
-              }}
-              className="animate-pulse"
-            />
-            <div
-              style={{
-                height: 14,
-                width: "60%",
-                background: "rgba(255,255,255,0.08)",
-                borderRadius: 4,
-              }}
-              className="animate-pulse"
-            />
-          </div>
+        {insight?.executive_summary ? (
+          <p
+            style={{
+              fontSize: 14,
+              color: "#e8e8f0",
+              lineHeight: 1.7,
+              marginBottom: 12,
+            }}
+          >
+            {insight.executive_summary}
+          </p>
         ) : (
+          <p
+            style={{
+              fontSize: 14,
+              color: "#e8e8f0",
+              lineHeight: 1.7,
+              marginBottom: 12,
+            }}
+          >
+            Produk ini belum memiliki insight. Pipeline AI mungkin masih
+            memproses data, atau belum ada ulasan/penjualan yang diupload untuk
+            produk ini.
+          </p>
+        )}
+
+        {insight?.summary ? (
           <>
-            {/* Executive summary — dari rule engine */}
-            {insight?.executive_summary && (
-              <p
+            {insight.summary !== insight.executive_summary && (
+              <div
                 style={{
-                  fontSize: 14,
-                  color: "#e8e8f0",
-                  lineHeight: 1.7,
-                  marginBottom: 12,
+                  borderTop: "1px solid rgba(255,255,255,0.06)",
+                  paddingTop: 10,
+                  marginTop: 4,
                 }}
               >
-                {insight.executive_summary}
-              </p>
-            )}
-
-            {/* AI polished summary — dari LLM */}
-            {insight?.summary &&
-              insight.summary !== insight.executive_summary && (
-                <div
+                <p
                   style={{
-                    borderTop: "1px solid rgba(255,255,255,0.06)",
-                    paddingTop: 10,
-                    marginTop: 4,
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.55)",
+                    lineHeight: 1.6,
                   }}
                 >
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: "rgba(255,255,255,0.55)",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {insight.summary}
-                  </p>
-                </div>
-              )}
+                  {insight.summary}
+                </p>
+              </div>
+            )}
           </>
+        ) : (
+          <p
+            style={{
+              fontSize: 12,
+              color: "rgba(255,255,255,0.55)",
+              lineHeight: 1.6,
+            }}
+          >
+            Upload ulasan dan data penjualan untuk produk ini agar AI dapat
+            menghasilkan insight.
+          </p>
         )}
 
         {/* Footer badges */}
@@ -294,24 +388,47 @@ export default function InsightCard({
             marginTop: 12,
           }}
         >
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 500,
-              padding: "3px 10px",
-              borderRadius: 20,
-              background: "rgba(83,74,183,0.3)",
-              color: "#AFA9EC",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Cpu size={11} /> Qwen2.5 Enhanced
-          </span>
-          {insight?.llm_used === false && (
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+          {insight?.llm_used === true ? (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 500,
+                padding: "3px 10px",
+                borderRadius: 20,
+                background: "rgba(83,74,183,0.3)",
+                color: "#AFA9EC",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Cpu size={11} /> Qwen2.5 Enhanced
+            </span>
+          ) : (
+            <span
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.3)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
               Rule engine fallback
+            </span>
+          )}
+
+          {insight?.confidence !== undefined && insight.confidence > 0 && (
+            <span
+              style={{
+                fontSize: 10,
+                color: "rgba(255,255,255,0.4)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              Confidence: {insight.confidence.toFixed(1)}%
             </span>
           )}
         </div>

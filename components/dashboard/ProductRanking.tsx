@@ -1,8 +1,8 @@
-// components/dashboard/ProductRanking.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { Trophy, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import CardSkeleton from "./skeleton/CardSkeleton";
 
 interface ProductRank {
   id: string;
@@ -81,7 +81,6 @@ function TopCard({
         padding: "14px 16px",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -117,7 +116,6 @@ function TopCard({
         </p>
       </div>
 
-      {/* Product name */}
       <p
         style={{
           fontSize: 14,
@@ -132,7 +130,6 @@ function TopCard({
         {product.name}
       </p>
 
-      {/* Health score bar */}
       <div
         style={{
           display: "flex",
@@ -160,7 +157,6 @@ function TopCard({
         </span>
       </div>
 
-      {/* Sentiment bar */}
       <div
         style={{
           display: "flex",
@@ -205,7 +201,6 @@ function TopCard({
         </span>
       </div>
 
-      {/* Footer */}
       <div
         style={{
           display: "flex",
@@ -233,10 +228,62 @@ function TopCard({
   );
 }
 
+function Modal({
+  children,
+  onClose,
+  title,
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+  title: string;
+}) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.4)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 50,
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 12,
+          padding: 20,
+          minWidth: 600,
+          maxHeight: "80vh",
+          overflowY: "auto",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 12,
+          }}
+        >
+          <h2 style={{ fontSize: 16, fontWeight: 600 }}>{title}</h2>
+          <button
+            onClick={onClose}
+            style={{ border: "none", background: "none", cursor: "pointer" }}
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function ProductRanking() {
   const [data, setData] = useState<RankingData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showAll, setShowAll] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/product-ranking")
@@ -246,40 +293,7 @@ export default function ProductRanking() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading)
-    return (
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          padding: "20px 24px",
-        }}
-      >
-        <div
-          style={{
-            height: 14,
-            width: 160,
-            background: "#f3f4f6",
-            borderRadius: 4,
-            marginBottom: 16,
-          }}
-          className="animate-pulse"
-        />
-        <div
-          className="grid grid-cols-1 gap-3 md:grid-cols-3"
-        >
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              style={{ height: 140, background: "#f9fafb", borderRadius: 10 }}
-              className="animate-pulse"
-            />
-          ))}
-        </div>
-      </div>
-    );
-
+  if (loading) return <CardSkeleton />;
   if (!data || data.total === 0) return null;
 
   return (
@@ -310,7 +324,7 @@ export default function ProductRanking() {
         </div>
         {data.total > 3 && (
           <button
-            onClick={() => setShowAll((p) => !p)}
+            onClick={() => setShowModal(true)}
             style={{
               fontSize: 12,
               color: "#4f46e5",
@@ -320,84 +334,189 @@ export default function ProductRanking() {
               fontWeight: 500,
             }}
           >
-            {showAll ? "Sembunyikan" : `Lihat semua (${data.total})`}
+            {`Lihat semua (${data.total})`}
           </button>
         )}
       </div>
 
-      {/* Top 3 cards */}
+      {/* Top cards */}
       <div
         className="grid grid-cols-1 gap-3 md:grid-cols-3"
         style={{
-          marginBottom: showAll ? 16 : 0,
+          marginBottom: 16,
         }}
       >
-        <TopCard
-          label="Terbaik"
-          icon={<Trophy size={14} />}
-          iconColor="#3B6D11"
-          iconBg="#EAF3DE"
-          product={data.best}
-        />
-        <TopCard
-          label="Perlu Perhatian"
-          icon={<AlertTriangle size={14} />}
-          iconColor="#854F0B"
-          iconBg="#FAEEDA"
-          product={data.worst}
-        />
-        <TopCard
-          label="Keluhan Terbanyak"
-          icon={<MessageSquareWarning size={14} />}
-          iconColor="#A32D2D"
-          iconBg="#FCEBEB"
-          product={data.mostComplaints}
-        />
+        {data.total === 1 ? (
+          // ── FIX UX: Jika cuma 1 produk, tampilkan 1 kartu ringkasan ──
+          <div className="md:col-span-3">
+            <TopCard
+              label="Ringkasan Produk"
+              icon={<Trophy size={14} />}
+              iconColor="#3B6D11"
+              iconBg="#EAF3DE"
+              product={data.best}
+            />
+          </div>
+        ) : (
+          // ── Jika lebih dari 1 produk, tampilkan 3 kartu peringkat ──
+          <>
+            <TopCard
+              label="Terbaik"
+              icon={<Trophy size={14} />}
+              iconColor="#3B6D11"
+              iconBg="#EAF3DE"
+              product={data.best}
+            />
+            <TopCard
+              label="Perlu Perhatian"
+              icon={<AlertTriangle size={14} />}
+              iconColor="#854F0B"
+              iconBg="#FAEEDA"
+              product={data.worst}
+            />
+            <TopCard
+              label="Keluhan Terbanyak"
+              icon={<MessageSquareWarning size={14} />}
+              iconColor="#A32D2D"
+              iconBg="#FCEBEB"
+              product={data.mostComplaints}
+            />
+          </>
+        )}
       </div>
 
-      {/* Full ranking table — toggle */}
-      {showAll && (
-        <div style={{ borderTop: "1px solid #f3f4f6", paddingTop: 14 }}>
-          <div className="overflow-x-auto">
+      {/* Modal daftar produk */}
+      {showModal && (
+        <Modal onClose={() => setShowModal(false)} title="Daftar Produk">
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              width: "100%",
+              minWidth: "560px", // Ditambah lebarnya agar pas dengan tabel ber-header
+              maxWidth: "600px",
+              boxSizing: "border-box",
+            }}
+          >
+            {/* 1. HEADER TABEL (Sejajar dengan isi data) */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: "12px",
+                padding: "6px 12px", // Menyesuaikan padding kiri-kanan data di bawah
+                marginBottom: "6px",
+                borderBottom: "1px solid #e5e7eb", // Garis pembatas header
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "#6b7280",
+                  width: "28px",
+                }}
+              >
+                RANK
+              </span>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "#6b7280",
+                  flex: 1,
+                }}
+              >
+                PRODUK
+              </span>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "#6b7280",
+                  width: "130px",
+                }}
+              >
+                HEALTH SCORE
+              </span>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "#6b7280",
+                  width: "42px",
+                  textAlign: "right",
+                }}
+              >
+                POSITIF
+              </span>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "#6b7280",
+                  width: "56px",
+                  textAlign: "center",
+                }}
+              >
+                RISIKO
+              </span>
+            </div>
+
+            {/* 2. DAFTAR PRODUK (Scrollable Area) */}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: 6,
-                minWidth: 560,
+                gap: "4px",
+                maxHeight: "50vh", // Membatasi tinggi daftar agar pas di tengah layar
+                overflowY: "auto",
+                paddingRight: "4px",
+                boxSizing: "border-box",
               }}
             >
               {data.all.map((p, i) => {
-                const risk = RISK_STYLE[p.riskLevel] ?? RISK_STYLE.unknown;
+                const risk = RISK_STYLE[p.riskLevel] || RISK_STYLE.unknown;
+                const isTopThree = i < 3;
+                const isFirst = i === 0;
+
                 return (
                   <div
                     key={p.id}
                     style={{
                       display: "flex",
+                      flexDirection: "row",
                       alignItems: "center",
-                      gap: 12,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      background: i === 0 ? "#f9fafb" : "transparent",
+                      gap: "12px",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      background: isFirst ? "#f3f4f6" : "transparent",
+                      border: isFirst
+                        ? "1px solid #e5e7eb"
+                        : "1px solid transparent",
+                      boxSizing: "border-box",
                     }}
                   >
-                    {/* Rank */}
+                    {/* Peringkat */}
                     <span
                       style={{
-                        fontSize: 12,
-                        fontWeight: 500,
-                        color: i < 3 ? "#4f46e5" : "#9ca3af",
-                        width: 20,
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: isTopThree ? "#4f46e5" : "#9ca3af",
+                        width: "28px",
                         flexShrink: 0,
                       }}
                     >
                       #{i + 1}
                     </span>
 
-                    {/* Name */}
+                    {/* Nama Produk */}
                     <span
+                      title={p.name}
                       style={{
-                        fontSize: 13,
+                        fontSize: "12px",
+                        fontWeight: 500,
                         color: "#111827",
                         flex: 1,
                         whiteSpace: "nowrap",
@@ -408,22 +527,24 @@ export default function ProductRanking() {
                       {p.name}
                     </span>
 
-                    {/* Health bar */}
+                    {/* Health Score */}
                     <div
                       style={{
                         display: "flex",
+                        flexDirection: "row",
                         alignItems: "center",
-                        gap: 6,
-                        width: 140,
+                        gap: "6px",
+                        width: "130px",
+                        flexShrink: 0,
                       }}
                     >
                       <ScoreBar value={p.healthScore} />
                       <span
                         style={{
-                          fontSize: 11,
-                          fontWeight: 500,
+                          fontSize: "11px",
+                          fontWeight: 600,
                           color: "#111827",
-                          width: 28,
+                          width: "24px",
                           textAlign: "right",
                         }}
                       >
@@ -431,30 +552,33 @@ export default function ProductRanking() {
                       </span>
                     </div>
 
-                    {/* Positive rate */}
+                    {/* Positif */}
                     <span
                       style={{
-                        fontSize: 11,
-                        color: "#6b7280",
-                        width: 40,
+                        fontSize: "11px",
+                        fontWeight: 500,
+                        color: "#374151",
+                        width: "42px",
                         textAlign: "right",
+                        flexShrink: 0,
                       }}
                     >
                       {p.positiveRate}%
                     </span>
 
-                    {/* Risk badge */}
+                    {/* Risiko */}
                     <span
                       style={{
-                        fontSize: 10,
-                        fontWeight: 500,
-                        padding: "2px 8px",
-                        borderRadius: 20,
+                        fontSize: "10px",
+                        fontWeight: 600,
+                        padding: "2px 6px",
+                        borderRadius: "10px",
                         background: risk.bg,
                         color: risk.color,
                         flexShrink: 0,
-                        width: 56,
+                        width: "56px",
                         textAlign: "center",
+                        textTransform: "uppercase",
                       }}
                     >
                       {risk.label}
@@ -464,7 +588,7 @@ export default function ProductRanking() {
               })}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

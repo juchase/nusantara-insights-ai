@@ -1,6 +1,7 @@
 "use client";
 import { Bell, Menu, Search, Upload } from "lucide-react";
 import Link from "next/link";
+import DemoCountdown from "@/components/dashboard/DemoCountdown";
 
 export default function Topbar({
   onMobileMenuClick,
@@ -15,10 +16,10 @@ export default function Topbar({
         top: 0,
         zIndex: 20,
         height: 64,
-        background: "rgba(247,246,255,0.85)",
+        background: "rgba(255,255,255,0.75)", // Diubah ke putih transparan agar backdrop-blur lebih bersih
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(229,231,235,0.7)",
+        borderBottom: "1px solid rgba(229,231,235,0.6)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -36,40 +37,53 @@ export default function Topbar({
       >
         {/* Hamburger — mobile only */}
         <button
-          className="
-    flex
-    items-center
-    justify-center
-    sm:hidden
-  "
+          className="flex items-center justify-center sm:hidden"
           onClick={onMobileMenuClick}
           style={{
             width: 36,
             height: 36,
-            borderRadius: 8,
+            borderRadius: 10, // Diperhalus sudut kelengkungannya
             border: "1px solid #e5e7eb",
-            background: "rgba(255,255,255,0.8)",
+            background: "#fff",
             cursor: "pointer",
-            color: "#6b7280",
+            color: "#4b5563",
             flexShrink: 0,
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#f9fafb";
+            e.currentTarget.style.borderColor = "#d1d5db";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#fff";
+            e.currentTarget.style.borderColor = "#e5e7eb";
           }}
         >
           <Menu size={16} />
         </button>
 
-        {/* Search */}
+        {/* Search Bar — Ditambahkan efek transisi ringkas saat fokus */}
         <div
           className="hidden lg:flex"
           style={{
             alignItems: "center",
             gap: 8,
             flex: 1,
-            maxWidth: 360,
+            maxWidth: 320, // Dipersempit sedikit agar lebih seimbang di layar lebar
             height: 36,
-            background: "rgba(255,255,255,0.8)",
+            background: "#f9fafb", // Diubah ke warna abu-abu tipis untuk membedakan kontras dari topbar
             border: "1px solid #e5e7eb",
-            borderRadius: 18,
-            padding: "0 14px",
+            borderRadius: 10, // Menggunakan pola sudut yang seragam dengan tombol
+            padding: "0 12px",
+            transition: "all 0.15s ease",
+          }}
+          onFocusCapture={(e) => {
+            e.currentTarget.style.borderColor = "#4f46e5";
+            e.currentTarget.style.background = "#fff";
+          }}
+          onBlurCapture={(e) => {
+            e.currentTarget.style.borderColor = "#e5e7eb";
+            e.currentTarget.style.background = "#f9fafb";
           }}
         >
           <Search size={14} style={{ color: "#9ca3af", flexShrink: 0 }} />
@@ -79,19 +93,28 @@ export default function Topbar({
               border: "none",
               outline: "none",
               background: "transparent",
-              fontSize: 13,
-              color: "#374151",
+              fontSize: 12.5,
+              fontWeight: 500,
+              color: "#1f2937",
               width: "100%",
             }}
           />
         </div>
       </div>
 
+      {/* Akses Konten Kanan */}
       <div
-        style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexShrink: 0,
+        }}
       >
+        <DemoCountdown />
+        {/* Tombol Upload Dataset */}
         <Link
-          className="px-3 sm:px-4"
+          className="px-3.5 sm:px-4"
           href="/dashboard/upload"
           style={{
             display: "inline-flex",
@@ -100,64 +123,103 @@ export default function Topbar({
             height: 36,
             background: "#4f46e5",
             color: "#fff",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 500,
+            borderRadius: 10,
+            fontSize: 12.5,
+            fontWeight: 600,
             textDecoration: "none",
+            transition: "all 0.15s ease",
+            boxShadow: "0 2px 4px rgba(79, 70, 229, 0.08)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#4338ca";
+            e.currentTarget.style.transform = "translateY(-0.5px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#4f46e5";
+            e.currentTarget.style.transform = "translateY(0px)";
           }}
         >
           <Upload size={14} />
           <span className="hidden sm:inline">Upload Dataset</span>
         </Link>
 
+        {/* Garis Pembatas */}
         <div
           className="hidden sm:block"
-          style={{ width: 1, height: 20, background: "#e5e7eb" }}
+          style={{
+            width: 1,
+            height: 16,
+            background: "#e5e7eb",
+            margin: "0 4px",
+          }}
         />
 
+        {/* Tombol Notifikasi */}
         <button
           style={{
             width: 36,
             height: 36,
-            borderRadius: "50%",
+            borderRadius: 10,
             border: "1px solid #e5e7eb",
-            background: "rgba(255,255,255,0.8)",
+            background: "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            color: "#6b7280",
+            color: "#4b5563",
             position: "relative",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#f9fafb";
+            e.currentTarget.style.color = "#111827";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "#fff";
+            e.currentTarget.style.color = "#4b5563";
           }}
         >
           <Bell size={15} />
+          {/* Titik indikator live notifikasi bercahaya */}
           <div
             style={{
               position: "absolute",
               top: 8,
               right: 8,
-              width: 5,
-              height: 5,
+              width: 6,
+              height: 6,
               borderRadius: "50%",
-              background: "#4f46e5",
+              background: "#ef4444", // Diubah ke warna merah cerah universal notifikasi
               border: "1.5px solid #fff",
+              boxShadow: "0 0 4px rgba(239, 68, 68, 0.5)",
             }}
           />
         </button>
 
+        {/* Avatar Profil Inisial Pengguna */}
         <div
           style={{
             width: 36,
             height: 36,
-            borderRadius: "50%",
+            borderRadius: 10,
             background: "linear-gradient(135deg, #4f46e5, #06b6d4)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 11,
-            fontWeight: 500,
+            fontWeight: 700,
             color: "#fff",
             cursor: "pointer",
+            letterSpacing: "0.02em",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = "0.95";
+            e.currentTarget.style.transform = "scale(1.02)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = "1";
+            e.currentTarget.style.transform = "scale(1)";
           }}
         >
           NI

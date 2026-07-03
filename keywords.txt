@@ -1,0 +1,360 @@
+34fc4267-7c03-4558-b1ae-33623905c8c2 | rusak | 1 | kemasan
+feb4bd5b-fd8d-4126-984f-50ff004e02d1 | beda | 2 | kualitas produk
+feb4bd5b-fd8d-4126-984f-50ff004e02d1 | berbeda | 2 | kualitas produk
+feb4bd5b-fd8d-4126-984f-50ff004e02d1 | sesuai | 1 | kualitas produk
+ae3d8b71-9637-480e-b724-55eee34fb077 | telat | 1 | pengiriman
+ae3d8b71-9637-480e-b724-55eee34fb077 | apek | 1 | kualitas produk
+ae3d8b71-9637-480e-b724-55eee34fb077 | salah | 1 | kualitas produk
+4e88c20b-fd67-4f58-9252-0063a5558813 | penyok | 2 | kemasan
+593ffa48-8822-48e9-8ed3-5ef0e6da1017 | kecewa | 1 | pelayanan
+77f2a4c7-3ee4-480e-bac7-d79c173439e3 | bagus | 1 | kualitas produk
+e8cc790c-32f0-4b4d-a634-577dc8981816 | lama | 2 | pengiriman
+e8cc790c-32f0-4b4d-a634-577dc8981816 | beda | 1 | kualitas produk
+c78d4699-1b66-446f-83af-43650ea5fb3e | kotor | 1 | kualitas produk
+86d05d8b-940e-43d4-bdbf-44ef2f5280c0 | lambat | 1 | pengiriman
+86d05d8b-940e-43d4-bdbf-44ef2f5280c0 | kecewa | 1 | pelayanan
+da168490-acfa-420c-a81f-5c496e86840c | lama | 2 | pengiriman
+da168490-acfa-420c-a81f-5c496e86840c | apek | 1 | kualitas produk
+da168490-acfa-420c-a81f-5c496e86840c | kotor | 1 | kualitas produk
+55fa1735-1e46-423c-a691-e282ed31c975 | bocor | 1 | kemasan
+b7447909-e514-48dc-ba61-d59debd211a6 | rusak | 1 | kemasan
+13d804b2-35dc-49d8-8996-3028f9664cd4 | kecewa | 1 | pelayanan
+9ad2ac96-2ca0-4f8d-a96e-2b2053791454 | enak | 1 | kualitas produk
+d5816426-a70d-4aa4-bc28-24909284c993 | fresh | 1 | kualitas produk
+20d7e48f-1312-4ab1-bd2b-d9c5611f4fde | rusak | 1 | kemasan
+20d7e48f-1312-4ab1-bd2b-d9c5611f4fde | lama | 1 | pengiriman
+b651579e-e2af-4f52-9e39-78bae35642cf | robek | 2 | kemasan
+b651579e-e2af-4f52-9e39-78bae35642cf | bocor | 2 | kemasan
+b651579e-e2af-4f52-9e39-78bae35642cf | bagus | 2 | kualitas produk
+b651579e-e2af-4f52-9e39-78bae35642cf | rusak | 1 | kemasan
+ba7aa095-7cba-4806-8545-827694d242b0 | sedap | 1 | kualitas produk
+ed3bce16-8d26-4bed-8a85-a52a3fb227e9 | lama | 1 | pengiriman
+ed3bce16-8d26-4bed-8a85-a52a3fb227e9 | tumpah | 1 | kemasan
+97204304-8a75-4ab2-b578-d82bacaad6fa | rusak | 1 | kemasan
+9429409d-704c-41ed-adea-0bf77dd9cb9b | lama | 1 | pengiriman
+1202c064-460e-4fb9-adc6-ff7ac8fb4c4a | salah | 1 | kualitas produk
+1202c064-460e-4fb9-adc6-ff7ac8fb4c4a | rusak | 1 | kemasan
+1202c064-460e-4fb9-adc6-ff7ac8fb4c4a | tumpah | 1 | kemasan
+f5704914-d8a4-455a-9975-cf798c2ac3a4 | lama | 1 | pengiriman
+f5704914-d8a4-455a-9975-cf798c2ac3a4 | bocor | 1 | kemasan
+f5704914-d8a4-455a-9975-cf798c2ac3a4 | mahal | 1 | harga
+90136f6f-e62f-46c2-9169-0f056e8b8252 | beda | 2 | kualitas produk
+90136f6f-e62f-46c2-9169-0f056e8b8252 | bocor | 1 | kemasan
+90136f6f-e62f-46c2-9169-0f056e8b8252 | karton | 1 | kemasan
+12b2e61a-1757-4200-88a1-5c7e65d99d14 | berbeda | 1 | kualitas produk
+46249516-7bb8-4360-b74f-b2bd9409e54d | mahal | 1 | harga
+46249516-7bb8-4360-b74f-b2bd9409e54d | basi | 1 | kualitas produk
+f8195293-bde0-48af-b3b0-34500dde676d | salah | 1 | kualitas produk
+1b2d43b8-0b07-4c5f-ad2c-c493a08a972f | beda | 1 | kualitas produk
+1b2d43b8-0b07-4c5f-ad2c-c493a08a972f | sampe | 1 | pengiriman
+d6531e4a-435f-446d-999f-9ddd65f6ba0f | lama | 1 | pengiriman
+d6531e4a-435f-446d-999f-9ddd65f6ba0f | rusak | 1 | kemasan
+d6531e4a-435f-446d-999f-9ddd65f6ba0f | bocor | 1 | kemasan
+d6531e4a-435f-446d-999f-9ddd65f6ba0f | salah | 1 | kualitas produk
+2a1dbc67-a5ea-4152-9d0e-bad71615d12e | lama | 2 | pengiriman
+2a1dbc67-a5ea-4152-9d0e-bad71615d12e | expired | 1 | kualitas produk
+a7493951-d28a-4900-9d2c-ac2f8761f802 | lama | 1 | pengiriman
+15483943-05b4-4fbf-bfdb-43d091aed657 | penyok | 1 | kemasan
+1788bafb-0088-483c-961d-40b902baac67 | mahal | 2 | harga
+1788bafb-0088-483c-961d-40b902baac67 | kecewa | 1 | pelayanan
+4a5426e7-6d79-4c2f-b7b9-3e3cf1091b4a | lama | 1 | pengiriman
+218a92e5-67f1-4c1b-9190-adea6d76b1a9 | sesuai | 1 | kualitas produk
+218a92e5-67f1-4c1b-9190-adea6d76b1a9 | lambat | 1 | pengiriman
+7da22996-ea40-489b-9e29-0d2e8a524b84 | bocor | 1 | kemasan
+0ff8c710-5884-4fce-abb5-3593fcec99fd | cocok | 1 | kualitas produk
+f0f8f3c3-2000-447a-ba43-63d2dd63541d | mahal | 1 | harga
+a21aab2d-3c46-4e2b-88be-edb0454cdd44 | lama | 1 | pengiriman
+f864cbd9-a4fa-44bf-bb7b-09aa69a470a9 | bocor | 2 | kemasan
+f864cbd9-a4fa-44bf-bb7b-09aa69a470a9 | tumpah | 1 | kemasan
+f864cbd9-a4fa-44bf-bb7b-09aa69a470a9 | lama | 1 | pengiriman
+598d5533-82b5-4916-8c5a-7567a0304218 | lama | 2 | pengiriman
+cb2066ef-932b-4b0a-a55d-f051c3218c2e | kecewa | 1 | pelayanan
+e00ba03b-478b-4cfa-b0c5-938eae73f6c9 | expired | 1 | kualitas produk
+e00ba03b-478b-4cfa-b0c5-938eae73f6c9 | lama | 1 | pengiriman
+d1dc90a4-6499-4fd6-afc3-cd11385c89e3 | kecewa | 1 | pelayanan
+d1dc90a4-6499-4fd6-afc3-cd11385c89e3 | lama | 1 | pengiriman
+c7c5de04-d260-488f-89d8-3712dbe0c365 | sesuai | 1 | kualitas produk
+1dbbc617-507b-41d2-9587-0585ebb8ba0e | lengket | 1 | kualitas produk
+1dbbc617-507b-41d2-9587-0585ebb8ba0e | lama | 1 | pengiriman
+061cb701-3fd7-4fc0-a094-d520aafcec48 | salah | 1 | kualitas produk
+d5941b11-dd2d-4c26-afb3-d4f1234373aa | beda | 1 | kualitas produk
+d5941b11-dd2d-4c26-afb3-d4f1234373aa | lama | 1 | pengiriman
+ff386a03-f7ce-4a54-b4e3-b83b2be194af | lama | 1 | pengiriman
+ff386a03-f7ce-4a54-b4e3-b83b2be194af | robek | 1 | kemasan
+4b7c086a-0e1b-4866-a2a0-ce7b66e5264b | lama | 1 | pengiriman
+626f6d7d-25ff-4487-950a-9d24d7dd8b6e | menyengat | 1 | pelayanan
+626f6d7d-25ff-4487-950a-9d24d7dd8b6e | lama | 1 | pengiriman
+626f6d7d-25ff-4487-950a-9d24d7dd8b6e | cocok | 1 | kualitas produk
+2bf7f2c8-5916-4a9e-b9cb-865f5b20d975 | tumpah | 1 | kemasan
+2bf7f2c8-5916-4a9e-b9cb-865f5b20d975 | kecewa | 1 | pelayanan
+2bf7f2c8-5916-4a9e-b9cb-865f5b20d975 | lama | 1 | pengiriman
+c05ccfd2-409c-4114-abcd-02a7d681cb6f | sesuai | 1 | kualitas produk
+c05ccfd2-409c-4114-abcd-02a7d681cb6f | bocor | 1 | kemasan
+3645ac73-668d-48c6-820d-ff3081aa34ff | sesuai | 2 | kualitas produk
+3645ac73-668d-48c6-820d-ff3081aa34ff | kecewa | 1 | pelayanan
+b734aada-c1b9-4034-a700-9589f7d2bd6c | kadaluarsa | 1 | kualitas produk
+b734aada-c1b9-4034-a700-9589f7d2bd6c | lama | 1 | pengiriman
+619d1058-a7a1-4a3d-b737-9851883a6941 | lama | 2 | pengiriman
+619d1058-a7a1-4a3d-b737-9851883a6941 | bocor | 1 | kemasan
+e11ecd0b-0296-443f-a21e-7f6786db4d01 | cocok | 1 | kualitas produk
+e11ecd0b-0296-443f-a21e-7f6786db4d01 | pecah | 1 | kemasan
+f11bded4-78bb-40b7-8d6a-345cab327483 | beda | 1 | kualitas produk
+f11bded4-78bb-40b7-8d6a-345cab327483 | cocok | 1 | kualitas produk
+7c600bf3-d80e-44c6-a88e-774a353a9fdb | rusak | 1 | kemasan
+7c600bf3-d80e-44c6-a88e-774a353a9fdb | bocor | 1 | kemasan
+7c600bf3-d80e-44c6-a88e-774a353a9fdb | lama | 1 | pengiriman
+7a136f4b-d938-47e7-bf9c-76cc61d88e86 | rusak | 1 | kemasan
+7a136f4b-d938-47e7-bf9c-76cc61d88e86 | bocor | 1 | kemasan
+7a136f4b-d938-47e7-bf9c-76cc61d88e86 | lama | 1 | pengiriman
+3ea69c61-053d-413e-9339-dd1a954a0bef | mahal | 1 | harga
+cbe86dce-1b9e-4c09-be61-d279b4007463 | kecewa | 1 | pelayanan
+304932a4-a30b-42f6-a43d-17f279a686c9 | lama | 1 | pengiriman
+304932a4-a30b-42f6-a43d-17f279a686c9 | penyok | 1 | kemasan
+304932a4-a30b-42f6-a43d-17f279a686c9 | rusak | 1 | kemasan
+e265954a-266b-4ab2-ab04-5fecf332666f | lama | 1 | pengiriman
+d5694bf3-ac48-4c83-8e12-48a291e84176 | bocor | 1 | kemasan
+c3731391-6ed4-4735-bb2d-ae23d72b41b5 | pecah | 1 | kemasan
+5e7f39df-cc4c-4d4e-a37f-eb11e2d077f8 | menyengat | 1 | pelayanan
+5e7f39df-cc4c-4d4e-a37f-eb11e2d077f8 | beda | 1 | kualitas produk
+8001943c-1053-40b3-8288-fc119b78e7a3 | mahal | 1 | harga
+8148154b-c06a-4a25-ab3f-f946f51e2421 | lama | 1 | pengiriman
+8148154b-c06a-4a25-ab3f-f946f51e2421 | rusak | 1 | kemasan
+1f14c9aa-1631-47bc-8dca-008de8497271 | tumpah | 2 | kemasan
+1f14c9aa-1631-47bc-8dca-008de8497271 | robek | 1 | kemasan
+1f14c9aa-1631-47bc-8dca-008de8497271 | bocor | 1 | kemasan
+1f14c9aa-1631-47bc-8dca-008de8497271 | kecewa | 1 | pelayanan
+34ce5fa8-8509-4226-97cf-8c746b64ca2e | bocor | 2 | kemasan
+34ce5fa8-8509-4226-97cf-8c746b64ca2e | tumpah | 1 | kemasan
+1969dd34-0599-47fd-925a-9bfc344ac0dc | penyok | 1 | kemasan
+31c6b7bf-b7ef-49f5-83b2-5741aaab1aec | pecah | 1 | kemasan
+31c6b7bf-b7ef-49f5-83b2-5741aaab1aec | fresh | 1 | kualitas produk
+31c6b7bf-b7ef-49f5-83b2-5741aaab1aec | lama | 1 | pengiriman
+2c6822d6-9130-4055-9c16-a197d6671cb2 | kecewa | 1 | pelayanan
+2c6822d6-9130-4055-9c16-a197d6671cb2 | sesuai | 1 | kualitas produk
+2c6822d6-9130-4055-9c16-a197d6671cb2 | salah | 1 | kualitas produk
+d11f6f4d-99d0-4e43-b75f-1ee6d4abf8d3 | rusak | 3 | kemasan
+d11f6f4d-99d0-4e43-b75f-1ee6d4abf8d3 | lama | 1 | pengiriman
+b2a63d2c-9ff8-474c-a4f0-f48cd5420f57 | kecewa | 1 | pelayanan
+5ef72346-998b-4e0b-aaef-c356e5821ce4 | kecewa | 2 | pelayanan
+9a8d2ca8-8d23-4eb6-b618-267adebe7bbd | bagus | 1 | kualitas produk
+89b0506e-0ab1-4283-a325-705ba8d374dc | sampe | 1 | pengiriman
+20aad4c4-c94b-4b73-bdfb-a7d22ba47dbc | salah | 1 | kualitas produk
+aeef7853-020b-484b-81ab-8e69030677ac | salah | 1 | kualitas produk
+aeef7853-020b-484b-81ab-8e69030677ac | beda | 1 | kualitas produk
+aeef7853-020b-484b-81ab-8e69030677ac | rapi | 1 | kualitas produk
+c4ef1dd8-be61-4fde-a140-c97a0553c217 | mahal | 1 | harga
+c4ef1dd8-be61-4fde-a140-c97a0553c217 | pecah | 1 | kemasan
+fddaf34c-502c-4d38-98a8-9058cef212f3 | licin | 1 | kualitas produk
+bae2b0dd-08a2-44a8-bbf2-79e6618cf61b | lama | 1 | pengiriman
+92b03bfe-5edb-4290-8dd7-b7cbec8c8445 | pecah | 2 | kemasan
+92b03bfe-5edb-4290-8dd7-b7cbec8c8445 | tumpah | 1 | kemasan
+92b03bfe-5edb-4290-8dd7-b7cbec8c8445 | bocor | 1 | kemasan
+92b03bfe-5edb-4290-8dd7-b7cbec8c8445 | rusak | 1 | kemasan
+376750df-4ad2-4ffa-95e4-c6ad107e2491 | pecah | 1 | kemasan
+376750df-4ad2-4ffa-95e4-c6ad107e2491 | lama | 1 | pengiriman
+23446911-0a2c-49aa-9167-fb4708a2fead | bocor | 2 | kemasan
+23446911-0a2c-49aa-9167-fb4708a2fead | pecah | 2 | kemasan
+23446911-0a2c-49aa-9167-fb4708a2fead | tumpah | 1 | kemasan
+a3920547-6698-40cf-ae28-40e88c17e44f | lelet | 1 | pengiriman
+92c3133f-4bc8-4469-b450-617ecbff1b42 | lama | 1 | pengiriman
+92c3133f-4bc8-4469-b450-617ecbff1b42 | bocor | 1 | kemasan
+5bb41ca7-c781-4f69-b2b5-7da329414db9 | salah | 1 | kualitas produk
+6bd90246-786a-43f3-b22c-508fa6fda269 | penyok | 2 | kemasan
+54d26321-d294-4aeb-a075-0ab787d2c86b | lengket | 1 | kualitas produk
+e0cd4437-6f09-47d1-a6aa-be92a2afdb08 | penyok | 1 | kemasan
+e3c6698a-cae5-424d-b3c0-c748046238d7 | penyok | 1 | kemasan
+5167ecf8-2e4c-4848-b86b-8da356d77c13 | bocor | 1 | kemasan
+0d696c1d-b62f-46f6-b3b5-ac9311d97554 | lama | 1 | pengiriman
+f1969079-7f99-4a1e-9434-2e79d9291f7f | lama | 1 | pengiriman
+85f039cb-5582-4080-84ad-5a3b921f42b5 | sesuai | 1 | kualitas produk
+94628559-8197-42bb-b124-5b9b291bbe2f | lama | 1 | pengiriman
+9c70ff8a-6468-4483-ae09-2edb35365ec3 | lama | 1 | pengiriman
+b113214a-8311-4c68-94ec-41456d02a062 | lama | 1 | pengiriman
+75679710-fd33-4429-9b4c-81ecc7ad9f49 | rapi | 1 | kualitas produk
+75679710-fd33-4429-9b4c-81ecc7ad9f49 | mahal | 1 | harga
+75679710-fd33-4429-9b4c-81ecc7ad9f49 | cocok | 1 | kualitas produk
+88097aa9-af16-496d-b71c-4f8a15a9b4ef | lama | 1 | pengiriman
+41aed052-a9c5-440f-9ef2-415e01b0cf56 | beda | 1 | kualitas produk
+01a67523-934c-424b-a0d5-8ef3073438a5 | sesuai | 1 | kualitas produk
+01a67523-934c-424b-a0d5-8ef3073438a5 | lama | 1 | pengiriman
+01a67523-934c-424b-a0d5-8ef3073438a5 | kecewa | 1 | pelayanan
+d02afcd2-03f9-43b7-932d-87c738830804 | salah | 2 | kualitas produk
+df77108b-0169-46a1-a1ab-911f1e76f295 | rapih | 1 | kualitas produk
+df77108b-0169-46a1-a1ab-911f1e76f295 | robek | 1 | kemasan
+cd4889f9-c79c-4893-bd43-b3ba1a5bd7b6 | salah | 1 | kualitas produk
+cd4889f9-c79c-4893-bd43-b3ba1a5bd7b6 | sesuai | 1 | kualitas produk
+9d9665f2-ed66-4358-8452-c58d8b3fa15e | lama | 1 | pengiriman
+9d9665f2-ed66-4358-8452-c58d8b3fa15e | beda | 1 | kualitas produk
+9d9665f2-ed66-4358-8452-c58d8b3fa15e | kecewa | 1 | pelayanan
+9d9665f2-ed66-4358-8452-c58d8b3fa15e | lambat | 1 | pengiriman
+5519f175-d1b5-41b3-bbb0-c3f397351bbf | salah | 2 | kualitas produk
+f9b71ab0-9492-4b41-834c-676a00f99518 | beda | 1 | kualitas produk
+f9b71ab0-9492-4b41-834c-676a00f99518 | lama | 1 | pengiriman
+5ed1b802-dbd2-44e8-b020-6c92c835d3b3 | basi | 1 | kualitas produk
+4ba58abe-b2bb-41f2-864f-1d004b51f3a2 | beda | 1 | kualitas produk
+34c9e63e-5db0-4b00-879f-0689b9f8de8d | kecewa | 1 | pelayanan
+6bb5019c-2165-44c1-88a5-edb9972ca5dd | beda | 1 | kualitas produk
+3c768e50-43ad-41e4-984a-5be308100227 | lama | 1 | pengiriman
+3c768e50-43ad-41e4-984a-5be308100227 | penyok | 1 | kemasan
+e1eaadd4-4a40-4b3e-93c6-34e2fa2af5d1 | penyok | 2 | kemasan
+e1eaadd4-4a40-4b3e-93c6-34e2fa2af5d1 | kotor | 1 | kualitas produk
+e1eaadd4-4a40-4b3e-93c6-34e2fa2af5d1 | rusak | 1 | kemasan
+60b92999-8330-4cba-96c7-177bf03cf4c2 | bocor | 1 | kemasan
+60b92999-8330-4cba-96c7-177bf03cf4c2 | kecewa | 1 | pelayanan
+1fba0373-6881-4e03-a658-1b7917650195 | bocor | 2 | kemasan
+1fba0373-6881-4e03-a658-1b7917650195 | kotor | 2 | kualitas produk
+a6378ab6-13dc-4af4-bc2b-25c4ecbe1a8c | expired | 2 | kualitas produk
+a6378ab6-13dc-4af4-bc2b-25c4ecbe1a8c | lama | 2 | pengiriman
+f3c42a82-e576-4472-b957-8d7769c0cdcc | bocor | 1 | kemasan
+7b682032-1c02-4177-9502-f6ea99b85c42 | salah | 1 | kualitas produk
+04552624-d38b-4983-84be-cf0e0668d49a | beda | 1 | kualitas produk
+15677e6c-7ed4-4dca-92cf-f7b9c14ed053 | lama | 1 | pengiriman
+876c4f12-10cf-4faa-b8ae-a578c6b30528 | lama | 1 | pengiriman
+475021db-6cbb-4ab8-aaad-47e9be94749c | salah | 2 | kualitas produk
+475021db-6cbb-4ab8-aaad-47e9be94749c | lama | 1 | pengiriman
+475021db-6cbb-4ab8-aaad-47e9be94749c | beda | 1 | kualitas produk
+475021db-6cbb-4ab8-aaad-47e9be94749c | kecewa | 1 | pelayanan
+a5c02c9c-2e4c-4bb9-ac05-93bac8cddce9 | sampe | 1 | pengiriman
+a5c02c9c-2e4c-4bb9-ac05-93bac8cddce9 | beda | 1 | kualitas produk
+b1b2e869-25e4-4adc-b913-40f5d35382ed | rusak | 1 | kemasan
+5eff5eb2-d9cf-48ac-80da-72561286f12e | kotor | 1 | kualitas produk
+5eff5eb2-d9cf-48ac-80da-72561286f12e | kecewa | 1 | pelayanan
+e700808b-d400-4801-9b12-bed67c5f24be | salah | 1 | kualitas produk
+e700808b-d400-4801-9b12-bed67c5f24be | beda | 1 | kualitas produk
+e700808b-d400-4801-9b12-bed67c5f24be | rusak | 1 | kemasan
+e700808b-d400-4801-9b12-bed67c5f24be | sesuai | 1 | kualitas produk
+e700808b-d400-4801-9b12-bed67c5f24be | kecewa | 1 | pelayanan
+8aa0b2b7-eb2b-4278-bdfc-131d605a9181 | kotor | 1 | kualitas produk
+56fccc14-a397-4a2a-a1f8-4a146e529df8 | lama | 1 | pengiriman
+2e074762-8d88-4f2c-a058-65d0dc8331b6 | licin | 2 | kualitas produk
+a4d9e0fd-7b99-4b07-b819-e5e35b575466 | hancur | 1 | kualitas produk
+a4d9e0fd-7b99-4b07-b819-e5e35b575466 | kecewa | 1 | pelayanan
+b048e91a-9e18-4911-9e2d-dbcf424801f8 | beda | 1 | kualitas produk
+b048e91a-9e18-4911-9e2d-dbcf424801f8 | rapih | 1 | kualitas produk
+b048e91a-9e18-4911-9e2d-dbcf424801f8 | sampe | 1 | pengiriman
+b048e91a-9e18-4911-9e2d-dbcf424801f8 | rapi | 1 | kualitas produk
+2b2c15b3-0eaf-44f8-aee9-5f49773dc86b | rusak | 1 | kemasan
+2b2c15b3-0eaf-44f8-aee9-5f49773dc86b | lama | 1 | pengiriman
+2b2c15b3-0eaf-44f8-aee9-5f49773dc86b | salah | 1 | kualitas produk
+4e97c3ba-4e70-4fff-ade7-f90d7fa7c5f0 | salah | 1 | kualitas produk
+9cf42ce6-c937-4dc5-937b-03030bbc9cac | kotor | 1 | kualitas produk
+c556e6ba-d3b4-4e59-af9f-c17134f93d55 | rusak | 1 | kemasan
+c556e6ba-d3b4-4e59-af9f-c17134f93d55 | lama | 1 | pengiriman
+35e50fad-a4eb-47c5-a461-0db1fbc7124b | salah | 1 | kualitas produk
+88aa212c-bc47-4517-9578-81288970c938 | lama | 1 | pengiriman
+88aa212c-bc47-4517-9578-81288970c938 | penyok | 1 | kemasan
+7986593c-3a5f-4a56-8aed-e089b2a6b36d | salah | 1 | kualitas produk
+0b76a644-4431-4746-bf30-cfdda65685d6 | enak | 1 | kualitas produk
+0b76a644-4431-4746-bf30-cfdda65685d6 | fresh | 1 | kualitas produk
+8d34f9f6-2db4-43c8-967d-2a957509d0e2 | kecewa | 1 | pelayanan
+ccf8efce-e4f8-4b40-a16f-99c4e4def117 | bocor | 1 | kemasan
+99ccf88a-3a3f-4da2-acaa-6089e4a9035d | marah | 1 | pelayanan
+ac33786c-fbcc-4998-8465-ba1257e798f1 | lama | 1 | pengiriman
+49b6b802-13f6-4c09-afa7-e9daed72ca9b | penyok | 3 | kemasan
+49b6b802-13f6-4c09-afa7-e9daed72ca9b | sesuai | 1 | kualitas produk
+6f62173a-7e03-4147-b703-bcf3d1b5c0ae | salah | 2 | kualitas produk
+c3c5ee2f-a956-46bb-81ac-abcc6259ae95 | hancur | 1 | kualitas produk
+c3c5ee2f-a956-46bb-81ac-abcc6259ae95 | kecewa | 1 | pelayanan
+fd83aa7e-6d8a-4400-9733-e7485beff5ee | beda | 2 | kualitas produk
+fd83aa7e-6d8a-4400-9733-e7485beff5ee | mahal | 1 | harga
+fd83aa7e-6d8a-4400-9733-e7485beff5ee | lama | 1 | pengiriman
+659ebb4b-95e1-443d-b476-4c7c6288cece | terlambat | 2 | pengiriman
+659ebb4b-95e1-443d-b476-4c7c6288cece | berbau | 1 | kualitas produk
+659ebb4b-95e1-443d-b476-4c7c6288cece | kecewa | 1 | pelayanan
+65962b5b-d120-4b65-b8df-20c151f548c5 | lama | 2 | pengiriman
+65962b5b-d120-4b65-b8df-20c151f548c5 | kecewa | 1 | pelayanan
+76ea77f3-363f-43f5-9094-bbed1bcf4bab | beda | 1 | kualitas produk
+96c39b34-908f-4e9a-872f-969092847da2 | rusak | 1 | kemasan
+d7cdc6a5-d993-446c-b425-052602a7a9f2 | lama | 1 | pengiriman
+10b847d0-5ef8-453f-a16e-e4bdbdb8bbd5 | terlambat | 1 | pengiriman
+59ea75cc-d3f5-42df-8d7d-e8f141fca933 | lama | 2 | pengiriman
+59ea75cc-d3f5-42df-8d7d-e8f141fca933 | kecewa | 1 | pelayanan
+59ea75cc-d3f5-42df-8d7d-e8f141fca933 | berbau | 1 | kualitas produk
+fcfc3a4e-d588-42d4-aef9-dadce63d76d2 | pecah | 1 | kemasan
+fcfc3a4e-d588-42d4-aef9-dadce63d76d2 | berbau | 1 | kualitas produk
+fcfc3a4e-d588-42d4-aef9-dadce63d76d2 | bocor | 1 | kemasan
+fcfc3a4e-d588-42d4-aef9-dadce63d76d2 | sampe | 1 | pengiriman
+a58d9ba0-4f70-4436-9d4a-041f43883e58 | salah | 1 | kualitas produk
+8001bcfb-e974-4b2d-b946-542098c8c9ab | lambat | 2 | pengiriman
+8001bcfb-e974-4b2d-b946-542098c8c9ab | terlambat | 1 | pengiriman
+b6db3875-76fa-49f4-b659-7f36fdeb0a18 | enak | 1 | kualitas produk
+68a32ee2-8038-4621-9360-19ad88384604 | lambat | 1 | pengiriman
+834e0d96-7cbd-4173-81b1-21c4e7c69a8a | sesuai | 1 | kualitas produk
+0eb780b2-21e2-40a3-8fbb-854cd9d78172 | salah | 1 | kualitas produk
+f06028cb-8ef8-4da1-a06b-2279e0aa926e | cocok | 1 | kualitas produk
+49dbe44c-41f8-4202-b069-9cc9682131c8 | kecewa | 1 | pelayanan
+49dbe44c-41f8-4202-b069-9cc9682131c8 | bocor | 1 | kemasan
+70ab5eb7-0350-4d35-ba39-cae0e349153c | lama | 1 | pengiriman
+70ab5eb7-0350-4d35-ba39-cae0e349153c | sesuai | 1 | kualitas produk
+70ab5eb7-0350-4d35-ba39-cae0e349153c | berbeda | 1 | kualitas produk
+88f38d61-b072-4f81-94ff-1ac0bfcff191 | beda | 1 | kualitas produk
+d16aacdf-186c-44e8-b25e-07682bc1e71e | salah | 1 | kualitas produk
+9b954694-095f-4fb7-a3d0-40b050f43843 | sesuai | 1 | kualitas produk
+a167f5b5-6983-4e03-8e0c-01704038e099 | hancur | 2 | kualitas produk
+a167f5b5-6983-4e03-8e0c-01704038e099 | sampe | 1 | pengiriman
+6856342a-4ffd-47e7-a9a0-a9bc83a67c5f | penyok | 4 | kemasan
+6856342a-4ffd-47e7-a9a0-a9bc83a67c5f | rusak | 1 | kemasan
+746ba928-193a-4254-8bfb-97a8c8413f65 | lama | 2 | pengiriman
+746ba928-193a-4254-8bfb-97a8c8413f65 | expired | 1 | kualitas produk
+746ba928-193a-4254-8bfb-97a8c8413f65 | rusak | 1 | kemasan
+4ad16abb-a5b1-4afa-8f16-7846dbdbc1c7 | rusak | 1 | kemasan
+4ad16abb-a5b1-4afa-8f16-7846dbdbc1c7 | lambat | 1 | pengiriman
+06d3aa79-f74f-48c8-b2a9-dad49064cf28 | kecewa | 1 | pelayanan
+eba656f6-3629-4939-a557-ff29d995bbc0 | menyengat | 1 | pelayanan
+eba656f6-3629-4939-a557-ff29d995bbc0 | kecewa | 1 | pelayanan
+3f780197-f93c-46d7-b77d-0074753d2fbb | lama | 2 | pengiriman
+201292f4-b9e1-4d7a-9c91-36c615554565 | bagus | 1 | kualitas produk
+201292f4-b9e1-4d7a-9c91-36c615554565 | lama | 1 | pengiriman
+6599fc0d-c2bd-4e30-a784-5babca711a15 | rusak | 1 | kemasan
+6599fc0d-c2bd-4e30-a784-5babca711a15 | basi | 1 | kualitas produk
+b65441d5-86e1-4eb3-81c0-48d1c57f5339 | salah | 1 | kualitas produk
+11a29700-0c96-4927-bc61-9fae92d50592 | sesuai | 1 | kualitas produk
+11a29700-0c96-4927-bc61-9fae92d50592 | kecewa | 1 | pelayanan
+11a29700-0c96-4927-bc61-9fae92d50592 | lama | 1 | pengiriman
+7620cf06-3b5d-4be8-a5ba-6efad79dc5e8 | lambat | 1 | pengiriman
+9773f1ee-c396-4324-8273-2aa4b50c357e | menyengat | 1 | pelayanan
+9773f1ee-c396-4324-8273-2aa4b50c357e | apek | 1 | kualitas produk
+9773f1ee-c396-4324-8273-2aa4b50c357e | sedap | 1 | kualitas produk
+e43fea5a-3f97-4876-998a-c8779d7c67c2 | lama | 2 | pengiriman
+345682a5-5dec-40ca-a28d-4bd1eca5367e | lama | 1 | pengiriman
+4c8e38d1-0117-4ded-8705-bd0644c344ec | fresh | 1 | kualitas produk
+4c8e38d1-0117-4ded-8705-bd0644c344ec | lama | 1 | pengiriman
+4c8e38d1-0117-4ded-8705-bd0644c344ec | kirim | 1 | pengiriman
+4b83e3d9-81bf-4d5a-9bfd-f570f7eadb1f | beda | 1 | kualitas produk
+4b83e3d9-81bf-4d5a-9bfd-f570f7eadb1f | sesuai | 1 | kualitas produk
+e97b87d6-62e9-4edc-9326-6583b64b4c06 | salah | 1 | kualitas produk
+e97b87d6-62e9-4edc-9326-6583b64b4c06 | rusak | 1 | kemasan
+e1470c3e-3460-4735-bbb5-977784ff9631 | salah | 1 | kualitas produk
+961e5327-78d5-4d32-9cab-2f9a0c1a637b | terlambat | 2 | pengiriman
+961e5327-78d5-4d32-9cab-2f9a0c1a637b | berbau | 1 | kualitas produk
+961e5327-78d5-4d32-9cab-2f9a0c1a637b | kecewa | 1 | pelayanan
+f367faa7-def6-4f91-93bb-7c3e468fd93b | lama | 1 | pengiriman
+c3c2d6e5-f55c-4c0a-93d1-7c2fcb76bd38 | expired | 1 | kualitas produk
+a9163e2a-f351-4270-993d-68e2144a6dec | hancur | 1 | kualitas produk
+a9163e2a-f351-4270-993d-68e2144a6dec | rusak | 1 | kemasan
+229c5109-f1ef-4082-90ae-8be3e519e1b7 | sesuai | 1 | kualitas produk
+229c5109-f1ef-4082-90ae-8be3e519e1b7 | mahal | 1 | harga
+229c5109-f1ef-4082-90ae-8be3e519e1b7 | lama | 1 | pengiriman
+8a8b5463-0649-4099-9a76-223c6c3f3772 | kecewa | 1 | pelayanan
+c5996f72-973f-4206-bfd7-205482423665 | pecah | 3 | kemasan
+c5996f72-973f-4206-bfd7-205482423665 | rapi | 1 | kualitas produk
+0703b1d9-6b1e-41a0-abc8-74f8ebbb1590 | sesuai | 1 | kualitas produk
+524a5f17-3824-4736-aba9-57b046cd6899 | lama | 1 | pengiriman
+a0eff662-640f-4215-b835-fe420069bdb2 | robek | 7 | kemasan
+a0eff662-640f-4215-b835-fe420069bdb2 | sesuai | 2 | kualitas produk
+a0eff662-640f-4215-b835-fe420069bdb2 | kecewa | 1 | pelayanan
+a0eff662-640f-4215-b835-fe420069bdb2 | rapih | 1 | kualitas produk
+a0eff662-640f-4215-b835-fe420069bdb2 | rusak | 1 | kemasan
+231b72f0-fb9f-478d-a72e-2a87e7db9c94 | lama | 2 | pengiriman
+e9375da0-a2d2-48f9-8ed7-90fec1639f88 | lama | 1 | pengiriman
+a28fd17e-54e7-4727-b1db-c6b63251a055 | kecewa | 1 | pelayanan
+a28fd17e-54e7-4727-b1db-c6b63251a055 | hancur | 1 | kualitas produk
+a28fd17e-54e7-4727-b1db-c6b63251a055 | robek | 1 | kemasan
+fcb1730b-bd58-461c-b21e-bbd02cd66d45 | salah | 1 | kualitas produk
+fcb1730b-bd58-461c-b21e-bbd02cd66d45 | lambat | 1 | pengiriman
+fcb1730b-bd58-461c-b21e-bbd02cd66d45 | enak | 1 | kualitas produk
+fcb1730b-bd58-461c-b21e-bbd02cd66d45 | lama | 1 | pengiriman
+44d54dc6-0cce-477e-9c7d-eabd6134bc6d | berbau | 1 | kualitas produk
+44d54dc6-0cce-477e-9c7d-eabd6134bc6d | apek | 1 | kualitas produk
+218bbe54-e402-4693-a405-880641dbf5d3 | lama | 1 | pengiriman
+411b65e3-52ed-4598-bb98-7c4c058e9b0b | bagus | 1 | kualitas produk

@@ -1,8 +1,22 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const userPayload = getUserFromRequest(request);
+
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // ✅ PERBAIKAN: Cari review berdasarkan kepemilikan produk milik user terpilih
   const reviews = await prisma.review.findMany({
+    where: {
+      product: {
+        userId: userPayload.userId, // Melompat ke tabel Product untuk cek userId
+      },
+    },
     include: {
       product: {
         select: {
@@ -22,36 +36,60 @@ export async function GET() {
   });
 }
 
-// 🔥 TAMBAHKAN INI
-export async function POST(req: Request) {
-  const body = await req.json();
+export async function POST(request: NextRequest) {
+  const userPayload = getUserFromRequest(request);
 
+  if (!userPayload) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
   const { reviewText, rating, productId, aspect, reviewDate } = body;
 
-  // 🔌 call FastAPI
-  const aiRes = await fetch("http://127.0.0.1:8000/analyze", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ text: reviewText }),
-  });
+  // Validasi input dasar
+  if (!reviewText || !productId || rating === undefined) {
+    return NextResponse.json(
+      { error: "Missing required fields" },
+      { status: 400 },
+    );
+  }
 
-  const aiData = await aiRes.json();
+  try {
+    // 🔌 call FastAPI backend untuk prediksi sentimen Linear SVC
+    const aiRes = await fetch("http://127.0.0.1:8000/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text: reviewText }),
+    });
 
-  // 💾 simpan ke DB
-  const review = await prisma.review.create({
-    data: {
-      reviewText,
-      rating,
-      productId,
-      sentiment: aiData.sentiment, // 🔥 hasil AI
-      aspect: aspect || "lainnya",
-      reviewDate: reviewDate ? new Date(reviewDate) : new Date(),
-    },
-  });
+    if (!aiRes.ok) {
+      throw new Error("FastAPI service error");
+    }
 
-  return NextResponse.json({
-    data: review,
-  });
+    const aiData = await aiRes.json();
+
+    // 💾 simpan ke DB PostgreSQL lewat Prisma
+    const review = await prisma.review.create({
+      data: {
+        reviewText,
+        rating: parseInt(rating),
+        productId,
+        // ✅ PERBAIKAN: Hapus properti 'id: userPayload.userId' agar ID Review digenerate otomatis berupa UUID baru
+        sentiment: aiData.sentiment, // Mengambil string: 'positive' / 'negative' / 'netral'
+        aspect: aspect || "lainnya",
+        reviewDate: reviewDate ? new Date(reviewDate) : new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      data: review,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Internal Server Error" },
+      { status: 500 },
+    );
+  }
 }

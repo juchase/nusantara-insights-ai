@@ -1,5 +1,3 @@
-// app/dashboard/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,12 +17,25 @@ import SentimentTrendCard from "@/components/dashboard/SentimentTrendCard";
 import { mergeForecastData } from "@/lib/mergeForecastData";
 
 type Product = { id: string; name: string };
+
 type ForecastPoint = {
   date: string;
   actual?: number | null;
   predicted?: number | null;
+  upper?: number | null;
+  lower?: number | null;
 };
+
+type ForecastSummary = {
+  avg: number;
+  min: number;
+  max: number;
+  lower: number;
+  upper: number;
+};
+
 type SentimentTimelinePoint = { date: string; total: number };
+
 type DashboardAnalyticsResponse = {
   topKeywords?: [string, number][];
   chartData?: SentimentTimelinePoint[];
@@ -41,17 +52,23 @@ export default function DashboardPage() {
   const [growth, setGrowth] = useState<number>(0);
   const [topKeywords, setTopKeywords] = useState<[string, number][]>([]);
   const [authLoading, setAuthLoading] = useState(true);
-  const [dataLoading, setDataLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoaded, setProductsLoaded] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [insight, setInsight] = useState<InsightResponse | null>(null);
-  const [insightLoading, setInsightLoading] = useState(false);
+
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [forecastLoading, setForecastLoading] = useState(true);
+  const [insightLoading, setInsightLoading] = useState(true);
+  const [complaintsLoading, setComplaintsLoading] = useState(true);
+
   const [confidence, setConfidence] = useState(0);
+  const [forecastSummary, setForecastSummary] =
+    useState<ForecastSummary | null>(null);
   const [stats, setStats] = useState({
     totalReviews: 0,
     avgRating: 0,
     totalProducts: 0,
-    sentimentStats: { positive: 0, neutral: 0, negative: 0 },
   });
   const [complaints, setComplaints] = useState<[string, number][]>([]);
   const [confidenceContext, setConfidenceContext] = useState<{
@@ -60,10 +77,11 @@ export default function DashboardPage() {
     color: "green" | "amber" | "red";
   } | null>(null);
   const [modelUsed, setModelUsed] = useState<string>("");
+  const [freq, setFreq] = useState<"D" | "W">("D"); // ← Tambahan state frekuensi
 
   const router = useRouter();
 
-  // AUTH
+  // ── AUTH ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -80,221 +98,214 @@ export default function DashboardPage() {
     checkAuth();
   }, [router]);
 
-  // PRODUCTS
-  // ── PRODUCTS ──────────────────────────────────────────
+  // ── PRODUCTS ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         const data = await safeFetch<Product[]>("/api/products", []);
         setProducts(data);
-        if (data.length > 0) setSelectedProduct(data[0].id);
+        if (data.length > 0) {
+          setSelectedProduct(data[0].id);
+        } else {
+          // Fix loading state for empty product list
+          setAnalyticsLoading(false);
+          setForecastLoading(false);
+          setInsightLoading(false);
+          setComplaintsLoading(false);
+        }
       } catch (err) {
         console.error(err);
+        setAnalyticsLoading(false);
+        setForecastLoading(false);
+        setInsightLoading(false);
+        setComplaintsLoading(false);
+      } finally {
+        setProductsLoaded(true);
       }
     };
     fetchProducts();
   }, []);
 
-  // ── ANALYTICS ─────────────────────────────────────────
+  // ── ANALYTICS ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchAnalytics = async () => {
+    if (!selectedProduct) return;
+
+    const loadAnalytics = async () => {
       try {
-        const data = await safeFetch<DashboardAnalyticsResponse>(
-          "/api/dashboard-analytics",
+        setAnalyticsLoading(true);
+        const analytics = await safeFetch<DashboardAnalyticsResponse>(
+          `/api/dashboard-analytics?productId=${selectedProduct}`,
           {
             topKeywords: [],
             chartData: [],
             totalReviews: 0,
-            totalProducts: 0,
             avgRating: 0,
             sentimentStats: { positive: 0, neutral: 0, negative: 0 },
           },
         );
-
-        setTopKeywords(data.topKeywords || []);
-        setChartData(data.chartData || []);
+        setTopKeywords(analytics.topKeywords || []);
+        setChartData(analytics.chartData || []);
         setStats({
-          totalReviews: data.totalReviews || 0,
-          totalProducts: data.totalProducts || 0,
-          avgRating: Math.round((data.avgRating || 0) * 10) / 10,
-          sentimentStats: data.sentimentStats || {
-            positive: 0,
-            neutral: 0,
-            negative: 0,
-          },
+          totalReviews: analytics.totalReviews || 0,
+          avgRating: Math.round((analytics.avgRating || 0) * 10) / 10,
+          totalProducts: products.length,
         });
-      } catch (err) {
-        console.error(err);
       } finally {
-        setDataLoading(false);
-      }
-    };
-    fetchAnalytics();
-  }, []);
-
-  // ── FORECAST ──────────────────────────────────────────
-  useEffect(() => {
-    if (!selectedProduct) return;
-
-    const fetchForecast = async () => {
-      try {
-        // Trigger AI predict — pakai safeFetch dengan fallback kosong
-        const predictData = await safeFetch<{
-          confidence: number;
-          confidence_context?: {
-            label: string;
-            message: string;
-            color: "green" | "amber" | "red";
-          };
-          model_used?: string;
-        }>(
-          `http://localhost:8000/predict-demand/${selectedProduct}`,
-          { confidence: 0 },
-          { method: "POST" }, // ← safeFetch perlu support options
-        );
-
-        setConfidence(predictData.confidence || 0);
-        setConfidenceContext(predictData.confidence_context || null);
-        setModelUsed(predictData.model_used || "");
-
-        await new Promise((r) => setTimeout(r, 300));
-
-        // Ambil hasil prediksi dari DB
-        const result = await safeFetch<{ sales: any[]; predictions: any[] }>(
-          `/api/predictions/${selectedProduct}`,
-          { sales: [], predictions: [] },
-        );
-
-        const merged = mergeForecastData(
-          result.sales,
-          result.predictions,
-        ) as ForecastPoint[];
-        setForecastData(merged);
-        setGrowth(calculateGrowth(merged));
-      } catch (err) {
-        console.error(err);
-        setForecastData([]);
-        setGrowth(0);
+        setAnalyticsLoading(false);
       }
     };
 
-    fetchForecast();
-  }, [selectedProduct]);
+    loadAnalytics();
+  }, [selectedProduct, products.length]);
 
-  // ── INSIGHT ───────────────────────────────────────────
+  // ── INSIGHT ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
 
-    const fetchInsight = async () => {
+    const loadInsight = async () => {
       try {
         setInsightLoading(true);
 
-        const data = await safeFetch<InsightResponse>(
-          `http://127.0.0.1:8000/generate-insight/${selectedProduct}`,
-          {
-            executive_summary: "",
-            summary: "",
-            health_score: 0,
-            health_label: "",
-            insights: [],
-            recommendations: [],
-            dominant_issue: "",
-            risk_level: "low",
-            llm_used: false,
-            metrics: undefined,
-          },
+        const insightData = await safeFetch<any>(
+          `/api/insights/${selectedProduct}`,
+          null,
         );
 
-        // Hanya set kalau ada data bermakna
-        if (data.summary) setInsight(data);
-      } catch (err) {
-        console.error(err);
+        if (!insightData) {
+          setInsight(null);
+          return;
+        }
+
+        setInsight({
+          executive_summary:
+            insightData.executive_summary || "Belum ada ringkasan.",
+          summary: insightData.summary || "Belum ada insight AI.",
+          health_score: insightData.health_score ?? 0,
+          health_label: insightData.health_label || "Belum dianalisis",
+          insights: insightData.insights || [],
+          recommendations: insightData.recommendations || [],
+          dominant_issue: insightData.dominant_issue || "—",
+          risk_level: insightData.risk_level || "low",
+          llm_used: insightData.llm_used ?? false,
+          metrics: insightData.metrics,
+          sentiment_trend: insightData.sentiment_trend,
+          // ── tambahan ──
+          confidence: insightData.confidence ?? 0,
+          confidence_context: insightData.confidence_context ?? null,
+          modelVersion: insightData.modelVersion || "prophet",
+          freq: insightData.freq || "D",
+        });
+
+        if (insightData.forecastSummary) {
+          setForecastSummary(insightData.forecastSummary);
+        }
+
+        const growthPct = insightData.metrics?.growth_percentage ?? 0;
+        setGrowth(growthPct);
+
+        setConfidence(insightData.confidence ?? 0);
+        setConfidenceContext(insightData.confidence_context ?? null);
+        setModelUsed(insightData.modelVersion || "prophet"); // ← ambil modelVersion
+        setFreq(insightData.freq || "D"); // ← ambil freq
       } finally {
         setInsightLoading(false);
       }
     };
 
-    fetchInsight();
+    loadInsight();
   }, [selectedProduct]);
 
-  // ── COMPLAINTS ────────────────────────────────────────
+  // ── FORECAST ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!selectedProduct) return;
 
-    const fetchComplaints = async () => {
-      const data = await safeFetch<{ topKeywords: [string, number][] }>(
-        `/api/complaints/${selectedProduct}`,
-        { topKeywords: [] },
-      );
-      setComplaints(data.topKeywords || []);
+    const loadForecast = async () => {
+      try {
+        setForecastLoading(true);
+
+        const forecast = await safeFetch(
+          `/api/predictions/${selectedProduct}`,
+          { sales: [], predictions: [] },
+        );
+
+        setForecastData(
+          mergeForecastData(
+            forecast.sales,
+            forecast.predictions,
+          ) as ForecastPoint[],
+        );
+
+        // modelUsed sudah diset di insight useEffect, tapi jika forecasting sendiri gagal, fallback
+        if (!modelUsed) setModelUsed("prophet");
+      } finally {
+        setForecastLoading(false);
+      }
     };
 
-    fetchComplaints();
+    loadForecast();
+  }, [selectedProduct, modelUsed]);
+
+  // ── COMPLAINTS ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedProduct) return;
+
+    const loadComplaints = async () => {
+      try {
+        setComplaintsLoading(true);
+        const complaintsData = await safeFetch(
+          `/api/complaints/${selectedProduct}`,
+          { topKeywords: [] },
+        );
+        setComplaints(complaintsData.topKeywords || []);
+      } finally {
+        setComplaintsLoading(false);
+      }
+    };
+
+    loadComplaints();
   }, [selectedProduct]);
 
-  // ✅ FIX di DashboardPage
-  function calculateGrowth(data: ForecastPoint[]): number {
-    const actual = data.filter((d) => d.actual).map((d) => d.actual ?? 0);
-    const predicted = data
-      .filter((d) => d.predicted)
-      .map((d) => d.predicted ?? 0);
-    if (!actual.length || !predicted.length) return 0;
-
-    const lastActual = actual[actual.length - 1];
-    const avgPredicted =
-      predicted.reduce((a, b) => a + b, 0) / predicted.length;
-    // ↑ rata-rata, bukan total
-
-    if (lastActual === 0) return 0;
-    return parseFloat(
-      (((avgPredicted - lastActual) / lastActual) * 100).toFixed(1),
-    );
-  }
-
-  if (authLoading || dataLoading) {
-    return (
-      <>
-        <div className="min-h-screen flex items-center justify-center">
-          <p className="text-sm text-gray-400">Memuat dashboard...</p>
-        </div>
-      </>
-    );
-  }
-
+  // ── RENDER ────────────────────────────────────────────────────────────────
   return (
     <>
       <div className="mx-auto max-w-[1200px] space-y-4 pb-8 sm:space-y-5 lg:space-y-6 lg:pb-10">
-        {/* AI INSIGHT CARD — dark, full width */}
         <InsightCard
           insight={insight}
           products={products}
           selectedProduct={selectedProduct}
           onProductChange={setSelectedProduct}
-          loading={insightLoading}
+          loading={!productsLoaded || insightLoading}
         />
 
         <ProductRanking />
 
-        {/* METRICS */}
         <InsightPanel
           insight={insight}
-          stats={stats}
+          totalReviews={stats.totalReviews}
+          avgRating={stats.avgRating}
+          totalProducts={stats.totalProducts}
           loading={insightLoading}
         />
 
         {/* ROW A: Sentiment Distribution + Forecast */}
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {/* ← tambah overflow-hidden */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
-            <SentimentDistribution
-              positive={stats.sentimentStats.positive}
-              neutral={stats.sentimentStats.neutral}
-              negative={stats.sentimentStats.negative}
-            />
-            <SentimentTrendCard
-              data={insight?.sentiment_trend}
-              loading={insightLoading}
-            />
+        <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
+              <SentimentDistribution
+                positive={Math.round(
+                  insight?.metrics?.positive_percentage ?? 0,
+                )}
+                neutral={Math.round(insight?.metrics?.neutral_percentage ?? 0)}
+                negative={Math.round(
+                  insight?.metrics?.negative_percentage ?? 0,
+                )}
+                loading={insightLoading}
+              />
+              <SentimentTrendCard
+                data={insight?.sentiment_trend}
+                loading={insightLoading}
+              />
+            </div>
           </div>
 
           <ForecastChart
@@ -303,14 +314,22 @@ export default function DashboardPage() {
             confidence={confidence}
             confidenceContext={confidenceContext}
             modelUsed={modelUsed}
+            forecastSummary={forecastSummary}
+            freq={freq} // ← FREKUENSI DINAMIS
+            loading={forecastLoading}
           />
         </div>
-        {/* ROW B: Sentiment Timeline (full width) */}
-        <SalesChart data={forecastData} modelUsed={modelUsed} />
+
+        {/* ROW B: Sales + Forecast Chart */}
+        <SalesChart
+          data={forecastData}
+          modelUsed={modelUsed}
+          loading={forecastLoading}
+        />
 
         {/* ROW C: Complaints + Risk Overview */}
         <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
-          <ComplaintsCard data={complaints} />
+          <ComplaintsCard data={complaints} loading={complaintsLoading} />
           <RiskOverview insight={insight} loading={insightLoading} />
         </div>
       </div>
