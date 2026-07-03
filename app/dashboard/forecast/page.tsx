@@ -28,6 +28,22 @@ type ConfidenceContext = {
   color: "green" | "amber" | "red";
 };
 
+// ── TAMBAHKAN TIPE UNTUK RESPON DARI FASTAPI ──
+type PredictDemandResponse = {
+  confidence: number;
+  confidence_context?: ConfidenceContext;
+  model_used?: string;
+  freq?: "D" | "W"; // ← FASTAPI MENGEMBALIKAN INI
+  forecast_summary?: {
+    // ← FASTAPI MENGEMBALIKAN INI
+    avg: number;
+    min: number;
+    max: number;
+    lower: number;
+    upper: number;
+  };
+};
+
 function calculateGrowth(data: ForecastPoint[]): number {
   const actual = data
     .filter((item) => item.actual)
@@ -59,28 +75,28 @@ export default function ForecastPage() {
   const [modelUsed, setModelUsed] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // ── TAMBAHKAN STATE UNTUK FORECASTSUMMARY DAN FREQ ──
+  const [forecastSummary, setForecastSummary] = useState<any>(null);
+  const [freq, setFreq] = useState<"D" | "W">("D");
+
+  // Muat daftar produk saat komponen mount
   useEffect(() => {
     const loadProducts = async () => {
       const data = await safeFetch<Product[]>("/api/products", []);
       setProducts(data);
       if (data.length > 0) setSelectedProduct(data[0].id);
     };
-
     loadProducts();
   }, []);
 
-  useEffect(() => {
-    if (!selectedProduct) return;
+  // Fungsi untuk melakukan refresh/load forecast
+  const handleRefresh = async (productId: string) => {
+    if (!productId) return;
+    setLoading(true);
 
-    const loadForecast = async () => {
-      setLoading(true);
-
-      const predictData = await safeFetch<{
-        confidence: number;
-        confidence_context?: ConfidenceContext;
-        model_used?: string;
-      }>(
-        `http://localhost:8000/predict-demand/${selectedProduct}`,
+    try {
+      const predictData = await safeFetch<PredictDemandResponse>(
+        `http://localhost:8000/predict-demand/${productId}`,
         { confidence: 0 },
         { method: "POST" },
       );
@@ -89,12 +105,16 @@ export default function ForecastPage() {
       setConfidenceContext(predictData.confidence_context || null);
       setModelUsed(predictData.model_used || "");
 
+      // ── AMBIL FREQ DAN FORECAST_SUMMARY DARI RESPON ──
+      setFreq(predictData.freq || "D");
+      setForecastSummary(predictData.forecast_summary || null);
+
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       const result = await safeFetch<{
         sales: SalesPoint[];
         predictions: PredictionPoint[];
-      }>(`/api/predictions/${selectedProduct}`, { sales: [], predictions: [] });
+      }>(`/api/predictions/${productId}`, { sales: [], predictions: [] });
 
       const merged = mergeForecastData(
         result.sales,
@@ -103,10 +123,18 @@ export default function ForecastPage() {
 
       setForecastData(merged);
       setGrowth(calculateGrowth(merged));
+    } catch (error) {
+      console.error("Gagal load forecast:", error);
+    } finally {
       setLoading(false);
-    };
+    }
+  };
 
-    loadForecast();
+  // Saat produk berubah (pertama kali dipilih atau ganti produk), refresh data otomatis 1x
+  useEffect(() => {
+    if (selectedProduct) {
+      handleRefresh(selectedProduct);
+    }
   }, [selectedProduct]);
 
   const selectedName =
@@ -148,17 +176,14 @@ export default function ForecastPage() {
             </select>
           </label>
 
+          {/* Tombol Refresh: memicu handleRefresh secara manual */}
           <button
             type="button"
-            onClick={() => {
-              const current = selectedProduct;
-              setSelectedProduct("");
-              setTimeout(() => setSelectedProduct(current), 0);
-            }}
+            onClick={() => handleRefresh(selectedProduct)}
             disabled={!selectedProduct || loading}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-950 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            <RefreshCcw size={15} />
+            <RefreshCcw size={15} className={loading ? "animate-spin" : ""} />
             Refresh
           </button>
         </div>
@@ -174,14 +199,22 @@ export default function ForecastPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        {/* ── SEKARANG PROPS INI SUDAH VALID ── */}
         <ForecastChart
           data={forecastData}
           growth={growth}
           confidence={confidence}
           confidenceContext={confidenceContext}
           modelUsed={modelUsed}
+          forecastSummary={forecastSummary}
+          freq={freq}
+          loading={loading}
         />
-        <SalesChart data={forecastData} modelUsed={modelUsed} />
+        <SalesChart
+          data={forecastData}
+          modelUsed={modelUsed}
+          loading={loading}
+        />
       </div>
 
       {/* Tabel prediksi 7 hari */}

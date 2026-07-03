@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MessageSquareText, Search, Star, ThumbsDown, ThumbsUp } from "lucide-react";
+import {
+  MessageSquareText,
+  Search,
+  Star,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 
 import { safeFetch } from "@/lib/safe-fetch";
 
@@ -11,7 +17,6 @@ type Review = {
   reviewText: string;
   rating: number;
   sentiment: string | null;
-  aspect: string;
   reviewDate: string;
   product?: {
     id: string;
@@ -24,13 +29,21 @@ type ReviewsResponse = {
   data: Review[];
 };
 
-const sentimentStyles: Record<string, { label: string; bg: string; color: string }> =
-  {
-    positive: { label: "Positif", bg: "#EAF3DE", color: "#3B6D11" },
-    neutral: { label: "Netral", bg: "#f3f4f6", color: "#4b5563" },
-    negative: { label: "Negatif", bg: "#FCEBEB", color: "#A32D2D" },
-    unknown: { label: "Belum ada", bg: "#f3f4f6", color: "#6b7280" },
-  };
+// Tambahkan tipe produk untuk dropdown
+type ProductSummary = {
+  id: string;
+  name: string;
+};
+
+const sentimentStyles: Record<
+  string,
+  { label: string; bg: string; color: string }
+> = {
+  positive: { label: "Positif", bg: "#EAF3DE", color: "#3B6D11" },
+  neutral: { label: "Netral", bg: "#f3f4f6", color: "#4b5563" },
+  negative: { label: "Negatif", bg: "#FCEBEB", color: "#A32D2D" },
+  unknown: { label: "Belum ada", bg: "#f3f4f6", color: "#6b7280" },
+};
 
 function SummaryCard({
   icon,
@@ -58,20 +71,35 @@ function SummaryCard({
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [products, setProducts] = useState<ProductSummary[]>([]);
   const [query, setQuery] = useState("");
   const [sentimentFilter, setSentimentFilter] = useState("all");
+  const [productFilter, setProductFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadReviews = async () => {
-      const response = await safeFetch<ReviewsResponse>("/api/reviews", {
-        data: [],
-      });
-      setReviews(response.data);
-      setLoading(false);
+    const loadData = async () => {
+      try {
+        // Ambil ulasan
+        const reviewsRes = await safeFetch<ReviewsResponse>("/api/reviews", {
+          data: [],
+        });
+        setReviews(reviewsRes.data);
+
+        // Ambil daftar produk (untuk filter dropdown)
+        const productsRes = await safeFetch<ProductSummary[]>(
+          "/api/products",
+          [],
+        );
+        setProducts(productsRes);
+      } catch (err) {
+        console.error("Error loading data:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    loadReviews();
+    loadData();
   }, []);
 
   const filteredReviews = useMemo(() => {
@@ -81,24 +109,31 @@ export default function ReviewsPage() {
       const sentiment = review.sentiment ?? "unknown";
       const matchesSentiment =
         sentimentFilter === "all" || sentiment === sentimentFilter;
+
+      const matchesProduct =
+        productFilter === "all" || review.productId === productFilter;
+
       const matchesSearch =
         !term ||
         [
           review.reviewText,
           review.product?.name,
           review.product?.category,
-          review.aspect,
           sentiment,
         ]
           .filter(Boolean)
           .some((value) => value?.toLowerCase().includes(term));
 
-      return matchesSentiment && matchesSearch;
+      return matchesSentiment && matchesProduct && matchesSearch;
     });
-  }, [reviews, query, sentimentFilter]);
+  }, [reviews, query, sentimentFilter, productFilter]);
 
-  const positive = reviews.filter((review) => review.sentiment === "positive").length;
-  const negative = reviews.filter((review) => review.sentiment === "negative").length;
+  const positive = reviews.filter(
+    (review) => review.sentiment === "positive",
+  ).length;
+  const negative = reviews.filter(
+    (review) => review.sentiment === "negative",
+  ).length;
   const avgRating =
     reviews.length > 0
       ? (
@@ -132,6 +167,7 @@ export default function ReviewsPage() {
             />
           </label>
 
+          {/* Filter sentimen */}
           <select
             value={sentimentFilter}
             onChange={(event) => setSentimentFilter(event.target.value)}
@@ -142,6 +178,20 @@ export default function ReviewsPage() {
             <option value="neutral">Netral</option>
             <option value="negative">Negatif</option>
           </select>
+
+          {/* Filter produk */}
+          <select
+            value={productFilter}
+            onChange={(event) => setProductFilter(event.target.value)}
+            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none"
+          >
+            <option value="all">Semua produk</option>
+            {products.map((product) => (
+              <option key={product.id} value={product.id}>
+                {product.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -151,9 +201,21 @@ export default function ReviewsPage() {
           label="Total ulasan"
           value={reviews.length}
         />
-        <SummaryCard icon={<Star size={18} />} label="Rating rata-rata" value={avgRating} />
-        <SummaryCard icon={<ThumbsUp size={18} />} label="Positif" value={positive} />
-        <SummaryCard icon={<ThumbsDown size={18} />} label="Negatif" value={negative} />
+        <SummaryCard
+          icon={<Star size={18} />}
+          label="Rating rata-rata"
+          value={avgRating}
+        />
+        <SummaryCard
+          icon={<ThumbsUp size={18} />}
+          label="Positif"
+          value={positive}
+        />
+        <SummaryCard
+          icon={<ThumbsDown size={18} />}
+          label="Negatif"
+          value={negative}
+        />
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
@@ -172,20 +234,25 @@ export default function ReviewsPage() {
                 <th className="px-5 py-3">Produk</th>
                 <th className="px-5 py-3">Rating</th>
                 <th className="px-5 py-3">Sentimen</th>
-                <th className="px-5 py-3">Aspek</th>
                 <th className="px-5 py-3">Tanggal</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-sm">
               {loading ? (
                 <tr>
-                  <td className="px-5 py-8 text-center text-gray-400" colSpan={6}>
+                  <td
+                    className="px-5 py-8 text-center text-gray-400"
+                    colSpan={5}
+                  >
                     Memuat ulasan...
                   </td>
                 </tr>
               ) : filteredReviews.length === 0 ? (
                 <tr>
-                  <td className="px-5 py-8 text-center text-gray-400" colSpan={6}>
+                  <td
+                    className="px-5 py-8 text-center text-gray-400"
+                    colSpan={5}
+                  >
                     Tidak ada ulasan yang cocok.
                   </td>
                 </tr>
@@ -210,7 +277,9 @@ export default function ReviewsPage() {
                           {review.product?.category ?? "Tanpa kategori"}
                         </p>
                       </td>
-                      <td className="px-5 py-4 text-gray-900">{review.rating}/5</td>
+                      <td className="px-5 py-4 text-gray-900">
+                        {review.rating}/5
+                      </td>
                       <td className="px-5 py-4">
                         <span
                           className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
@@ -222,15 +291,15 @@ export default function ReviewsPage() {
                           {sentiment.label}
                         </span>
                       </td>
-                      <td className="px-5 py-4 capitalize text-gray-600">
-                        {review.aspect}
-                      </td>
                       <td className="px-5 py-4 text-gray-600">
-                        {new Date(review.reviewDate).toLocaleDateString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
+                        {new Date(review.reviewDate).toLocaleDateString(
+                          "id-ID",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          },
+                        )}
                       </td>
                     </tr>
                   );

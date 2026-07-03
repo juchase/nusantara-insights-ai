@@ -1,7 +1,6 @@
-// app/dashboard/insight/page.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react"; // ← tambah useCallback
+import { useEffect, useState, useCallback } from "react";
 import InsightCard from "@/components/dashboard/InsightCard";
 import InsightPanel from "@/components/dashboard/InsightPanel";
 import RiskOverview from "@/components/dashboard/RiskOverview";
@@ -31,7 +30,7 @@ export default function InsightPage() {
     sentimentStats: { positive: 0, neutral: 0, negative: 0 },
   });
 
-  // ✅ Definisikan fetchInsight sebagai useCallback
+  // Definisikan fetchInsight sebagai useCallback agar bisa dipakai di useEffect
   const fetchInsight = useCallback(
     async (productId?: string) => {
       const id = productId ?? selectedProduct;
@@ -40,24 +39,33 @@ export default function InsightPage() {
       setLoading(true);
       setInsight(null);
 
-      const data = await safeFetch<InsightResponse>(
-        `http://127.0.0.1:8000/generate-insight/${id}`,
-        {
-          executive_summary: "",
-          summary: "",
-          health_score: 0,
-          health_label: "",
-          insights: [],
-          recommendations: [],
-          dominant_issue: "",
-          risk_level: "low",
-          llm_used: false,
-          metrics: undefined,
-        },
-      );
+      try {
+        const data = await safeFetch<InsightResponse>(
+          `http://127.0.0.1:8000/generate-insight/${id}`,
+          {
+            executive_summary: "",
+            summary: "",
+            health_score: 0,
+            health_label: "",
+            insights: [],
+            recommendations: [],
+            dominant_issue: "",
+            risk_level: "low",
+            llm_used: false,
+            metrics: undefined,
+            confidence: 0,
+            confidence_context: null,
+            modelVersion: "prophet",
+            freq: "D",
+          },
+        );
 
-      if (data.summary || data.executive_summary) setInsight(data);
-      setLoading(false);
+        if (data.summary || data.executive_summary) setInsight(data);
+      } catch (error) {
+        console.error("Gagal fetch insight:", error);
+      } finally {
+        setLoading(false);
+      }
     },
     [selectedProduct],
   );
@@ -92,11 +100,12 @@ export default function InsightPage() {
     loadInitialData();
   }, []);
 
-  // Auto-fetch saat produk berubah
+  // Saat selectedProduct berubah (inisialisasi), jalankan fetch 1x
   useEffect(() => {
-    if (!selectedProduct) return;
-    fetchInsight(selectedProduct);
-  }, [selectedProduct]); // ← tidak include fetchInsight untuk hindari infinite loop
+    if (selectedProduct) {
+      fetchInsight(selectedProduct);
+    }
+  }, [selectedProduct, fetchInsight]);
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6">
@@ -138,7 +147,7 @@ export default function InsightPage() {
           </p>
         </div>
 
-        {/* ✅ Tombol Generate Ulang — memanggil fetchInsight() */}
+        {/* Tombol Generate — hanya memicu fetchInsight saat diklik */}
         <button
           onClick={() => fetchInsight()}
           disabled={loading || !selectedProduct}
@@ -177,7 +186,13 @@ export default function InsightPage() {
         loading={loading}
       />
 
-      <InsightPanel insight={insight} stats={stats} loading={loading} />
+      <InsightPanel
+        insight={insight}
+        totalReviews={stats.totalReviews}
+        avgRating={stats.avgRating}
+        totalProducts={stats.totalProducts}
+        loading={loading}
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -185,6 +200,7 @@ export default function InsightPage() {
             positive={stats.sentimentStats.positive}
             neutral={stats.sentimentStats.neutral}
             negative={stats.sentimentStats.negative}
+            loading={loading}
           />
           <SentimentTrendCard
             data={insight?.sentiment_trend}
