@@ -22,6 +22,31 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
 
     forecast_result = predict_and_save(product_id)
 
+    # ── Ambil data dari forecasting ──────────────────────────────────────────
+    if forecast_result.get("status") == "success":
+        growth = float(forecast_result.get("growth", 0))
+        growth_display = forecast_result.get("growth_display", "meningkat")
+        confidence = float(forecast_result.get("confidence", 0))
+        confidence_context = forecast_result.get("confidence_context", {
+            "label": "Akurasi Rendah",
+            "message": "Data tidak cukup",
+            "color": "red"
+        })
+        forecast_summary = forecast_result.get("forecast_summary", {})
+        model_used = forecast_result.get("model_used", "prophet")
+        freq = forecast_result.get("freq", "D")
+    else:
+        growth = 0.0
+        growth_display = "meningkat"
+        confidence = 0.0
+        confidence_context = {
+            "label": "Gagal Prediksi",
+            "message": "Terjadi kesalahan pada forecasting.",
+            "color": "red"
+        }
+        forecast_summary = {}
+        model_used = "prophet"
+        freq = "D"
     product_row = db.execute(text("""
         SELECT name FROM "Product" WHERE id = :pid
     """), {"pid": product_id}).fetchone()
@@ -161,6 +186,8 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "confidence_label": confidence_context.get("label", "Akurasi Rendah"),
         "confidence_message": confidence_context.get("message", ""),
         "confidence_color": confidence_context.get("color", "red"),
+        "freq": freq,
+        "model_version": model_used,
         "created_at": current_time,
         "updated_at": current_time,
     }
@@ -174,6 +201,8 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
             "demandGrowthPct", "riskLevel", "healthScore",
             "llmUsed", "llmModel",
             "confidence", "confidenceLabel", "confidenceMessage", "confidenceColor",
+            "freq",
+            "modelVersion",
             "createdAt", "updatedAt"
         ) VALUES (
             :id, :product_id,
@@ -183,6 +212,8 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
             :growth, :risk, :health_score,
             :llm_used, :model,
             :confidence, :confidence_label, :confidence_message, :confidence_color,
+            :freq,
+            :model_version,
             :created_at, :updated_at
         )
     """

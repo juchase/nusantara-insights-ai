@@ -34,25 +34,8 @@ export async function GET(
       return NextResponse.json(null, { status: 200 });
     }
 
-    // 3. Tentukan frekuensi prediksi dari tabel Prediction
-    const latestPrediction = await prisma.prediction.findFirst({
-      where: { productId },
-      orderBy: { predictionDate: "desc" },
-      select: { modelVersion: true },
-    });
-
-    let freq: "D" | "W" = "D";
-    let modelVersion = latestPrediction?.modelVersion ?? "prophet";
-
-    if (
-      modelVersion &&
-      (modelVersion.toLowerCase().includes("weekly") ||
-        modelVersion.toLowerCase().includes("moving_average") ||
-        modelVersion.toLowerCase().includes("week"))
-    ) {
-      freq = "W";
-    }
-
+    const freq = (insight.freq ?? "D") as "D" | "W";
+    const modelVersion = insight.modelVersion ?? "prophet";
     const takeCount = freq === "W" ? 4 : 7;
     const predictions = await prisma.prediction.findMany({
       where: { productId },
@@ -220,8 +203,8 @@ export async function GET(
       dominant_issue: insight.dominantIssue ?? "—",
       risk_level: insight.riskLevel ?? "low",
       llm_used: insight.llmUsed ?? false,
-      freq,
-      modelVersion,
+      freq: insight.freq ?? "D", // default "D"
+      modelVersion: insight.modelVersion ?? "prophet",
       metrics: {
         positive_percentage: Math.round(positivePercentage * 10) / 10,
         negative_percentage: Math.round(negativePercentage * 10) / 10,

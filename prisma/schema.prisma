@@ -44,7 +44,6 @@ model Review {
   reviewText String
   rating     Int
   sentiment  String?
-  aspect     String   @default("lainnya")
   reviewDate DateTime
 
   createdAt DateTime @default(now())
@@ -102,6 +101,9 @@ model Prediction {
   confidenceLabel   String?
   confidenceMessage String?
   confidenceColor   String?
+
+  freq         String?  @default("D")
+  modelVersion String?
 
   llmUsed  Boolean  @default(false)
   llmModel String?

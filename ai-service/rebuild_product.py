@@ -42,7 +42,7 @@ def should_call_llm(product_id: str, db: Session) -> bool:
 
 
 def generate_insight_for_product(product_id: str, db: Session):
-    """Generate dan simpan insight untuk satu produk (sama dengan rebuild_user)."""
+    """Generate dan simpan insight. Memastikan freq dan modelVersion tersimpan."""
     start_time = time.time()
     current_time = datetime.now()
 
@@ -60,10 +60,9 @@ def generate_insight_for_product(product_id: str, db: Session):
                 "color": "red"
             })
             growth = float(forecast_result.get("growth", 0))
-            growth_display = forecast_result.get("growth_display", "meningkat")  # ← ambil growth_display
+            growth_display = forecast_result.get("growth_display", "meningkat")
             model_used = forecast_result.get("model_used", "prophet")
-            freq = forecast_result.get("freq", "D")
-            # Tentukan trend dari growth
+            freq = forecast_result.get("freq", "D")   # ← AMBIL FREQ
             if growth > 0:
                 trend = "up"
             elif growth < 0:
@@ -82,7 +81,6 @@ def generate_insight_for_product(product_id: str, db: Session):
             trend = "stable"
             model_used = "prophet"
             freq = "D"
-            print(f"⚠️ Forecasting gagal untuk {product_id}: {forecast_result.get('error', 'unknown')}")
 
         print(f"📌 growth_display yang dikirim ke LLM: '{growth_display}'")
 
@@ -139,7 +137,7 @@ def generate_insight_for_product(product_id: str, db: Session):
             prompt = build_prompt(
                 raw_sentences=raw_sentences,
                 top_recommendation=top_rec,
-                growth_display=growth_display  # ← sekarang growth_display terkirim
+                growth_display=growth_display
             )
             final_summary = safe_generate(
                 prompt=prompt,
@@ -175,6 +173,8 @@ def generate_insight_for_product(product_id: str, db: Session):
             "confidence_label": confidence_context.get("label", "Akurasi Rendah"),
             "confidence_message": confidence_context.get("message", ""),
             "confidence_color": confidence_context.get("color", "red"),
+            "freq": freq,               # ← SIMPAN FREQ
+            "model_version": model_used, # ← SIMPAN MODEL VERSION
             "created_at": current_time,
             "updated_at": current_time,
         }
@@ -188,6 +188,7 @@ def generate_insight_for_product(product_id: str, db: Session):
                 "demandGrowthPct", "riskLevel", "healthScore",
                 "llmUsed", "llmModel",
                 "confidence", "confidenceLabel", "confidenceMessage", "confidenceColor",
+                "freq", "modelVersion",
                 "createdAt", "updatedAt"
             ) VALUES (
                 :id, :product_id,
@@ -197,6 +198,7 @@ def generate_insight_for_product(product_id: str, db: Session):
                 :growth, :risk, :health_score,
                 :llm_used, :model,
                 :confidence, :confidence_label, :confidence_message, :confidence_color,
+                :freq, :model_version,
                 :created_at, :updated_at
             )
         """
@@ -221,7 +223,6 @@ def generate_insight_for_product(product_id: str, db: Session):
 def rebuild_product(product_id: str):
     db = SessionLocal()
     try:
-        # Cek apakah produk ada
         product = db.execute(
             text('SELECT id FROM "Product" WHERE id = :pid'),
             {"pid": product_id}
