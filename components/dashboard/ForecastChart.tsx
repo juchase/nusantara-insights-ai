@@ -32,25 +32,25 @@ function getDemandAlert(growth: number): {
   if (growth > 20)
     return {
       text: "Permintaan diprediksi meningkat signifikan",
-      color: "#5DCAA5",
-      bg: "rgba(29,158,117,0.2)",
+      color: "#009B77",
+      bg: "bg-[#009B77]/20",
     };
   if (growth > 5)
     return {
       text: "Pertumbuhan permintaan moderat",
-      color: "#5DCAA5",
-      bg: "rgba(29,158,117,0.2)",
+      color: "#009B77",
+      bg: "bg-[#009B77]/20",
     };
   if (growth < -10)
     return {
       text: "Permintaan diprediksi menurun",
       color: "#E24B4A",
-      bg: "rgba(226,75,74,0.2)",
+      bg: "bg-[#E24B4A]/20",
     };
   return {
     text: "Permintaan diprediksi stabil",
-    color: "#AFA9EC",
-    bg: "rgba(127,119,221,0.2)",
+    color: "#7F77DD",
+    bg: "bg-[#7F77DD]/20",
   };
 }
 
@@ -68,67 +68,25 @@ function IntervalBar({
   const clamped = Math.max(0, Math.min(100, pct));
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 4,
-        }}
-      >
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+    <div className="mt-3">
+      <div className="flex justify-between mb-1">
+        <span className="text-[10px] text-slate-500">
           Min {lower.toLocaleString("id-ID")}
         </span>
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+        <span className="text-[10px] text-slate-500">
           Maks {upper.toLocaleString("id-ID")}
         </span>
       </div>
 
-      <div
-        style={{
-          position: "relative",
-          height: 6,
-          borderRadius: 99,
-          background: "rgba(255,255,255,0.12)",
-          overflow: "visible",
-        }}
-      >
+      <div className="relative h-1.5 rounded-full bg-[#1e293b] overflow-visible">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#009B77]/30 via-[#009B77]/60 to-[#009B77]/30" />
         <div
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            height: "100%",
-            width: "100%",
-            borderRadius: 99,
-            background:
-              "linear-gradient(90deg, rgba(93,202,165,0.25) 0%, rgba(93,202,165,0.55) 50%, rgba(93,202,165,0.25) 100%)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: `${clamped}%`,
-            transform: "translate(-50%, -50%)",
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            background: "#5DCAA5",
-            border: "2px solid #1a1a2e",
-            boxShadow: "0 0 6px rgba(93,202,165,0.7)",
-          }}
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#009B77] border-2 border-[#0f172a] shadow-[0_0_8px_rgba(0,155,119,0.6)]"
+          style={{ left: `${clamped}%` }}
         />
       </div>
 
-      <p
-        style={{
-          fontSize: 10,
-          color: "rgba(255,255,255,0.35)",
-          marginTop: 5,
-          textAlign: "center",
-        }}
-      >
+      <p className="text-[10px] text-slate-500 text-center mt-1.5">
         Rentang prediksi 80% (uncertainty interval Prophet)
       </p>
     </div>
@@ -154,17 +112,9 @@ export default function ForecastChart({
   freq?: "D" | "W";
   loading: boolean;
 }) {
-  // ── LOADING ──────────────────────────────────────────────────────────────
-  if (loading) {
-    return <ForecastChartSkeleton />;
-  }
+  if (loading) return <ForecastChartSkeleton />;
+  if (!data || data.length === 0) return null;
 
-  // ── EMPTY ──────────────────────────────────────────────────────────────────
-  if (!data || data.length === 0) {
-    return null;
-  }
-
-  // ── DATA ADA — hitung nilai dasar ──────────────────────────────────────
   const latestActual = [...data].reverse().find((d) => d.actual)?.actual;
   const avgPredicted =
     forecastSummary?.avg ??
@@ -182,10 +132,11 @@ export default function ForecastChart({
   const alert = getDemandAlert(growth);
   const ctxColor =
     confidenceContext?.color === "green"
-      ? "#5DCAA5"
+      ? "#009B77"
       : confidenceContext?.color === "amber"
-        ? "#EF9F27"
+        ? "#F59E0B"
         : "#E24B4A";
+
   const ctxLabel =
     confidenceContext?.label ??
     (confidence >= 70
@@ -193,535 +144,240 @@ export default function ForecastChart({
       : confidence >= 40
         ? "Akurasi Sedang"
         : "Akurasi Rendah");
-  const ctxMessage = confidenceContext?.message ?? "";
 
-  // ── Dinamis unit ──────────────────────────────────────────────────────────
+  const ctxMessage = confidenceContext?.message ?? "";
   const unitLabel = freq === "W" ? "minggu" : "hari";
   const period = freq === "W" ? 4 : 7;
 
-  // ── Logika Pertumbuhan (Persentase vs Unit Absolut) ──────────────────────
+  // ── Logika Pertumbuhan ──────────────────────────────────
   const shouldShowAbsUnit = (latestActual ?? 0) < 10 || avgPredicted < 10;
   let growthDisplay = "";
-  let growthColor = "#AFA9EC";
+  let growthColor = "#7F77DD";
 
   if (shouldShowAbsUnit) {
     const unitDifference = Math.round(avgPredicted - (latestActual ?? 0));
     if (unitDifference > 0) {
       growthDisplay = `+${unitDifference} unit`;
-      growthColor = "#5DCAA5";
+      growthColor = "#009B77";
     } else if (unitDifference < 0) {
       growthDisplay = `${unitDifference} unit`;
       growthColor = "#E24B4A";
     } else {
       growthDisplay = `0 unit`;
-      growthColor = "#AFA9EC";
+      growthColor = "#7F77DD";
     }
   } else {
     if (growth > 0) {
       growthDisplay = `+${growth}%`;
-      growthColor = "#5DCAA5";
+      growthColor = "#009B77";
     } else if (growth < 0) {
       growthDisplay = `${growth}%`;
       growthColor = "#E24B4A";
     } else {
       growthDisplay = `0%`;
-      growthColor = "#AFA9EC";
+      growthColor = "#7F77DD";
     }
   }
 
-  // ── TAMPILAN KHUSUS UNTUK MOVING AVERAGE ────────────────────────────────
+  // ── TAMPILAN KHUSUS MOVING AVERAGE ────────────────────────────
   if (modelUsed === "moving_average") {
     return (
-      <div
-        className="min-w-0 p-5 sm:p-6 lg:p-7"
-        style={{
-          minHeight: 420,
-          borderRadius: 20,
-          background: "#1a1a2e",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          color: "#fff",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Header */}
+      <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between text-white border border-[rgba(255,255,255,0.06)]">
+        <div className="flex flex-col gap-6">
           <div>
-            <p style={{ fontSize: 15, fontWeight: 500, color: "#fff" }}>
+            <p className="text-sm font-bold text-white">
               Estimasi Permintaan (Data Terbatas)
             </p>
-            <p
-              style={{
-                fontSize: 12,
-                color: "rgba(255,255,255,0.5)",
-                marginTop: 4,
-              }}
-            >
+            <p className="text-xs text-slate-400 mt-1">
               Karena data penjualan sangat minim, sistem menggunakan metode
               rata-rata tertimbang dari 3 data terakhir.
             </p>
           </div>
 
-          {/* Angka Estimasi */}
           <div>
-            <p
-              style={{
-                fontSize: 11,
-                color: "rgba(255,255,255,0.5)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 6,
-              }}
-            >
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
               Rata-rata Prediksi
             </p>
-            <p
-              className="text-[36px] sm:text-[44px]"
-              style={{
-                fontWeight: 500,
-                color: "#5DCAA5",
-                lineHeight: 1,
-                display: "flex",
-                alignItems: "baseline",
-                gap: 8,
-              }}
-            >
+            <p className="text-4xl sm:text-5xl font-bold text-[#009B77] flex items-baseline gap-2">
               {avgPredicted
                 ? Math.round(avgPredicted).toLocaleString("id-ID")
                 : "—"}
-              <span
-                style={{
-                  fontSize: 16,
-                  color: "rgba(255,255,255,0.5)",
-                  fontWeight: 400,
-                }}
-              >
+              <span className="text-base text-slate-500 font-normal">
                 unit/{unitLabel}
               </span>
             </p>
           </div>
 
-          {/* Rentang Estimasi */}
           {hasInterval && forecastSummary && (
-            <div
-              style={{
-                background: "rgba(255,255,255,0.07)",
-                borderRadius: 12,
-                padding: "12px 14px",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "rgba(255,255,255,0.5)",
-                  marginBottom: 6,
-                }}
-              >
+            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
+              <p className="text-[10px] text-slate-500 mb-2">
                 Rentang Estimasi
               </p>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 14,
-                  color: "#fff",
-                }}
-              >
+              <div className="flex justify-between text-sm text-white">
                 <span>
                   {Math.round(forecastSummary.lower).toLocaleString("id-ID")}
                 </span>
-                <span style={{ color: "rgba(255,255,255,0.3)" }}>—</span>
+                <span className="text-slate-500">—</span>
                 <span>
                   {Math.round(forecastSummary.upper).toLocaleString("id-ID")}
                 </span>
               </div>
-              <div
-                style={{
-                  height: 4,
-                  borderRadius: 2,
-                  background: "rgba(93,202,165,0.3)",
-                  marginTop: 6,
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: "100%",
-                    borderRadius: 2,
-                    background: "#5DCAA5",
-                  }}
-                />
+              <div className="h-1 bg-[#009B77]/30 rounded-full mt-2">
+                <div className="h-full w-full rounded-full bg-[#009B77]" />
               </div>
-              <p
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.35)",
-                  marginTop: 4,
-                  textAlign: "center",
-                }}
-              >
+              <p className="text-[10px] text-slate-500 text-center mt-2">
                 Rentang estimasi 80% (MVA sederhana)
               </p>
             </div>
           )}
 
-          {/* Card Penjualan Terakhir & Rata-rata (sama seperti sebelumnya) */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]">
-            <div
-              style={{
-                background: "rgba(255,255,255,0.07)",
-                borderRadius: 12,
-                padding: "12px 14px",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.45)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 6,
-                }}
-              >
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                 Penjualan Terakhir
               </p>
-              <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+              <p className="text-2xl font-bold text-white">
                 {latestActual ? latestActual.toLocaleString("id-ID") : "—"}
               </p>
-              <p
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.35)",
-                  marginTop: 2,
-                }}
-              >
-                unit terjual
-              </p>
+              <p className="text-[10px] text-slate-500 mt-1">unit terjual</p>
             </div>
-            <div
-              style={{
-                background: "rgba(255,255,255,0.07)",
-                borderRadius: 12,
-                padding: "12px 14px",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.45)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 6,
-                }}
-              >
+            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
                 Rata-rata Prediksi
               </p>
-              <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+              <p className="text-2xl font-bold text-white">
                 {avgPredicted
                   ? Math.round(avgPredicted).toLocaleString("id-ID")
                   : "—"}
               </p>
-              <p
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.35)",
-                  marginTop: 2,
-                }}
-              >
+              <p className="text-[10px] text-slate-500 mt-1">
                 unit/{unitLabel}
               </p>
             </div>
           </div>
-
-          {/* Footer info model */}
-          <p
-            style={{
-              fontSize: 11,
-              color: "rgba(255,255,255,0.35)",
-              marginTop: 8,
-              lineHeight: 1.5,
-            }}
-          >
-            Estimasi menggunakan rata-rata tertimbang (Moving Average) dari data
-            penjualan terakhir karena data historis masih sangat terbatas.
-          </p>
         </div>
+
+        <p className="text-[10px] text-slate-500 mt-6 leading-relaxed">
+          Estimasi menggunakan rata-rata tertimbang (Moving Average) dari data
+          penjualan terakhir karena data historis masih sangat terbatas.
+        </p>
       </div>
     );
   }
 
-  // ── TAMPILAN NORMAL (PROPHET) ─────────────────────────────────────────────
+  // ── TAMPILAN NORMAL PROPHET ──────────────────────────────────────────────
   return (
-    <div
-      className="min-w-0 p-5 sm:p-6 lg:p-7"
-      style={{
-        minHeight: 420,
-        borderRadius: 20,
-        background: "#1a1a2e",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        color: "#fff",
-      }}
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+    <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between text-white border border-[rgba(255,255,255,0.06)]">
+      <div className="flex flex-col gap-6">
         <div>
-          <p style={{ fontSize: 15, fontWeight: 500, color: "#fff" }}>
-            Prediksi Permintaan
-          </p>
-          <p
-            style={{
-              fontSize: 12,
-              color: "rgba(255,255,255,0.5)",
-              marginTop: 4,
-            }}
-          >
+          <p className="text-sm font-bold text-white">Prediksi Permintaan</p>
+          <p className="text-xs text-slate-400 mt-1">
             Berdasarkan tren penjualan historis
           </p>
         </div>
 
-        {/* Pertumbuhan */}
         <div>
-          <p
-            style={{
-              fontSize: 11,
-              color: "rgba(255,255,255,0.5)",
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              marginBottom: 6,
-            }}
-          >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
             Prediksi Pertumbuhan
           </p>
           <p
-            className="text-[36px] sm:text-[44px]"
-            style={{ fontWeight: 500, color: growthColor, lineHeight: 1 }}
+            className="text-4xl sm:text-5xl font-bold"
+            style={{ color: growthColor, lineHeight: 1 }}
           >
             {growthDisplay}
           </p>
           <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              marginTop: 8,
-              padding: "4px 10px",
-              borderRadius: 20,
-              background: alert.bg,
-            }}
+            className={`inline-flex items-center gap-2 mt-2 px-3 py-1 rounded-full ${alert.bg}`}
           >
             <div
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: alert.color,
-              }}
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: alert.color }}
             />
-            <span style={{ fontSize: 11, color: alert.color, fontWeight: 500 }}>
+            <span
+              className="text-xs font-semibold"
+              style={{ color: alert.color }}
+            >
               {alert.text}
             </span>
           </div>
         </div>
 
-        {/* Confidence */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.07)",
-            borderRadius: 12,
-            padding: "12px 14px",
-          }}
-        >
-          <p
-            style={{
-              fontSize: 11,
-              color: "rgba(255,255,255,0.5)",
-              marginBottom: 4,
-            }}
-          >
+        <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
+          <p className="text-[10px] text-slate-500 mb-1">
             Tingkat Kepercayaan Model
           </p>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              gap: 8,
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                fontSize: 22,
-                fontWeight: 500,
-                color: confidence < 20 ? "rgba(255,255,255,0.6)" : "#fff",
-              }}
-            >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-2xl font-bold text-white">
               {confidence.toFixed(1)}%
             </span>
             {confidence >= 70 ? (
-              <span style={{ fontSize: 11, color: "#5DCAA5", fontWeight: 500 }}>
+              <span className="text-xs font-semibold text-[#009B77]">
                 Akurasi Tinggi
               </span>
             ) : confidence >= 40 ? (
-              <span style={{ fontSize: 11, color: "#EF9F27", fontWeight: 500 }}>
+              <span className="text-xs font-semibold text-[#F59E0B]">
                 Akurasi Sedang
               </span>
             ) : confidence >= 20 ? (
-              <span style={{ fontSize: 11, color: "#E24B4A", fontWeight: 500 }}>
+              <span className="text-xs font-semibold text-[#E24B4A]">
                 Akurasi Rendah
               </span>
             ) : (
-              <span
-                style={{
-                  fontSize: 11,
-                  color: "rgba(255,255,255,0.5)",
-                  fontWeight: 500,
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  borderRadius: 4,
-                  padding: "0px 6px",
-                }}
-              >
+              <span className="text-xs font-semibold text-slate-400 border border-slate-500/30 px-2 py-0.5 rounded">
                 Data Terbatas
               </span>
             )}
           </div>
           {ctxMessage && (
-            <p
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.4)",
-                marginTop: 4,
-                lineHeight: 1.4,
-              }}
-            >
+            <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
               {ctxMessage}
             </p>
           )}
           {modelUsed && (
-            <p
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.25)",
-                marginTop: 6,
-              }}
-            >
+            <p className="text-[10px] text-slate-500 mt-2">
               Model: {modelUsed.replace(/_/g, " ")}
             </p>
           )}
         </div>
 
-        {/* Penjualan Terakhir & Rata-rata */}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-[10px]">
-          <div
-            style={{
-              background: "rgba(255,255,255,0.07)",
-              borderRadius: 12,
-              padding: "12px 14px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.45)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 6,
-              }}
-            >
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
               Penjualan Terakhir
             </p>
-            <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+            <p className="text-2xl font-bold text-white">
               {latestActual ? latestActual.toLocaleString("id-ID") : "—"}
             </p>
-            <p
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.35)",
-                marginTop: 2,
-              }}
-            >
-              unit terjual
-            </p>
+            <p className="text-[10px] text-slate-500 mt-1">unit terjual</p>
           </div>
-          <div
-            style={{
-              background: "rgba(255,255,255,0.07)",
-              borderRadius: 12,
-              padding: "12px 14px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.45)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 6,
-              }}
-            >
+          <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
               Rata-rata Prediksi
             </p>
-            <p style={{ fontSize: 22, fontWeight: 500, color: "#fff" }}>
+            <p className="text-2xl font-bold text-white">
               {avgPredicted
                 ? Math.round(avgPredicted).toLocaleString("id-ID")
                 : "—"}
             </p>
-            <p
-              style={{
-                fontSize: 10,
-                color: "rgba(255,255,255,0.35)",
-                marginTop: 2,
-              }}
-            >
-              {unitLabel === "minggu" ? "unit/minggu" : "unit/hari"}
-            </p>
+            <p className="text-[10px] text-slate-500 mt-1">unit/{unitLabel}</p>
           </div>
         </div>
 
-        {/* Interval Bar (Prophet) */}
         {hasInterval && forecastSummary && (
-          <div
-            style={{
-              background: "rgba(93,202,165,0.07)",
-              border: "1px solid rgba(93,202,165,0.18)",
-              borderRadius: 12,
-              padding: "12px 14px",
-            }}
-          >
-            <p
-              style={{
-                fontSize: 11,
-                color: "rgba(255,255,255,0.5)",
-                marginBottom: 2,
-              }}
-            >
+          <div className="bg-[#009B77]/10 rounded-xl p-4 border border-[#009B77]/20">
+            <p className="text-[10px] text-slate-400 mb-1">
               Rentang Prediksi {period} {unitLabel}
             </p>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 6,
-                marginBottom: 2,
-              }}
-            >
-              <span style={{ fontSize: 13, fontWeight: 500, color: "#5DCAA5" }}>
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-sm font-semibold text-[#009B77]">
                 {Math.round(forecastSummary.lower).toLocaleString("id-ID")}
               </span>
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>
-                —
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "#5DCAA5" }}>
+              <span className="text-[10px] text-slate-500">—</span>
+              <span className="text-sm font-semibold text-[#009B77]">
                 {Math.round(forecastSummary.upper).toLocaleString("id-ID")}
               </span>
-              <span
-                style={{
-                  fontSize: 10,
-                  color: "rgba(255,255,255,0.35)",
-                  marginLeft: 2,
-                }}
-              >
-                {unitLabel === "minggu" ? "unit/minggu" : "unit/hari"}
+              <span className="text-[10px] text-slate-400 ml-1">
+                unit/{unitLabel}
               </span>
             </div>
             <IntervalBar
@@ -733,15 +389,7 @@ export default function ForecastChart({
         )}
       </div>
 
-      {/* Footer model (Prophet) */}
-      <p
-        style={{
-          fontSize: 11,
-          color: "rgba(255,255,255,0.35)",
-          marginTop: 16,
-          lineHeight: 1.5,
-        }}
-      >
+      <p className="text-[10px] text-slate-500 mt-6 leading-relaxed">
         Prediksi menggunakan{" "}
         {modelUsed
           ? modelUsed.replace(/_/g, " ") === "moving average"
