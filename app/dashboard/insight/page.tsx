@@ -30,7 +30,6 @@ export default function InsightPage() {
     sentimentStats: { positive: 0, neutral: 0, negative: 0 },
   });
 
-  // Definisikan fetchInsight sebagai useCallback agar bisa dipakai di useEffect
   const fetchInsight = useCallback(
     async (productId?: string) => {
       const id = productId ?? selectedProduct;
@@ -70,7 +69,6 @@ export default function InsightPage() {
     [selectedProduct],
   );
 
-  // Load produk + analytics sekali
   useEffect(() => {
     const loadInitialData = async () => {
       const [productData, analytics] = await Promise.all([
@@ -100,7 +98,6 @@ export default function InsightPage() {
     loadInitialData();
   }, []);
 
-  // Saat selectedProduct berubah (inisialisasi), jalankan fetch 1x
   useEffect(() => {
     if (selectedProduct) {
       fetchInsight(selectedProduct);
@@ -110,73 +107,32 @@ export default function InsightPage() {
   return (
     <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 16,
-        }}
-      >
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <p
-            style={{
-              fontSize: 11,
-              fontWeight: 500,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: "#4f46e5",
-              marginBottom: 4,
-            }}
-          >
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#F59E0B] mb-1">
             AI Decision Support
           </p>
-          <h1 style={{ fontSize: 22, fontWeight: 500, color: "#111827" }}>
-            AI Insight
-          </h1>
-          <p
-            style={{
-              fontSize: 13,
-              color: "#6b7280",
-              marginTop: 6,
-              maxWidth: 560,
-            }}
-          >
+          <h1 className="text-2xl font-bold text-white">AI Insight</h1>
+          <p className="text-sm text-slate-400 mt-2 max-w-lg">
             Analisis kesehatan produk, risiko, isu dominan, dan rekomendasi
             bisnis berbasis rule engine dan LLM.
           </p>
         </div>
 
-        {/* Tombol Generate — hanya memicu fetchInsight saat diklik */}
+        {/* Tombol Generate Ulang */}
         <button
           onClick={() => fetchInsight()}
           disabled={loading || !selectedProduct}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 7,
-            height: 36,
-            padding: "0 16px",
-            flexShrink: 0,
-            background: loading ? "#f3f4f6" : "rgba(127,119,221,0.15)",
-            color: loading ? "#9ca3af" : "#7F77DD",
-            border: `1px solid ${loading ? "#e5e7eb" : "rgba(127,119,221,0.3)"}`,
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 500,
-            cursor: loading ? "not-allowed" : "pointer",
-            transition: "all 0.15s",
-          }}
+          className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
+            loading || !selectedProduct
+              ? "bg-[#1e293b] text-slate-500 cursor-not-allowed"
+              : "bg-[#F59E0B]/10 border border-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/20"
+          }`}
         >
-          <RefreshCw
-            size={14}
-            style={{ animation: loading ? "spin 1s linear infinite" : "none" }}
-          />
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           {loading ? "Memproses..." : "Generate Ulang"}
         </button>
       </div>
-
-      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
 
       <InsightCard
         insight={insight}
