@@ -62,39 +62,23 @@ function SidebarContent({
   };
 
   return (
-    <>
-      {/* Header */}
+    <div className="flex flex-col h-full bg-[#1e293b] text-foreground">
+      {/* ── HEADER ────────────────────────────────────── */}
       <div
-        style={{
-          height: 64,
-          padding: visuallyCollapsed ? "0 17px" : "0 14px 0 5px",
-          borderBottom: "1px solid #f3f4f6",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: visuallyCollapsed ? "center" : "space-between",
-          gap: 8,
-          flexShrink: 0,
-          overflow: "hidden",
-        }}
+        className={`h-16 flex items-center border-b border-border shrink-0 overflow-hidden transition-all duration-200 ${
+          visuallyCollapsed ? "justify-center px-4" : "justify-between"
+        }`}
       >
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            overflow: "hidden",
-            gap: 4,
-            flex: 1,
-            justifyContent: visuallyCollapsed ? "center" : "flex-start",
-          }}
+          className={`flex items-center gap-0.5 overflow-hidden ${
+            visuallyCollapsed ? "justify-center" : "justify-start"
+          }`}
         >
           <SVGComponent />
-
           {!visuallyCollapsed && (
-            <div style={{ whiteSpace: "nowrap", overflow: "hidden" }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>
-                NusantaraInsight
-              </p>
-              <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>
+            <div className="whitespace-nowrap overflow-hidden">
+              <p className="text-sm font-bold text-white">NusantaraInsight</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
                 AI Business Intelligence
               </p>
             </div>
@@ -104,20 +88,9 @@ function SidebarContent({
         {showToggle && onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              border: "1px solid #e5e7eb",
-              background: "#f9fafb",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#6b7280",
-              flexShrink: 0,
-              marginRight: !visuallyCollapsed ? "0px" : "11px",
-            }}
+            className={`flex items-center justify-center w-7 h-7 rounded-lg border border-border bg-[#1e293b]/50 text-slate-400 hover:text-white hover:bg-[#1e293b] transition-colors cursor-pointer shrink-0 ${
+              visuallyCollapsed ? "ml-0" : "mr-3"
+            }`}
             title={visuallyCollapsed ? "Perluas sidebar" : "Perkecil sidebar"}
           >
             {visuallyCollapsed ? (
@@ -129,33 +102,16 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Nav */}
-      <nav
-        style={{
-          flex: 1,
-          padding: "10px 8px",
-          display: "flex",
-          flexDirection: "column",
-          overflowY: "auto",
-          overflowX: "hidden",
-        }}
-      >
+      {/* ── NAVIGASI ──────────────────────────────────────── */}
+      <nav className="flex-1 p-3 overflow-y-auto overflow-x-hidden flex flex-col">
         {NAV.map(({ section, items }) => (
           <div key={section}>
             <p
-              style={{
-                fontSize: 10,
-                color: "#9ca3af",
-                fontWeight: 500,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                padding: "10px 8px 4px",
-                opacity: visuallyCollapsed ? 0 : 1,
-                transition: "opacity 0.15s",
-                whiteSpace: "nowrap",
-                height: visuallyCollapsed ? 0 : "auto",
-                overflow: "hidden",
-              }}
+              className={`text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500 pt-3 pb-1 px-2 transition-opacity duration-200 ${
+                visuallyCollapsed
+                  ? "opacity-0 h-0 overflow-hidden p-0"
+                  : "opacity-100 mb-2"
+              }`}
             >
               {section}
             </p>
@@ -167,32 +123,23 @@ function SidebarContent({
                   href={href}
                   onClick={onNavigate}
                   title={visuallyCollapsed ? label : undefined}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: visuallyCollapsed ? "10px 0 10px 6px" : "8px 10px",
-                    justifyContent: visuallyCollapsed ? "center" : "flex-start",
-                    borderRadius: 7,
-                    fontSize: 12.5,
-                    color: active ? "#4f46e5" : "#4b5563",
-                    background: active ? "#eef2ff" : "transparent",
-                    fontWeight: active ? 500 : 400,
-                    textDecoration: "none",
-                    marginBottom: 2,
-                    transition: "background 0.12s, color 0.12s, padding 0.22s",
-                    overflow: "hidden",
-                    whiteSpace: "nowrap",
-                  }}
+                  className={`flex items-center gap-3 py-2.5 mb-1 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap overflow-hidden ${
+                    visuallyCollapsed
+                      ? "justify-center px-4"
+                      : "justify-start px-2"
+                  } ${
+                    active
+                      ? "text-[#F59E0B] bg-[#F59E0B]/10 border-l-4 border-[#F59E0B]"
+                      : "text-slate-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)]"
+                  }`}
                 >
-                  <Icon size={16} style={{ flexShrink: 0 }} />
+                  <Icon size={16} className="shrink-0 ml-2" />
                   <span
-                    style={{
-                      opacity: visuallyCollapsed ? 0 : 1,
-                      maxWidth: visuallyCollapsed ? 0 : 160,
-                      transition: "opacity 0.15s, max-width 0.22s",
-                      overflow: "hidden",
-                    }}
+                    className={`transition-all duration-200 ${
+                      visuallyCollapsed
+                        ? "opacity-0 max-w-0"
+                        : "opacity-100 max-w-[160px]"
+                    }`}
                   >
                     {label}
                   </span>
@@ -203,90 +150,42 @@ function SidebarContent({
         ))}
       </nav>
 
-      {/* Footer — Production info + Logout */}
-      <div
-        style={{
-          padding: "8px 10px 12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
-      >
-        {/* ✅ Production card — ganti dari Sprint 6 */}
+      {/* ── FOOTER ────────────────────────────────────────── */}
+      <div className="p-3 flex flex-col gap-2">
+        {/* System Status Card */}
         {!visuallyCollapsed && (
-          <div
-            style={{
-              padding: "11px 12px",
-              background: "#f9fafb",
-              borderRadius: 8,
-              border: "1px solid #f3f4f6",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                marginBottom: 4,
-              }}
-            >
-              <div
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "#1D9E75",
-                }}
-              />
-              <p style={{ fontSize: 11, fontWeight: 500, color: "#111827" }}>
-                Sistem Aktif
-              </p>
+          <div className="glass p-3.5 rounded-xl border border-border">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#009B77]" />
+              <p className="text-[11px] font-bold text-white">Sistem Aktif</p>
             </div>
-            <p style={{ fontSize: 10, color: "#6b7280", lineHeight: 1.5 }}>
+            <p className="text-[10px] text-slate-400 leading-tight">
               Rule Engine + LLM berjalan normal
             </p>
           </div>
         )}
 
-        {/* ✅ Logout button */}
+        {/* Logout Button */}
         <button
           onClick={handleLogout}
           title={visuallyCollapsed ? "Keluar" : undefined}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            padding: visuallyCollapsed ? "10px 0" : "9px 10px",
-            justifyContent: visuallyCollapsed ? "center" : "flex-start",
-            borderRadius: 7,
-            fontSize: 12.5,
-            color: "#dc2626",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            width: "100%",
-            transition: "background 0.12s",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#fef2f2")}
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "transparent")
-          }
+          className={`flex items-center gap-3 py-2.5 px-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors w-full ${
+            visuallyCollapsed ? "justify-center" : "justify-start"
+          }`}
         >
-          <LogOut size={15} style={{ flexShrink: 0 }} />
+          <LogOut size={15} className="shrink-0" />
           <span
-            style={{
-              opacity: visuallyCollapsed ? 0 : 1,
-              maxWidth: visuallyCollapsed ? 0 : 120,
-              transition: "opacity 0.15s, max-width 0.22s",
-              overflow: "hidden",
-              whiteSpace: "nowrap",
-            }}
+            className={`transition-all duration-200 ${
+              visuallyCollapsed
+                ? "opacity-0 max-w-0"
+                : "opacity-100 max-w-[120px]"
+            }`}
           >
             Keluar
           </span>
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -309,24 +208,11 @@ export default function Sidebar({
       {/* ── MOBILE SIDEBAR ───────────────────────────── */}
       {mobileOpen && (
         <>
-          {/* Overlay */}
           <div
-            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/60 lg:hidden"
             onClick={onNavigate}
           />
-          {/* ✅ Fix: h-screen + flex flex-col */}
-          <aside
-            className="fixed left-0 top-0 z-50 lg:hidden"
-            style={{
-              width: 260,
-              height: "100vh", // ← fix tinggi penuh
-              display: "flex",
-              flexDirection: "column", // ← fix agar footer di bawah
-              background: "#fff",
-              borderRight: "1px solid #e5e7eb",
-              overflow: "hidden",
-            }}
-          >
+          <aside className="fixed left-0 top-0 z-50 lg:hidden w-[260px] h-full bg-[#1e293b] border-r border-border overflow-hidden flex flex-col">
             <SidebarContent
               visuallyCollapsed={false}
               onNavigate={onNavigate}
@@ -338,21 +224,12 @@ export default function Sidebar({
 
       {/* ── DESKTOP SIDEBAR ──────────────────────────── */}
       <aside
-        className="hidden lg:flex"
+        className="hidden lg:flex flex-col h-full bg-[#1e293b] border-r border-border sticky top-0 z-30 overflow-hidden"
         style={{
           width: sidebarWidth,
-          minWidth: sidebarWidth, // ← kunci agar konten tidak tumpang tindih
-          height: "100vh",
-          position: "sticky",
-          top: 0,
-          flexShrink: 0,
-          background: "#fff",
-          borderRight: "1px solid #e5e7eb",
-          zIndex: 30,
-          flexDirection: "column",
+          minWidth: sidebarWidth,
           transition:
             "width 0.22s cubic-bezier(.4,0,.2,1), min-width 0.22s cubic-bezier(.4,0,.2,1)",
-          overflow: "hidden",
         }}
       >
         <SidebarContent
