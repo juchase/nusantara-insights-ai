@@ -5,29 +5,29 @@ import { ArrowLeft, Scale, AlertTriangle, FileText } from "lucide-react";
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 antialiased py-16 px-6 sm:px-8 lg:px-12">
+    <main className="min-h-screen bg-background text-foreground antialiased py-16 px-6 sm:px-8 lg:px-12">
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition mb-10"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#F59E0B] transition mb-10"
         >
           <ArrowLeft size={14} />
           Kembali ke Beranda
         </Link>
 
-        <div className="border-b border-slate-200 pb-6 mb-8">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+        <div className="border-b border-border pb-6 mb-8">
+          <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
             Ketentuan Layanan
           </h1>
-          <p className="text-sm text-slate-500 mt-2">
+          <p className="text-sm text-slate-400 mt-2">
             Syarat & Ketentuan Penggunaan Platform NusantaraInsight AI
           </p>
         </div>
 
-        <div className="space-y-8 text-sm leading-relaxed text-slate-600">
+        <div className="space-y-8 text-sm leading-relaxed text-slate-300">
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Scale size={18} className="text-indigo-600" /> 1. Lisensi
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <Scale size={18} className="text-[#F59E0B]" /> 1. Lisensi
               Penggunaan Aplikasi
             </h2>
             <p>
@@ -39,8 +39,8 @@ export default function TermsPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <AlertTriangle size={18} className="text-indigo-600" /> 2. Batasan
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <AlertTriangle size={18} className="text-[#F59E0B]" /> 2. Batasan
               Tanggung Jawab Prediksi
             </h2>
             <p>
@@ -54,8 +54,8 @@ export default function TermsPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <FileText size={18} className="text-indigo-600" /> 3. Larangan
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <FileText size={18} className="text-[#F59E0B]" /> 3. Larangan
               Penyalahgunaan
             </h2>
             <p>

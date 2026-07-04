@@ -15,10 +15,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  // Menyesuaikan style input yang bersih, bulat tipis, dan flat tanpa shadow tebal khas Meta
   const inputContainerClass = "relative mt-2 flex items-center";
   const inputClass =
-    "w-full rounded-xl border border-slate-300 bg-white pl-11 pr-4 py-3 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600";
+    "w-full rounded-xl border border-[rgba(255,255,255,0.06)] bg-[#1e293b] pl-11 pr-4 py-3 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B]";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +25,7 @@ export default function RegisterPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Konfirmasi password tidak cocok dengan password utama.");
+      setError("Konfirmasi kata sandi tidak cocok.");
       setIsLoading(false);
       return;
     }
@@ -53,45 +52,42 @@ export default function RegisterPage() {
   };
 
   return (
-    // Menggunakan background putih polos (bg-white) tanpa border / card pembungkus luar
-    <main className="relative flex min-h-screen w-full flex-col items-center justify-center bg-white px-4 py-12 text-slate-900 antialiased sm:px-6 lg:px-8">
+    <main className="relative flex min-h-screen w-full flex-col items-center justify-center bg-background px-4 py-12 text-white antialiased sm:px-6 lg:px-8">
       {/* Tombol Kembali ke Beranda */}
       <div className="absolute top-6 left-6 z-50">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-[#1e293b] px-4 py-2 text-xs font-bold text-slate-400 transition hover:border-[#F59E0B]/30 hover:text-[#F59E0B]"
         >
           <ArrowLeft size={14} />
           Kembali
         </Link>
       </div>
 
-      {/* Bagian Konten Form Utama (Lebar maksimal disesuaikan dengan form pendaftaran standar) */}
+      {/* Bagian Konten Form Utama */}
       <div className="w-full max-w-md">
-        {/* Header Identitas Brand ala Meta (Logo + Sub-brand kecil) */}
+        {/* Header Identitas Brand */}
         <div className="mb-8 text-left">
           <div className="mb-3 flex items-center gap-2">
             <SVGComponent width={40} height={40} viewBox="0 0 200 200" />
-
-            <p className="text-xs font-bold tracking-wider uppercase text-indigo-600">
+            <p className="text-xs font-bold tracking-wider uppercase text-[#F59E0B]">
               NusantaraInsight AI
             </p>
           </div>
 
-          {/* Judul & Deskripsi Pendaftaran (Mirip teks 'Get started on Facebook') */}
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Buat akun baru
+          <h1 className="text-3xl font-bold tracking-tight text-white">
+            Buat Akun Baru
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-500">
-            Daftar sekarang untuk mulai mengoptimalkan keputusan bisnis dan
-            analitik produk UMKM Anda.
+          <p className="mt-2 text-sm leading-relaxed text-slate-400">
+            Bergabunglah sekarang dan mulailah memanfaatkan kecerdasan data
+            untuk mengembangkan bisnis UMKM Anda.
           </p>
         </div>
 
-        {/* Formulir Pendaftaran Tanpa Box/Card */}
+        {/* Formulir Pendaftaran */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-600">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-400">
               {error}
             </div>
           )}
@@ -100,12 +96,12 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="name"
-              className="text-sm font-semibold text-slate-800"
+              className="text-sm font-semibold text-slate-200"
             >
               Nama Lengkap
             </label>
             <div className={inputContainerClass}>
-              <User className="absolute left-4 text-slate-400" size={16} />
+              <User className="absolute left-4 text-slate-500" size={16} />
               <input
                 id="name"
                 name="name"
@@ -124,12 +120,12 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="email"
-              className="text-sm font-semibold text-slate-800"
+              className="text-sm font-semibold text-slate-200"
             >
-              Alamat Email
+              Email Bisnis
             </label>
             <div className={inputContainerClass}>
-              <Mail className="absolute left-4 text-slate-400" size={16} />
+              <Mail className="absolute left-4 text-slate-500" size={16} />
               <input
                 id="email"
                 name="email"
@@ -137,7 +133,7 @@ export default function RegisterPage() {
                 autoComplete="email"
                 required
                 className={inputClass}
-                placeholder="nama@email.com"
+                placeholder="nama@bisnis.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -148,12 +144,12 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="password"
-              className="text-sm font-semibold text-slate-800"
+              className="text-sm font-semibold text-slate-200"
             >
-              Password
+              Kata Sandi
             </label>
             <div className={inputContainerClass}>
-              <Lock className="absolute left-4 text-slate-400" size={16} />
+              <Lock className="absolute left-4 text-slate-500" size={16} />
               <input
                 id="password"
                 name="password"
@@ -172,30 +168,30 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="confirmPassword"
-              className="text-sm font-semibold text-slate-800"
+              className="text-sm font-semibold text-slate-200"
             >
-              Konfirmasi Password
+              Konfirmasi Kata Sandi
             </label>
             <div className={inputContainerClass}>
-              <Lock className="absolute left-4 text-slate-400" size={16} />
+              <Lock className="absolute left-4 text-slate-500" size={16} />
               <input
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
                 required
                 className={inputClass}
-                placeholder="Masukkan kembali password"
+                placeholder="Masukkan kembali kata sandi Anda"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Tombol Submit Utama */}
+          {/* Tombol Submit */}
           <button
             type="submit"
             disabled={isLoading}
-            className="group mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F59E0B] px-4 text-sm font-bold text-background transition hover:bg-[#D97706] focus:outline-none focus:ring-4 focus:ring-[#F59E0B]/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? (
               <>
@@ -215,12 +211,12 @@ export default function RegisterPage() {
         </form>
 
         {/* Tautan Navigasi ke Halaman Login */}
-        <div className="mt-8 border-t border-slate-100 pt-5 text-center">
-          <p className="text-sm text-slate-500">
+        <div className="mt-8 border-t border-border pt-5 text-center">
+          <p className="text-sm text-slate-400">
             Sudah punya akun?{" "}
             <Link
               href="/login"
-              className="font-bold text-indigo-600 transition hover:text-indigo-700"
+              className="font-bold text-[#F59E0B] transition hover:text-[#D97706]"
             >
               Masuk di sini
             </Link>
@@ -228,8 +224,8 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* Footer Hak Cipta Ringkas */}
-      <p className="mt-12 text-[11px] font-medium text-slate-400">
+      {/* Footer Hak Cipta */}
+      <p className="mt-12 text-[11px] font-medium text-slate-500">
         &copy; {new Date().getFullYear()} NusantaraInsight AI. Hak cipta
         dilindungi undang-undang.
       </p>
