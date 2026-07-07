@@ -21,28 +21,38 @@ type ForecastPoint = {
   lower?: number | null;
 };
 
-type TooltipProps = {
+// Membuat tipe data kustom eksplisit untuk menghindari error mismatch Recharts
+type CustomTooltipProps = {
   active?: boolean;
-  payload?: { name: string; value: number; color: string }[];
+  payload?: Array<{
+    name: string;
+    value: number | null;
+    color: string;
+  }>;
   label?: string;
 };
 
-function CustomTooltip({ active, payload, label }: TooltipProps) {
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
     <div className="bg-[#1e293b] border border-border rounded-xl p-3 text-xs shadow-xl shadow-black/20">
       <p className="font-semibold text-white mb-1">{label}</p>
-      {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-2">
-          <div
-            className="w-2 h-2 rounded-full"
-            style={{ background: p.color }}
-          />
-          <span className="text-slate-400">{p.name}:</span>
-          <span className="font-bold text-white">{p.value} unit</span>
-        </div>
-      ))}
+      {payload.map((p) => {
+        if (p.value === null || p.value === undefined) return null;
+        return (
+          <div key={p.name} className="flex items-center gap-2 mt-1">
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ background: p.color }}
+            />
+            <span className="text-slate-400">{p.name}:</span>
+            <span className="font-bold text-white">
+              {Math.round(p.value).toLocaleString("id-ID")} unit
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -60,6 +70,7 @@ export default function SalesChart({
   if (!data || data.length === 0) return null;
 
   const isMVA = modelUsed === "moving_average";
+
   const lastActualIndex = data.reduce(
     (last, d, i) => (d.actual != null ? i : last),
     -1,
@@ -68,14 +79,14 @@ export default function SalesChart({
   const chartData = data.map((d, i) => ({
     date: d.date,
     actual: d.actual ?? null,
-    predicted: i >= lastActualIndex ? (d.predicted ?? null) : null,
+    predicted: i >= lastActualIndex ? (d.predicted ?? d.actual ?? null) : null,
     upper: d.upper ?? null,
     lower: d.lower ?? null,
   }));
 
   const allValues = data
-    .flatMap((d) => [d.actual, d.predicted])
-    .filter(Boolean) as number[];
+    .flatMap((d) => [d.actual, d.predicted, d.upper, d.lower])
+    .filter((v): v is number => typeof v === "number");
   const maxVal = Math.max(...allValues, 0);
 
   return (
@@ -127,16 +138,16 @@ export default function SalesChart({
             axisLine={false}
             tickLine={false}
             tick={{ fill: "#64748b", fontSize: 11 }}
-            domain={[0, Math.ceil(maxVal * 1.2)]}
+            domain={[0, maxVal > 0 ? Math.ceil(maxVal * 1.2) : 10]}
             width={36}
           />
 
           <Tooltip content={<CustomTooltip />} />
 
-          {lastActualIndex >= 0 && (
+          {lastActualIndex >= 0 && chartData[lastActualIndex] && (
             <ReferenceLine
-              x={chartData[lastActualIndex]?.date}
-              stroke="rgba(255,255,255,0.1)"
+              x={chartData[lastActualIndex].date}
+              stroke="rgba(255,255,255,0.15)"
               strokeDasharray="4 4"
               label={{
                 value: "Hari ini",
@@ -147,26 +158,17 @@ export default function SalesChart({
             />
           )}
 
+          {/* Menggunakan fungsi callback pada dataKey agar lolos pengecekan tipe TypeScript */}
           {isMVA && (
-            <>
-              <Area
-                type="monotone"
-                dataKey="upper"
-                stroke="none"
-                fill="rgba(0,155,119,0.15)"
-                fillOpacity={1}
-                stackId="mva_band"
-                connectNulls={true}
-              />
-              <Area
-                type="monotone"
-                dataKey="lower"
-                stroke="none"
-                fill="transparent"
-                stackId="mva_band"
-                connectNulls={true}
-              />
-            </>
+            <Area
+              type="monotone"
+              dataKey={(d: any) => [d.lower, d.upper]}
+              name="Rentang Estimasi"
+              stroke="none"
+              fill="rgba(0,155,119,0.12)"
+              fillOpacity={1}
+              connectNulls={true}
+            />
           )}
 
           <Line
@@ -186,11 +188,11 @@ export default function SalesChart({
           />
 
           <Line
-            type={isMVA ? "step" : "monotone"}
+            type={isMVA ? "stepAfter" : "monotone"}
             dataKey="predicted"
             name={isMVA ? "Estimasi" : "Prediksi"}
             stroke="#009B77"
-            strokeWidth={isMVA ? 2.5 : 2}
+            strokeWidth={2.5}
             strokeDasharray={isMVA ? "none" : "6 4"}
             dot={false}
             connectNulls={false}

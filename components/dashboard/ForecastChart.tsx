@@ -1,5 +1,6 @@
 "use client";
 
+import { Info } from "lucide-react";
 import ForecastChartSkeleton from "@/components/dashboard/skeleton/ForecastChartSkeleton";
 
 type ForecastPoint = {
@@ -79,9 +80,9 @@ function IntervalBar({
       </div>
 
       <div className="relative h-1.5 rounded-full bg-[#1e293b] overflow-visible">
-        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#009B77]/30 via-[#009B77]/60 to-[#009B77]/30" />
+        <div className="absolute inset-0 rounded-full bg-linear-to-r from-[#009B77]/30 via-[#009B77]/60 to-[#009B77]/30" />
         <div
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#009B77] border-2 border-[#0f172a] shadow-[0_0_8px_rgba(0,155,119,0.6)]"
+          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#009B77] border-2 border-background shadow-[0_0_8px_rgba(0,155,119,0.6)]"
           style={{ left: `${clamped}%` }}
         />
       </div>
@@ -130,26 +131,11 @@ export default function ForecastChart({
     forecastSummary.upper > forecastSummary.lower;
 
   const alert = getDemandAlert(growth);
-  const ctxColor =
-    confidenceContext?.color === "green"
-      ? "#009B77"
-      : confidenceContext?.color === "amber"
-        ? "#F59E0B"
-        : "#E24B4A";
-
-  const ctxLabel =
-    confidenceContext?.label ??
-    (confidence >= 70
-      ? "Akurasi Tinggi"
-      : confidence >= 40
-        ? "Akurasi Sedang"
-        : "Akurasi Rendah");
-
-  const ctxMessage = confidenceContext?.message ?? "";
   const unitLabel = freq === "W" ? "minggu" : "hari";
   const period = freq === "W" ? 4 : 7;
 
-  // ── Logika Pertumbuhan ──────────────────────────────────
+  const ctxMessage = confidenceContext?.message ?? "";
+
   const shouldShowAbsUnit = (latestActual ?? 0) < 10 || avgPredicted < 10;
   let growthDisplay = "";
   let growthColor = "#7F77DD";
@@ -179,15 +165,24 @@ export default function ForecastChart({
     }
   }
 
-  // ── TAMPILAN KHUSUS MOVING AVERAGE ────────────────────────────
   if (modelUsed === "moving_average") {
     return (
-      <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between text-white border border-[rgba(255,255,255,0.06)]">
+      <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between text-white border border-border">
         <div className="flex flex-col gap-6">
           <div>
-            <p className="text-sm font-bold text-white">
-              Estimasi Permintaan (Data Terbatas)
-            </p>
+            <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+              <p className="text-sm font-bold text-white">
+                Estimasi Permintaan (Data Terbatas)
+              </p>
+              <Info size={14} className="text-slate-500" />
+              <div className="absolute left-0 top-full mt-2 w-64 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-30 pointer-events-none">
+                <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+                  Metode estimasi jangka pendek yang digunakan otomatis karena
+                  data riwayat transaksi penjualan Anda belum mencukupi untuk
+                  pemodelan AI tingkat lanjut.
+                </p>
+              </div>
+            </div>
             <p className="text-xs text-slate-400 mt-1">
               Karena data penjualan sangat minim, sistem menggunakan metode
               rata-rata tertimbang dari 3 data terakhir.
@@ -195,9 +190,18 @@ export default function ForecastChart({
           </div>
 
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Rata-rata Prediksi
-            </p>
+            <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Rata-rata Prediksi
+              </p>
+              <Info size={11} className="text-slate-500" />
+              <div className="absolute left-0 top-full mt-1 w-60 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                  Nilai rata-rata volume penjualan yang diekspektasikan muncul
+                  di setiap periode ke depan berdasarkan tren jangka pendek.
+                </p>
+              </div>
+            </div>
             <p className="text-4xl sm:text-5xl font-bold text-[#009B77] flex items-baseline gap-2">
               {avgPredicted
                 ? Math.round(avgPredicted).toLocaleString("id-ID")
@@ -209,10 +213,17 @@ export default function ForecastChart({
           </div>
 
           {hasInterval && forecastSummary && (
-            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
-              <p className="text-[10px] text-slate-500 mb-2">
-                Rentang Estimasi
-              </p>
+            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-border">
+              <div className="flex items-center gap-1.5 group cursor-help w-fit mb-2 relative">
+                <p className="text-[10px] text-slate-500">Rentang Estimasi</p>
+                <Info size={11} className="text-slate-500" />
+                <div className="absolute left-0 top-full mt-1 w-60 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                  <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                    Batas minimum dan maksimum toleransi deviasi statis
+                    menggunakan metode deviasi standar MVA sederhana.
+                  </p>
+                </div>
+              </div>
               <div className="flex justify-between text-sm text-white">
                 <span>
                   {Math.round(forecastSummary.lower).toLocaleString("id-ID")}
@@ -232,19 +243,37 @@ export default function ForecastChart({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Penjualan Terakhir
-              </p>
+            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-border">
+              <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Penjualan Terakhir
+                </p>
+                <Info size={11} className="text-slate-500" />
+                <div className="absolute left-0 top-full mt-1 w-52 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                  <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                    Volume transaksi riil terakhir yang berhasil disinkronisasi
+                    oleh sistem sebelum proyeksi dimulai.
+                  </p>
+                </div>
+              </div>
               <p className="text-2xl font-bold text-white">
                 {latestActual ? latestActual.toLocaleString("id-ID") : "—"}
               </p>
               <p className="text-[10px] text-slate-500 mt-1">unit terjual</p>
             </div>
-            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                Rata-rata Prediksi
-              </p>
+            <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-border">
+              <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Rata-rata Prediksi
+                </p>
+                <Info size={11} className="text-slate-500" />
+                <div className="absolute right-0 top-full mt-1 w-52 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                  <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                    Representasi target permintaan tengah per interval waktu (
+                    {unitLabel}).
+                  </p>
+                </div>
+              </div>
               <p className="text-2xl font-bold text-white">
                 {avgPredicted
                   ? Math.round(avgPredicted).toLocaleString("id-ID")
@@ -265,21 +294,40 @@ export default function ForecastChart({
     );
   }
 
-  // ── TAMPILAN NORMAL PROPHET ──────────────────────────────────────────────
   return (
-    <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between text-white border border-[rgba(255,255,255,0.06)]">
+    <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between text-white border border-border">
       <div className="flex flex-col gap-6">
         <div>
-          <p className="text-sm font-bold text-white">Prediksi Permintaan</p>
+          <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+            <p className="text-sm font-bold text-white">Prediksi Permintaan</p>
+            <Info size={14} className="text-slate-500" />
+            <div className="absolute left-0 top-full mt-2 w-64 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+              <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+                Analisis perkiraan volume penjualan ke depan menggunakan model
+                kecerdasan buatan (*time-series*) guna mendeteksi pola musiman
+                dan siklus penjualan produk.
+              </p>
+            </div>
+          </div>
           <p className="text-xs text-slate-400 mt-1">
             Berdasarkan tren penjualan historis
           </p>
         </div>
 
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-            Prediksi Pertumbuhan
-          </p>
+          <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Prediksi Pertumbuhan
+            </p>
+            <Info size={11} className="text-slate-500" />
+            <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+              <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                Persentase kenaikan atau penurunan yang dihitung dengan
+                membandingkan titik data aktual terakhir dengan rata-rata hasil
+                ramalan AI.
+              </p>
+            </div>
+          </div>
           <p
             className="text-4xl sm:text-5xl font-bold"
             style={{ color: growthColor, lineHeight: 1 }}
@@ -302,10 +350,45 @@ export default function ForecastChart({
           </div>
         </div>
 
-        <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
-          <p className="text-[10px] text-slate-500 mb-1">
-            Tingkat Kepercayaan Model
-          </p>
+        {/* METRIK ACCURACY / CONFIDENCE DENGAN PENJELASAN MENDALAM */}
+        <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-border">
+          <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+            <p className="text-[10px] text-slate-500">
+              Tingkat Kepercayaan Model
+            </p>
+            <Info size={11} className="text-slate-500" />
+            <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-30 pointer-events-none">
+              <p className="text-[11px] text-slate-200 font-semibold mb-1">
+                Bagaimana skor ini dihitung?
+              </p>
+              <p className="text-[10px] text-slate-400 font-normal normal-case tracking-normal leading-relaxed mb-2">
+                Persentase ini dihitung secara matematis berdasarkan{" "}
+                <span className="text-amber-400 font-medium">
+                  "volume kecukupan data historis"
+                </span>
+                ,{" "}
+                <span className="text-amber-400 font-medium">
+                  "keteraturan pola musiman"
+                </span>
+                , dan{" "}
+                <span className="text-amber-400 font-medium">
+                  "tingkat fluktuasi acak (noise)"
+                </span>{" "}
+                pada transaksi produk Anda.
+              </p>
+              <p className="text-[10px] text-slate-400 font-normal normal-case tracking-normal leading-relaxed border-t border-border/60 pt-1.5">
+                <strong className="text-amber-400 font-medium">Catatan:</strong>{" "}
+                Jika persentase ini rendah, hal tersebut{" "}
+                <span className="text-white font-medium">
+                  BUKAN berarti model rusak/salah
+                </span>
+                , melainkan karena data riwayat penjualan Anda terlalu minim,
+                polanya acak, atau kurang informatif bagi AI untuk menemukan
+                tren yang stabil.
+              </p>
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-2xl font-bold text-white">
               {confidence.toFixed(1)}%
@@ -328,11 +411,13 @@ export default function ForecastChart({
               </span>
             )}
           </div>
+
           {ctxMessage && (
             <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
               {ctxMessage}
             </p>
           )}
+
           {modelUsed && (
             <p className="text-[10px] text-slate-500 mt-2">
               Model: {modelUsed.replace(/_/g, " ")}
@@ -341,19 +426,37 @@ export default function ForecastChart({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Penjualan Terakhir
-            </p>
+          <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-border">
+            <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Penjualan Terakhir
+              </p>
+              <Info size={11} className="text-slate-500" />
+              <div className="absolute left-0 top-full mt-1 w-52 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                  Volume transaksi riil terakhir yang berhasil terekam sistem
+                  sebelum masuk ke masa proyeksi depan.
+                </p>
+              </div>
+            </div>
             <p className="text-2xl font-bold text-white">
               {latestActual ? latestActual.toLocaleString("id-ID") : "—"}
             </p>
             <p className="text-[10px] text-slate-500 mt-1">unit terjual</p>
           </div>
-          <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-[rgba(255,255,255,0.06)]">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Rata-rata Prediksi
-            </p>
+          <div className="bg-[#1e293b]/60 rounded-xl p-4 border border-border">
+            <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Rata-rata Prediksi
+              </p>
+              <Info size={11} className="text-slate-500" />
+              <div className="absolute right-0 top-full mt-1 w-52 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                  Target volume rata-rata yang diekspektasikan muncul di masa
+                  mendatang berdasarkan kalkulasi AI.
+                </p>
+              </div>
+            </div>
             <p className="text-2xl font-bold text-white">
               {avgPredicted
                 ? Math.round(avgPredicted).toLocaleString("id-ID")
@@ -365,9 +468,19 @@ export default function ForecastChart({
 
         {hasInterval && forecastSummary && (
           <div className="bg-[#009B77]/10 rounded-xl p-4 border border-[#009B77]/20">
-            <p className="text-[10px] text-slate-400 mb-1">
-              Rentang Prediksi {period} {unitLabel}
-            </p>
+            <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+              <p className="text-[10px] text-slate-400">
+                Rentang Prediksi {period} {unitLabel}
+              </p>
+              <Info size={11} className="text-slate-400" />
+              <div className="absolute left-0 top-full mt-1 w-64 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                  Batas atas & batas bawah probabilistik (Uncertainty Interval).
+                  Menunjukkan area di mana data riil di lapangan kemungkinan
+                  besar akan jatuh (probabilitas 80%).
+                </p>
+              </div>
+            </div>
             <div className="flex items-baseline gap-2 mb-1">
               <span className="text-sm font-semibold text-[#009B77]">
                 {Math.round(forecastSummary.lower).toLocaleString("id-ID")}

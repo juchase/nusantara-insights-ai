@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trophy, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import {
+  Trophy,
+  AlertTriangle,
+  MessageSquareWarning,
+  Info,
+} from "lucide-react";
 import CardSkeleton from "./skeleton/CardSkeleton";
 
 interface ProductRank {
@@ -79,17 +84,29 @@ function TopCard({
         {product.name}
       </p>
 
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="text-[10px] text-slate-400 w-16 shrink-0">Health</span>
+      {/* TOOLTIP: Health Score */}
+      <div className="flex items-center gap-2 mb-1.5 group cursor-help relative">
+        <span className="text-[10px] text-slate-400 w-16 shrink-0 flex items-center gap-1">
+          Health <Info size={10} className="text-slate-500" />
+        </span>
         <ScoreBar value={product.healthScore} />
         <span className="text-[10px] font-bold text-white w-8 text-right">
           {product.healthScore}
         </span>
+
+        <div className="absolute bottom-full left-0 mb-1.5 w-60 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 pointer-events-none">
+          <p className="text-[10px] text-slate-300 font-normal leading-relaxed">
+            <strong className="text-white">Health Score:</strong> Indikator
+            kesehatan performa produk (skala 0-100) yang digabungkan dari rasio
+            sentimen ulasan, volume komplain, dan stabilitas kepuasan pelanggan.
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-[10px] text-slate-400 w-16 shrink-0">
-          Positif
+      {/* TOOLTIP: Sentimen Positif */}
+      <div className="flex items-center gap-2 mb-3 group cursor-help relative">
+        <span className="text-[10px] text-slate-400 w-16 shrink-0 flex items-center gap-1">
+          Positif <Info size={10} className="text-slate-500" />
         </span>
         <div className="flex-1 h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
           <div
@@ -100,17 +117,40 @@ function TopCard({
         <span className="text-[10px] font-bold text-white w-8 text-right">
           {product.positiveRate}%
         </span>
+
+        <div className="absolute bottom-full left-0 mb-1.5 w-60 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 pointer-events-none">
+          <p className="text-[10px] text-slate-300 font-normal leading-relaxed">
+            <strong className="text-white">Rasio Positif:</strong> Persentase
+            ulasan konsumen yang mengandung sentimen apresiatif, kepuasan, atau
+            rekomendasi produk dari total ulasan masuk.
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center justify-between border-t border-border pt-2 mt-auto">
         <span className="text-[10px] text-slate-500">
           {product.totalReviews} ulasan
         </span>
-        <span
-          className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${risk.bg} ${risk.color}`}
-        >
-          {risk.label}
-        </span>
+
+        {/* TOOLTIP: Tingkat Risiko */}
+        <div className="group cursor-help relative">
+          <span
+            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${risk.bg} ${risk.color}`}
+          >
+            {risk.label}
+          </span>
+          <div className="absolute bottom-full right-0 mb-1.5 w-56 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 pointer-events-none">
+            <p className="text-[10px] text-slate-300 font-normal leading-relaxed text-left">
+              <strong className="text-white">Status Risiko:</strong> Tingkat
+              urgensi intervensi manajemen operasional berdasarkan keparahan
+              komplain utama (
+              <span className="italic">
+                {product.dominantIssue || "tidak ada"}
+              </span>
+              ).
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { InsightResponse } from "@/types/insight";
-import { Cpu, Sparkles, Upload, ChevronDown } from "lucide-react";
+import { Cpu, Sparkles, Upload, ChevronDown, Info } from "lucide-react";
 import Link from "next/link";
 import InsightCardSkeleton from "@/components/dashboard/skeleton/InsightCardSkeleton";
 
@@ -81,37 +81,53 @@ export default function InsightCard({
       {/* ─── 3 KARTU HEADER ─── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-6 border-b border-border">
         {/* KARTU 1: Business Status */}
-        <div className="glass-card border border-border rounded-xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 shrink-0 rounded-lg bg-[#7F77DD]/15 border border-[#7F77DD]/20 flex items-center justify-center text-[#7F77DD]">
-            <Sparkles size={18} />
+        <div className="glass-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4 relative">
+          <div className="flex items-center gap-2.5 group cursor-help w-fit relative">
+            <div className="w-7 h-7 shrink-0 rounded-md bg-[#7F77DD]/15 border border-[#7F77DD]/20 flex items-center justify-center text-[#7F77DD]">
+              <Sparkles size={14} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Business Status
+              </p>
+              <Info size={12} className="text-slate-500" />
+            </div>
+            {/* Tooltip Content - Diubah ke top-full mt-2 (muncul di bawah) */}
+            <div className="absolute left-0 top-full mt-2 w-56 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+              <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+                Status risiko bisnis dihitung dari gabungan sentimen negatif
+                pelanggan dan tren penurunan permintaan saat ini.
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#F59E0B]">
-              Business Status
-            </p>
-            {insight && (
+          <div>
+            {insight ? (
               <span
-                className={`text-[10px] font-medium mt-1 px-2 py-0.5 rounded-full w-fit truncate ${riskBadge(insight.risk_level)}`}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg inline-block w-fit ${riskBadge(insight.risk_level)}`}
               >
                 {riskLabel(insight.risk_level)}
               </span>
+            ) : (
+              <span className="text-sm text-slate-500">—</span>
             )}
           </div>
         </div>
 
         {/* KARTU 2: Product Selector */}
-        <div className="glass-card border border-border rounded-xl p-4 flex flex-col justify-center">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
-            Produk Aktif
-          </p>
-          <div className="relative">
+        <div className="glass-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4">
+          <div className="flex items-center h-7">
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Produk Aktif
+            </p>
+          </div>
+          <div className="relative w-full">
             <select
               value={selectedProduct}
               onChange={(e) => onProductChange(e.target.value)}
-              className="w-full bg-[#1e293b] border border-border rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-[#F59E0B] truncate appearance-none pr-8"
+              className="w-full bg-[#1e293b]/80 hover:bg-[#1e293b] border border-border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] transition-all appearance-none pr-8 cursor-pointer truncate"
             >
               {products.map((p) => {
-                const maxLength = 40;
+                const maxLength = 35;
                 const truncatedName =
                   p.name.length > maxLength
                     ? p.name.substring(0, maxLength) + "..."
@@ -128,30 +144,50 @@ export default function InsightCard({
                 );
               })}
             </select>
-            {/* Custom Chevron */}
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
               <ChevronDown size={16} />
             </div>
           </div>
         </div>
 
         {/* KARTU 3: Health Score */}
-        {insight && (
-          <div className="glass-card border border-border rounded-xl p-4 flex flex-col items-start md:items-end justify-center">
-            <p className="text-3xl font-bold text-white leading-none flex items-baseline gap-1">
-              {insight.health_score}
-              <span className="text-sm font-medium text-slate-400">/ 100</span>
-            </p>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">
-              Health Score
-            </p>
-            <span
-              className={`text-[10px] font-medium mt-1 px-2 py-0.5 rounded-full inline-block w-fit ${healthColor(insight.health_label ?? "")}`}
-            >
-              {insight.health_label ?? "—"}
-            </span>
+        <div className="glass-card border border-border rounded-xl p-5 flex flex-col justify-between gap-4 relative">
+          <div className="flex items-center justify-between h-7">
+            <div className="flex items-center gap-1.5 group cursor-help relative">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Health Score
+              </p>
+              <Info size={12} className="text-slate-500" />
+              {/* Tooltip Content - Diubah ke top-full mt-2 dan right-0 (muncul di bawah rata kanan) */}
+              <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-56 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+                <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+                  Metrik kesehatan produk berskala 0-100. Dihitung otomatis oleh
+                  AI berdasarkan rasio sentimen pelanggan dan stabilitas
+                  penjualan.
+                </p>
+              </div>
+            </div>
+            {insight && (
+              <span
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-md ${healthColor(insight.health_label ?? "")}`}
+              >
+                {insight.health_label ?? "—"}
+              </span>
+            )}
           </div>
-        )}
+          <div>
+            {insight ? (
+              <p className="text-3xl font-bold text-white leading-none flex items-baseline gap-1.5">
+                {insight.health_score}
+                <span className="text-sm font-medium text-slate-500">
+                  / 100
+                </span>
+              </p>
+            ) : (
+              <span className="text-sm text-slate-500">—</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ─── EXECUTIVE SUMMARY ─── */}
@@ -183,22 +219,45 @@ export default function InsightCard({
           </p>
         )}
 
-        {/* Footer badges */}
+        {/* Footer badges with Tooltips */}
         <div className="flex flex-wrap items-center gap-3 mt-4">
-          {insight?.llm_used === true ? (
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-3 py-1 rounded-full bg-[#7F77DD]/20 text-[#7F77DD]">
-              <Cpu size={11} /> Qwen2.5 Enhanced
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-[10px] text-slate-500">
-              Rule engine fallback
-            </span>
-          )}
+          <div className="group relative cursor-help flex items-center">
+            {insight?.llm_used === true ? (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-medium px-3 py-1 rounded-full bg-[#7F77DD]/20 text-[#7F77DD]">
+                <Cpu size={11} /> Qwen2.5 Enhanced
+                <Info size={12} className="text-slate-500" />
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[10px] text-slate-400 border border-border px-3 py-1 rounded-full bg-slate-800/50">
+                Rule engine fallback
+                <Info size={12} className="text-slate-500" />
+              </span>
+            )}
+            {/* Tooltip Content (Tetap bottom-full karena di area bawah kartu) */}
+            <div className="absolute left-0 bottom-full mb-2 w-52 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
+              <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                {insight?.llm_used === true
+                  ? "Analisis teks ini dihasilkan oleh model AI Generatif (Qwen) untuk akurasi insight yang lebih mendalam."
+                  : "Insight ini dihasilkan oleh sistem algoritma standar karena batas penggunaan AI generatif telah tercapai atau tidak stabil."}
+              </p>
+            </div>
+          </div>
 
           {insight?.confidence !== undefined && insight.confidence > 0 && (
-            <span className="text-[10px] text-slate-400">
-              Confidence: {insight.confidence.toFixed(1)}%
-            </span>
+            <div className="group relative cursor-help flex items-center">
+              <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1 bg-[#1e293b] px-3 py-1 rounded-full border border-border">
+                Confidence: {insight.confidence.toFixed(1)}%
+                <Info size={10} className="text-slate-500 ml-0.5" />
+              </span>
+              {/* Tooltip Content (Tetap bottom-full karena di area bawah kartu) */}
+              <div className="absolute left-0 bottom-full mb-2 w-48 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
+                <p className="text-[11px] text-slate-300 font-normal leading-relaxed">
+                  Tingkat keyakinan model terhadap prediksi dan sentimen ini.
+                  Dipengaruhi oleh kualitas dan jumlah data historis yang
+                  tersedia.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>

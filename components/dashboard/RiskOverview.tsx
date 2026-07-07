@@ -1,7 +1,7 @@
 "use client";
 
 import { InsightResponse } from "@/types/insight";
-import { Check, Minus, TrendingDown, TrendingUp, X } from "lucide-react";
+import { Check, Minus, TrendingDown, TrendingUp, X, Info } from "lucide-react";
 import RiskOverviewSkeleton from "@/components/dashboard/skeleton/RiskOverviewSkeleton";
 
 interface Props {
@@ -28,6 +28,8 @@ export default function RiskOverview({ insight, loading }: Props) {
   const rows = [
     {
       label: "Risk Level",
+      tooltip:
+        "Tingkat urgensi penanganan produk berdasarkan kalkulasi keparahan komplain dan tren penurunan sentimen.",
       value: (
         <span
           className={`text-xs font-bold px-3 py-1 rounded-full ${risk.bg} ${risk.color}`}
@@ -38,6 +40,8 @@ export default function RiskOverview({ insight, loading }: Props) {
     },
     {
       label: "Isu Dominan",
+      tooltip:
+        "Topik masalah utama yang paling banyak dikeluhkan oleh konsumen dalam ulasan negatif terakhir.",
       value: (
         <span className="text-sm font-medium text-white capitalize">
           {insight.dominant_issue ?? "—"}
@@ -46,6 +50,8 @@ export default function RiskOverview({ insight, loading }: Props) {
     },
     {
       label: "Demand Trend",
+      tooltip:
+        "Arah pergerakan permintaan volume penjualan di masa mendatang yang diproyeksikan oleh model AI.",
       value:
         trend === "up" ? (
           <span className="text-xs font-bold text-[#009B77] flex items-center gap-1">
@@ -63,6 +69,8 @@ export default function RiskOverview({ insight, loading }: Props) {
     },
     {
       label: "LLM Digunakan",
+      tooltip:
+        "Status pemrosesan wawasan teks ulasan menggunakan model bahasa besar (Generative AI) berbasis Qwen.",
       value: llmUsed ? (
         <span className="text-xs font-bold text-[#7F77DD] flex items-center gap-1">
           <Check size={14} /> Ya (Qwen2.5)
@@ -84,10 +92,26 @@ export default function RiskOverview({ insight, loading }: Props) {
         {rows.map((row) => (
           <div
             key={row.label}
-            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-[#1e293b]/50 rounded-lg p-3"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 bg-[#1e293b]/50 rounded-lg p-3 group cursor-help relative"
           >
-            <span className="text-xs text-slate-400">{row.label}</span>
+            {/* Label dengan Ikon Info */}
+            <span className="text-xs text-slate-400 flex items-center gap-1.5 select-none">
+              {row.label}
+              <Info
+                size={12}
+                className="text-slate-600 group-hover:text-slate-400 transition-colors"
+              />
+            </span>
+
+            {/* Nilai Metrik */}
             {row.value}
+
+            {/* Tooltip Content Popover */}
+            <div className="absolute bottom-[85%] left-3 mb-1 w-60 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 pointer-events-none">
+              <p className="text-[10px] text-slate-300 font-normal leading-relaxed">
+                {row.tooltip}
+              </p>
+            </div>
           </div>
         ))}
       </div>

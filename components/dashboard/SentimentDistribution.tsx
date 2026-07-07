@@ -1,6 +1,7 @@
 "use client";
 
 import SentimentDistributionSkeleton from "@/components/dashboard/skeleton/SentimentDistributionSkeleton";
+import { Info } from "lucide-react"; // Tambahkan import ikon Info
 
 interface Props {
   positive: number;
@@ -28,7 +29,20 @@ export default function SentimentDistribution({
 
   return (
     <div className="glass-card border border-border p-5">
-      <p className="text-sm font-bold text-white mb-1">Distribusi Sentimen</p>
+      {/* ── Judul dengan Tooltip ── */}
+      <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+        <p className="text-sm font-bold text-white">Distribusi Sentimen</p>
+        <Info size={14} className="text-slate-500" />
+
+        {/* Konten Tooltip */}
+        <div className="absolute left-0 top-full mt-2 w-60 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+          <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+            Persentase ulasan pelanggan yang dikategorikan ke dalam sentimen
+            Positif, Netral, dan Negatif oleh model analisis AI.
+          </p>
+        </div>
+      </div>
+
       <p className="text-xs text-slate-400 mb-4">30 hari terakhir</p>
 
       <div className="flex flex-col gap-3">

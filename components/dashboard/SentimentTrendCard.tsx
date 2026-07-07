@@ -42,10 +42,23 @@ export default function SentimentTrendCard({
   if (!data) return null;
 
   const dataStatus = data.status?.toLowerCase();
+
+  // ── KONDISI DATA TIDAK CUKUP / ERROR ───────────────────
   if (dataStatus === "insufficient_data" || dataStatus !== "ok") {
     return (
       <div className="glass-card border border-border p-5">
-        <p className="text-sm font-bold text-white mb-1">Tren Sentimen</p>
+        {/* Judul dengan Tooltip */}
+        <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+          <p className="text-sm font-bold text-white">Tren Sentimen</p>
+          <Info size={14} className="text-slate-500" />
+          {/* Tooltip Content */}
+          <div className="absolute left-0 top-full mt-2 w-60 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+            <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+              Membandingkan rasio ulasan positif antara dua rentang waktu untuk
+              melihat arah perkembangan kepuasan pelanggan.
+            </p>
+          </div>
+        </div>
         <p className="text-xs text-slate-400">
           {data.message ?? "Belum ada data tren"}
         </p>
@@ -56,11 +69,23 @@ export default function SentimentTrendCard({
   const cfg = TREND_CONFIG[data.trend] ?? TREND_CONFIG.stable;
   const delta = data.delta > 0 ? `+${data.delta}%` : `${data.delta}%`;
 
+  // ── KONDISI DATA ADA ───────────────────────────────────
   return (
     <div className="glass-card border border-border p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm font-bold text-white">Tren Sentimen</p>
+          {/* Judul dengan Tooltip */}
+          <div className="flex items-center gap-1.5 group cursor-help w-fit relative">
+            <p className="text-sm font-bold text-white">Tren Sentimen</p>
+            <Info size={14} className="text-slate-500" />
+            {/* Tooltip Content */}
+            <div className="absolute left-0 top-full mt-2 w-60 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
+              <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+                Membandingkan rasio ulasan positif antara dua rentang waktu
+                untuk melihat arah perkembangan kepuasan pelanggan.
+              </p>
+            </div>
+          </div>
           <p className="text-xs text-slate-400 mt-1">
             Periode awal vs periode akhir
           </p>
@@ -74,6 +99,7 @@ export default function SentimentTrendCard({
       </div>
 
       <div className="flex items-center gap-3 mb-4">
+        {/* Periode Awal */}
         <div className="flex-1 bg-[#1e293b] rounded-lg p-3 text-center">
           <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
             Periode Awal
@@ -89,6 +115,7 @@ export default function SentimentTrendCard({
           </p>
         </div>
 
+        {/* Indikator Arah Tren */}
         <div className="flex flex-col items-center gap-1 w-10 shrink-0">
           <span
             className="text-lg font-bold"
@@ -103,6 +130,7 @@ export default function SentimentTrendCard({
           <span className={`text-[10px] font-bold ${cfg.color}`}>{delta}</span>
         </div>
 
+        {/* Periode Akhir */}
         <div className="flex-1 bg-[#1e293b] rounded-lg p-3 text-center">
           <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
             Periode Akhir
@@ -126,6 +154,7 @@ export default function SentimentTrendCard({
         </div>
       </div>
 
+      {/* Pesan Kesimpulan */}
       <div className={`flex items-center gap-2 rounded-lg p-2.5 ${cfg.bg}`}>
         <div
           className="w-1.5 h-1.5 rounded-full"
