@@ -7,7 +7,7 @@ import FadeIn from "@/components/animation/FadeIn";
 
 export default function HomePage() {
   return (
-    <div className="bg-[#faf8ff]">
+    <div className="min-h-screen bg-appBackground text-surface">
       <Navbar />
       <Hero />
       <FadeIn>

@@ -267,72 +267,66 @@ export default function DashboardPage() {
 
   // ── RENDER ────────────────────────────────────────────────────────────────
   return (
-    <>
-      <div className="mx-auto max-w-[1200px] space-y-4 pb-8 sm:space-y-5 lg:space-y-6 lg:pb-10">
-        <InsightCard
-          insight={insight}
-          products={products}
-          selectedProduct={selectedProduct}
-          onProductChange={setSelectedProduct}
-          loading={!productsLoaded || insightLoading}
-        />
+    <div className="mx-auto max-w-[1200px] space-y-4 pb-8 sm:space-y-5 lg:space-y-6 lg:pb-10 bg-background text-foreground">
+      <InsightCard
+        insight={insight}
+        products={products}
+        selectedProduct={selectedProduct}
+        onProductChange={setSelectedProduct}
+        loading={!productsLoaded || insightLoading}
+      />
 
-        <ProductRanking />
+      <ProductRanking />
 
-        <InsightPanel
-          insight={insight}
-          totalReviews={stats.totalReviews}
-          avgRating={stats.avgRating}
-          totalProducts={stats.totalProducts}
-          loading={insightLoading}
-        />
+      <InsightPanel
+        insight={insight}
+        totalReviews={stats.totalReviews}
+        avgRating={stats.avgRating}
+        totalProducts={stats.totalProducts}
+        loading={insightLoading}
+      />
 
-        {/* ROW A: Sentiment Distribution + Forecast */}
+      {/* ROW A: Sentiment Distribution + Forecast */}
+      <div className="grid grid-cols-1 gap-4">
         <div className="grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
-              <SentimentDistribution
-                positive={Math.round(
-                  insight?.metrics?.positive_percentage ?? 0,
-                )}
-                neutral={Math.round(insight?.metrics?.neutral_percentage ?? 0)}
-                negative={Math.round(
-                  insight?.metrics?.negative_percentage ?? 0,
-                )}
-                loading={insightLoading}
-              />
-              <SentimentTrendCard
-                data={insight?.sentiment_trend}
-                loading={insightLoading}
-              />
-            </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 overflow-hidden">
+            <SentimentDistribution
+              positive={Math.round(insight?.metrics?.positive_percentage ?? 0)}
+              neutral={Math.round(insight?.metrics?.neutral_percentage ?? 0)}
+              negative={Math.round(insight?.metrics?.negative_percentage ?? 0)}
+              loading={insightLoading}
+            />
+            <SentimentTrendCard
+              data={insight?.sentiment_trend}
+              loading={insightLoading}
+            />
           </div>
-
-          <ForecastChart
-            data={forecastData}
-            growth={growth}
-            confidence={confidence}
-            confidenceContext={confidenceContext}
-            modelUsed={modelUsed}
-            forecastSummary={forecastSummary}
-            freq={freq} // ← FREKUENSI DINAMIS
-            loading={forecastLoading}
-          />
         </div>
 
-        {/* ROW B: Sales + Forecast Chart */}
-        <SalesChart
+        <ForecastChart
           data={forecastData}
+          growth={growth}
+          confidence={confidence}
+          confidenceContext={confidenceContext}
           modelUsed={modelUsed}
+          forecastSummary={forecastSummary}
+          freq={freq} // ← FREKUENSI DINAMIS
           loading={forecastLoading}
         />
-
-        {/* ROW C: Complaints + Risk Overview */}
-        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
-          <ComplaintsCard data={complaints} loading={complaintsLoading} />
-          <RiskOverview insight={insight} loading={insightLoading} />
-        </div>
       </div>
-    </>
+
+      {/* ROW B: Sales + Forecast Chart */}
+      <SalesChart
+        data={forecastData}
+        modelUsed={modelUsed}
+        loading={forecastLoading}
+      />
+
+      {/* ROW C: Complaints + Risk Overview */}
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
+        <ComplaintsCard data={complaints} loading={complaintsLoading} />
+        <RiskOverview insight={insight} loading={insightLoading} />
+      </div>
+    </div>
   );
 }

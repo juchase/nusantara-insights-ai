@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ArrowLeft, Check, Zap, Server } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function PricingPage() {
   const tiers = [
@@ -41,12 +40,12 @@ export default function PricingPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 antialiased py-16 px-6 sm:px-8 lg:px-12">
+    <main className="min-h-screen bg-background text-foreground py-16 px-6 sm:px-8 lg:px-12">
       <div className="max-w-5xl mx-auto">
         {/* Navigasi Kembali */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-indigo-600 transition mb-10"
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#F59E0B] transition mb-10"
         >
           <ArrowLeft size={14} />
           Kembali ke Beranda
@@ -54,10 +53,10 @@ export default function PricingPage() {
 
         {/* Header Section */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+          <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
             Investasi Transparan untuk UMKM
           </h1>
-          <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
             Pilih paket yang sesuai dengan skala operasional bisnis Anda. Semua
             data tetap dijamin aman dan berjalan offline pada server lokal Anda.
           </p>
@@ -68,25 +67,25 @@ export default function PricingPage() {
           {tiers.map((tier, idx) => (
             <div
               key={idx}
-              className={`relative flex flex-col justify-between p-8 bg-white rounded-3xl border shadow-sm transition-all duration-300 hover:shadow-md ${
+              className={`relative flex flex-col justify-between p-8 bg-[#1e293b] rounded-3xl border backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:border-[rgba(255,255,255,0.15)] ${
                 tier.featured
-                  ? "border-indigo-600 ring-2 ring-indigo-600/10"
-                  : "border-slate-200"
+                  ? "border-[#F59E0B] ring-2 ring-[#F59E0B]/20 shadow-[0_0_30px_rgba(245,158,11,0.15)]"
+                  : "border-border"
               }`}
             >
               {tier.featured && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-sm">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#F59E0B] text-background text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg shadow-[#F59E0B]/20">
                   Paling Populer
                 </span>
               )}
 
               <div>
                 {/* Judul & Harga */}
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                <h3 className="text-lg font-bold text-white mb-2">
                   {tier.name}
                 </h3>
                 <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-3xl font-black text-slate-900">
+                  <span className="text-3xl font-black text-white">
                     {tier.price}
                   </span>
                   {tier.period && (
@@ -95,20 +94,20 @@ export default function PricingPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                <p className="text-xs text-slate-400 mb-6 leading-relaxed">
                   {tier.desc}
                 </p>
 
                 {/* List Fitur */}
-                <ul className="space-y-3 border-t border-slate-100 pt-6 mb-8">
+                <ul className="space-y-3 border-t border-border pt-6 mb-8">
                   {tier.features.map((feat, fIdx) => (
                     <li
                       key={fIdx}
-                      className="flex items-start gap-2.5 text-xs text-slate-600 font-medium"
+                      className="flex items-start gap-2.5 text-xs text-slate-300 font-medium"
                     >
                       <Check
                         size={14}
-                        className="text-emerald-500 mt-0.5 shrink-0"
+                        className="text-[#009B77] mt-0.5 shrink-0"
                       />
                       <span>{feat}</span>
                     </li>
@@ -118,15 +117,15 @@ export default function PricingPage() {
 
               {/* Tombol Aksi */}
               <Link href={tier.href}>
-                <Button
+                <button
                   className={`w-full h-11 rounded-xl text-xs font-bold transition-all ${
                     tier.featured
-                      ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100"
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      ? "btn-primary"
+                      : "glass hover:bg-[rgba(255,255,255,0.05)] text-white"
                   }`}
                 >
                   {tier.cta}
-                </Button>
+                </button>
               </Link>
             </div>
           ))}

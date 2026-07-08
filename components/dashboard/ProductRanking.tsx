@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trophy, AlertTriangle, MessageSquareWarning } from "lucide-react";
+import {
+  Trophy,
+  AlertTriangle,
+  MessageSquareWarning,
+  Info,
+} from "lucide-react";
 import CardSkeleton from "./skeleton/CardSkeleton";
 
 interface ProductRank {
@@ -25,32 +30,19 @@ interface RankingData {
 
 const RISK_STYLE: Record<string, { bg: string; color: string; label: string }> =
   {
-    low: { bg: "#EAF3DE", color: "#3B6D11", label: "Rendah" },
-    medium: { bg: "#FAEEDA", color: "#854F0B", label: "Sedang" },
-    high: { bg: "#FCEBEB", color: "#A32D2D", label: "Tinggi" },
-    unknown: { bg: "#f3f4f6", color: "#6b7280", label: "—" },
+    low: { bg: "bg-[#009B77]/15", color: "text-[#009B77]", label: "Rendah" },
+    medium: { bg: "bg-[#F59E0B]/15", color: "text-[#F59E0B]", label: "Sedang" },
+    high: { bg: "bg-[#E24B4A]/15", color: "text-[#E24B4A]", label: "Tinggi" },
+    unknown: { bg: "bg-[#1e293b]", color: "text-[#6b7280]", label: "—" },
   };
 
 function ScoreBar({ value }: { value: number }) {
-  const color = value >= 70 ? "#1D9E75" : value >= 45 ? "#EF9F27" : "#E24B4A";
+  const color = value >= 70 ? "#009B77" : value >= 45 ? "#F59E0B" : "#E24B4A";
   return (
-    <div
-      style={{
-        flex: 1,
-        height: 6,
-        background: "#f3f4f6",
-        borderRadius: 3,
-        overflow: "hidden",
-      }}
-    >
+    <div className="flex-1 h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
       <div
-        style={{
-          height: "100%",
-          width: `${value}%`,
-          background: color,
-          borderRadius: 3,
-          transition: "width 0.6s ease",
-        }}
+        className="h-full rounded-full transition-all duration-500"
+        style={{ width: `${value}%`, background: color }}
       />
     </div>
   );
@@ -73,156 +65,92 @@ function TopCard({
   const risk = RISK_STYLE[product.riskLevel] ?? RISK_STYLE.unknown;
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        padding: "14px 16px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 12,
-        }}
-      >
+    <div className="glass-card border border-border flex flex-col">
+      <div className="flex items-center gap-2 mb-3">
         <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: 7,
-            background: iconBg,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: iconColor,
-          }}
+          className={`w-7 h-7 rounded-lg flex items-center justify-center ${iconBg}`}
         >
-          {icon}
+          <span className={iconColor}>{icon}</span>
         </div>
-        <p
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: "#6b7280",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-          }}
-        >
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
           {label}
         </p>
       </div>
 
       <p
-        style={{
-          fontSize: 14,
-          fontWeight: 500,
-          color: "#111827",
-          marginBottom: 10,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
+        className="text-sm font-medium text-white mb-2 truncate"
+        title={product.name}
       >
         {product.name}
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 8,
-        }}
-      >
-        <span
-          style={{ fontSize: 11, color: "#6b7280", width: 64, flexShrink: 0 }}
-        >
-          Health
+      {/* TOOLTIP: Health Score */}
+      <div className="flex items-center gap-2 mb-1.5 group cursor-help relative">
+        <span className="text-[10px] text-slate-400 w-16 shrink-0 flex items-center gap-1">
+          Health <Info size={10} className="text-slate-500" />
         </span>
         <ScoreBar value={product.healthScore} />
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: "#111827",
-            width: 32,
-            textAlign: "right",
-          }}
-        >
+        <span className="text-[10px] font-bold text-white w-8 text-right">
           {product.healthScore}
         </span>
+
+        <div className="absolute bottom-full left-0 mb-1.5 w-60 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 pointer-events-none">
+          <p className="text-[10px] text-slate-300 font-normal leading-relaxed">
+            <strong className="text-white">Health Score:</strong> Indikator
+            kesehatan performa produk (skala 0-100) yang digabungkan dari rasio
+            sentimen ulasan, volume komplain, dan stabilitas kepuasan pelanggan.
+          </p>
+        </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 10,
-        }}
-      >
-        <span
-          style={{ fontSize: 11, color: "#6b7280", width: 64, flexShrink: 0 }}
-        >
-          Positif
+      {/* TOOLTIP: Sentimen Positif */}
+      <div className="flex items-center gap-2 mb-3 group cursor-help relative">
+        <span className="text-[10px] text-slate-400 w-16 shrink-0 flex items-center gap-1">
+          Positif <Info size={10} className="text-slate-500" />
         </span>
-        <div
-          style={{
-            flex: 1,
-            height: 6,
-            background: "#f3f4f6",
-            borderRadius: 3,
-            overflow: "hidden",
-          }}
-        >
+        <div className="flex-1 h-1.5 bg-[#1e293b] rounded-full overflow-hidden">
           <div
-            style={{
-              height: "100%",
-              width: `${product.positiveRate}%`,
-              background: "#1D9E75",
-              borderRadius: 3,
-            }}
+            className="h-full rounded-full bg-[#009B77]"
+            style={{ width: `${product.positiveRate}%` }}
           />
         </div>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 500,
-            color: "#111827",
-            width: 32,
-            textAlign: "right",
-          }}
-        >
+        <span className="text-[10px] font-bold text-white w-8 text-right">
           {product.positiveRate}%
         </span>
+
+        <div className="absolute bottom-full left-0 mb-1.5 w-60 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 pointer-events-none">
+          <p className="text-[10px] text-slate-300 font-normal leading-relaxed">
+            <strong className="text-white">Rasio Positif:</strong> Persentase
+            ulasan konsumen yang mengandung sentimen apresiatif, kepuasan, atau
+            rekomendasi produk dari total ulasan masuk.
+          </p>
+        </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span style={{ fontSize: 11, color: "#9ca3af" }}>
+      <div className="flex items-center justify-between border-t border-border pt-2 mt-auto">
+        <span className="text-[10px] text-slate-500">
           {product.totalReviews} ulasan
         </span>
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 500,
-            padding: "2px 8px",
-            borderRadius: 20,
-            background: risk.bg,
-            color: risk.color,
-          }}
-        >
-          {risk.label}
-        </span>
+
+        {/* TOOLTIP: Tingkat Risiko */}
+        <div className="group cursor-help relative">
+          <span
+            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${risk.bg} ${risk.color}`}
+          >
+            {risk.label}
+          </span>
+          <div className="absolute bottom-full right-0 mb-1.5 w-56 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 z-30 pointer-events-none">
+            <p className="text-[10px] text-slate-300 font-normal leading-relaxed text-left">
+              <strong className="text-white">Status Risiko:</strong> Tingkat
+              urgensi intervensi manajemen operasional berdasarkan keparahan
+              komplain utama (
+              <span className="italic">
+                {product.dominantIssue || "tidak ada"}
+              </span>
+              ).
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -238,38 +166,13 @@ function Modal({
   title: string;
 }) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 50,
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 12,
-          padding: 20,
-          minWidth: 600,
-          maxHeight: "80vh",
-          overflowY: "auto",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 12,
-          }}
-        >
-          <h2 style={{ fontSize: 16, fontWeight: 600 }}>{title}</h2>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="glass-card-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-5 border border-border">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-base font-bold text-white">{title}</h2>
           <button
             onClick={onClose}
-            style={{ border: "none", background: "none", cursor: "pointer" }}
+            className="text-slate-400 hover:text-white transition"
           >
             ✕
           </button>
@@ -297,42 +200,19 @@ export default function ProductRanking() {
   if (!data || data.total === 0) return null;
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        padding: "20px 24px",
-      }}
-    >
+    <div className="glass-card-lg border border-border">
       {/* Header */}
-      <div
-        className="flex-col gap-3 sm:flex-row sm:items-center"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 16,
-        }}
-      >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <p style={{ fontSize: 15, fontWeight: 500, color: "#111827" }}>
-            Performa Produk
-          </p>
-          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+          <p className="text-sm font-bold text-white">Performa Produk</p>
+          <p className="text-xs text-slate-400 mt-1">
             Perbandingan {data.total} produk berdasarkan health score
           </p>
         </div>
         {data.total > 3 && (
           <button
             onClick={() => setShowModal(true)}
-            style={{
-              fontSize: 12,
-              color: "#4f46e5",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 500,
-            }}
+            className="text-xs font-bold text-[#F59E0B] hover:text-[#D97706] transition"
           >
             {`Lihat semua (${data.total})`}
           </button>
@@ -340,45 +220,38 @@ export default function ProductRanking() {
       </div>
 
       {/* Top cards */}
-      <div
-        className="grid grid-cols-1 gap-3 md:grid-cols-3"
-        style={{
-          marginBottom: 16,
-        }}
-      >
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3 mb-4">
         {data.total === 1 ? (
-          // ── FIX UX: Jika cuma 1 produk, tampilkan 1 kartu ringkasan ──
           <div className="md:col-span-3">
             <TopCard
               label="Ringkasan Produk"
               icon={<Trophy size={14} />}
-              iconColor="#3B6D11"
-              iconBg="#EAF3DE"
+              iconColor="text-[#009B77]"
+              iconBg="bg-[#009B77]/15"
               product={data.best}
             />
           </div>
         ) : (
-          // ── Jika lebih dari 1 produk, tampilkan 3 kartu peringkat ──
           <>
             <TopCard
               label="Terbaik"
               icon={<Trophy size={14} />}
-              iconColor="#3B6D11"
-              iconBg="#EAF3DE"
+              iconColor="text-[#009B77]"
+              iconBg="bg-[#009B77]/15"
               product={data.best}
             />
             <TopCard
               label="Perlu Perhatian"
               icon={<AlertTriangle size={14} />}
-              iconColor="#854F0B"
-              iconBg="#FAEEDA"
+              iconColor="text-[#F59E0B]"
+              iconBg="bg-[#F59E0B]/15"
               product={data.worst}
             />
             <TopCard
               label="Keluhan Terbanyak"
               icon={<MessageSquareWarning size={14} />}
-              iconColor="#A32D2D"
-              iconBg="#FCEBEB"
+              iconColor="text-[#E24B4A]"
+              iconBg="bg-[#E24B4A]/15"
               product={data.mostComplaints}
             />
           </>
@@ -388,198 +261,47 @@ export default function ProductRanking() {
       {/* Modal daftar produk */}
       {showModal && (
         <Modal onClose={() => setShowModal(false)} title="Daftar Produk">
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              width: "100%",
-              minWidth: "560px", // Ditambah lebarnya agar pas dengan tabel ber-header
-              maxWidth: "600px",
-              boxSizing: "border-box",
-            }}
-          >
-            {/* 1. HEADER TABEL (Sejajar dengan isi data) */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                gap: "12px",
-                padding: "6px 12px", // Menyesuaikan padding kiri-kanan data di bawah
-                marginBottom: "6px",
-                borderBottom: "1px solid #e5e7eb", // Garis pembatas header
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#6b7280",
-                  width: "28px",
-                }}
-              >
-                RANK
-              </span>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#6b7280",
-                  flex: 1,
-                }}
-              >
-                PRODUK
-              </span>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#6b7280",
-                  width: "130px",
-                }}
-              >
-                HEALTH SCORE
-              </span>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#6b7280",
-                  width: "42px",
-                  textAlign: "right",
-                }}
-              >
-                POSITIF
-              </span>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  color: "#6b7280",
-                  width: "56px",
-                  textAlign: "center",
-                }}
-              >
-                RISIKO
-              </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 pb-2 border-b border-border px-2">
+              <span className="w-8">Rank</span>
+              <span className="flex-1">Produk</span>
+              <span className="w-24 text-right">Health</span>
+              <span className="w-12 text-right">Pos</span>
+              <span className="w-16 text-center">Risiko</span>
             </div>
-
-            {/* 2. DAFTAR PRODUK (Scrollable Area) */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-                maxHeight: "50vh", // Membatasi tinggi daftar agar pas di tengah layar
-                overflowY: "auto",
-                paddingRight: "4px",
-                boxSizing: "border-box",
-              }}
-            >
+            <div className="max-h-[40vh] overflow-y-auto pr-1 space-y-1">
               {data.all.map((p, i) => {
                 const risk = RISK_STYLE[p.riskLevel] || RISK_STYLE.unknown;
                 const isTopThree = i < 3;
-                const isFirst = i === 0;
 
                 return (
                   <div
                     key={p.id}
-                    style={{
-                      display: "flex",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: "12px",
-                      padding: "8px 12px",
-                      borderRadius: "6px",
-                      background: isFirst ? "#f3f4f6" : "transparent",
-                      border: isFirst
-                        ? "1px solid #e5e7eb"
-                        : "1px solid transparent",
-                      boxSizing: "border-box",
-                    }}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg text-xs transition-colors ${
+                      i === 0
+                        ? "bg-[#1e293b]/50 border border-border"
+                        : "hover:bg-[#1e293b]/30"
+                    }`}
                   >
-                    {/* Peringkat */}
                     <span
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: isTopThree ? "#4f46e5" : "#9ca3af",
-                        width: "28px",
-                        flexShrink: 0,
-                      }}
+                      className={`w-8 font-bold ${isTopThree ? "text-[#F59E0B]" : "text-slate-500"}`}
                     >
                       #{i + 1}
                     </span>
-
-                    {/* Nama Produk */}
-                    <span
-                      title={p.name}
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 500,
-                        color: "#111827",
-                        flex: 1,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
+                    <span className="flex-1 text-white truncate" title={p.name}>
                       {p.name}
                     </span>
-
-                    {/* Health Score */}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: "6px",
-                        width: "130px",
-                        flexShrink: 0,
-                      }}
-                    >
+                    <div className="w-24 flex items-center gap-2 justify-end">
                       <ScoreBar value={p.healthScore} />
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          color: "#111827",
-                          width: "24px",
-                          textAlign: "right",
-                        }}
-                      >
+                      <span className="text-white font-bold w-6 text-right">
                         {p.healthScore}
                       </span>
                     </div>
-
-                    {/* Positif */}
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 500,
-                        color: "#374151",
-                        width: "42px",
-                        textAlign: "right",
-                        flexShrink: 0,
-                      }}
-                    >
+                    <span className="w-12 text-right text-slate-400 font-medium">
                       {p.positiveRate}%
                     </span>
-
-                    {/* Risiko */}
                     <span
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        padding: "2px 6px",
-                        borderRadius: "10px",
-                        background: risk.bg,
-                        color: risk.color,
-                        flexShrink: 0,
-                        width: "56px",
-                        textAlign: "center",
-                        textTransform: "uppercase",
-                      }}
+                      className={`w-16 text-center text-[9px] font-bold px-1.5 py-0.5 rounded-full ${risk.bg} ${risk.color}`}
                     >
                       {risk.label}
                     </span>

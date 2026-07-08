@@ -63,7 +63,7 @@ export default function DemoCountdown() {
   if (!isDemo) return null;
 
   return (
-    <div className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full hidden sm:block">
+    <div className="hidden sm:block glass border border-border px-4 py-1.5 rounded-full text-xs font-medium text-[#F59E0B]">
       Demo Session {timeLeft || "...loading"}
     </div>
   );

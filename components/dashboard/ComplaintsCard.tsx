@@ -1,5 +1,6 @@
 "use client";
 
+import { Info } from "lucide-react";
 import ComplaintsCardSkeleton from "@/components/dashboard/skeleton/ComplaintsCardSkeleton";
 
 export default function ComplaintsCard({
@@ -9,92 +10,69 @@ export default function ComplaintsCard({
   data: [string, number][];
   loading: boolean;
 }) {
-  // ── LOADING ──────────────────────────────────────────────────────────────
-  if (loading) {
-    return <ComplaintsCardSkeleton />;
-  }
+  if (loading) return <ComplaintsCardSkeleton />;
+  if (!data || data.length === 0) return null;
 
-  // ── EMPTY — sembunyikan komponen sepenuhnya ─────────────────────────────
-  if (!data || data.length === 0) {
-    return null;
-  }
-
-  // ── DATA ADA — render normal ────────────────────────────────────────────
   const maxCount = Math.max(...data.map(([, count]) => count), 1);
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 16,
-        padding: "20px 24px",
-      }}
-    >
-      <p
-        style={{
-          fontSize: 15,
-          fontWeight: 500,
-          color: "#111827",
-          marginBottom: 4,
-        }}
-      >
-        Keluhan Pelanggan
-      </p>
-      <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 20 }}>
+    <div className="glass-card border border-border p-5">
+      {/* Header dengan Tooltip Utama */}
+      <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
+        <p className="text-sm font-bold text-white">Keluhan Pelanggan</p>
+        <Info size={14} className="text-slate-500" />
+        <div className="absolute left-0 top-full mt-2 w-64 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-30 pointer-events-none">
+          <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+            Distribusi topik komplain yang diekstraksi otomatis oleh AI dari
+            ulasan bersentimen negatif guna membantu tim operasional memetakan
+            masalah utama produk.
+          </p>
+        </div>
+      </div>
+
+      <p className="text-xs text-slate-400 mb-4">
         Kategori keluhan yang paling sering muncul di ulasan produk ini
       </p>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="flex flex-col gap-3">
         {data.map(([category, count], i) => (
           <div
             key={i}
-            style={{ display: "flex", alignItems: "center", gap: 10 }}
+            className="flex items-center gap-3 group/row cursor-help relative"
           >
-            <span
-              style={{
-                fontSize: 12,
-                color: "#374151",
-                width: 90,
-                flexShrink: 0,
-                textTransform: "capitalize",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
+            {/* Nama Kategori */}
+            <span className="text-xs text-slate-400 w-24 shrink-0 truncate capitalize">
               {category}
             </span>
-            <div
-              style={{
-                flex: 1,
-                height: 8,
-                background: "#f3f4f6",
-                borderRadius: 4,
-                overflow: "hidden",
-              }}
-            >
+
+            {/* Bar Progres dengan Tooltip Detail */}
+            <div className="flex-1 h-2 bg-[#1e293b] rounded-full overflow-hidden relative">
               <div
+                className="h-full rounded-full transition-all duration-500"
                 style={{
-                  height: "100%",
-                  borderRadius: 4,
-                  background: i === 0 ? "#E24B4A" : "#534AB7",
                   width: `${(count / maxCount) * 100}%`,
-                  transition: "width 0.6s ease",
+                  background: i === 0 ? "#E24B4A" : "#7F77DD",
                 }}
               />
             </div>
-            <span
-              style={{
-                fontSize: 11,
-                color: "#6b7280",
-                width: 64,
-                textAlign: "right",
-                flexShrink: 0,
-              }}
-            >
+
+            {/* Jumlah Sebutan */}
+            <span className="text-xs text-slate-400 w-12 text-right shrink-0">
               {count} sebutan
             </span>
+
+            {/* Tooltip Baris Kategori */}
+            <div className="absolute bottom-full left-24 mb-1 w-56 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover/row:opacity-100 group-hover/row:visible transition-all duration-150 z-20 pointer-events-none">
+              <p className="text-[10px] text-slate-300 font-normal leading-relaxed">
+                Masalah{" "}
+                <span className="text-white font-medium capitalize">
+                  "{category}"
+                </span>{" "}
+                telah diidentifikasi sebanyak{" "}
+                <span className="text-white font-bold">{count} kali</span> pada
+                riwayat umpan balik pelanggan.
+              </p>
+            </div>
           </div>
         ))}
       </div>

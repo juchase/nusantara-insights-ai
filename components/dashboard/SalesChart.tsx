@@ -21,53 +21,38 @@ type ForecastPoint = {
   lower?: number | null;
 };
 
-type TooltipProps = {
+// Membuat tipe data kustom eksplisit untuk menghindari error mismatch Recharts
+type CustomTooltipProps = {
   active?: boolean;
-  payload?: { name: string; value: number; color: string }[];
+  payload?: Array<{
+    name: string;
+    value: number | null;
+    color: string;
+  }>;
   label?: string;
 };
 
-function CustomTooltip({ active, payload, label }: TooltipProps) {
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 10,
-        padding: "10px 14px",
-        fontSize: 12,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-      }}
-    >
-      <p style={{ fontWeight: 500, color: "#111827", marginBottom: 6 }}>
-        {label}
-      </p>
-      {payload.map((p) => (
-        <div
-          key={p.name}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            marginBottom: 2,
-          }}
-        >
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: p.color,
-            }}
-          />
-          <span style={{ color: "#6b7280" }}>{p.name}:</span>
-          <span style={{ fontWeight: 500, color: "#111827" }}>
-            {p.value} unit
-          </span>
-        </div>
-      ))}
+    <div className="bg-[#1e293b] border border-border rounded-xl p-3 text-xs shadow-xl shadow-black/20">
+      <p className="font-semibold text-white mb-1">{label}</p>
+      {payload.map((p) => {
+        if (p.value === null || p.value === undefined) return null;
+        return (
+          <div key={p.name} className="flex items-center gap-2 mt-1">
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ background: p.color }}
+            />
+            <span className="text-slate-400">{p.name}:</span>
+            <span className="font-bold text-white">
+              {Math.round(p.value).toLocaleString("id-ID")} unit
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -81,18 +66,11 @@ export default function SalesChart({
   modelUsed?: string;
   loading?: boolean;
 }) {
-  // ── LOADING ──────────────────────────────────────────────────────────────
-  if (loading) {
-    return <SalesChartSkeleton />;
-  }
+  if (loading) return <SalesChartSkeleton />;
+  if (!data || data.length === 0) return null;
 
-  // ── EMPTY — sembunyikan komponen sepenuhnya ─────────────────────────────
-  if (!data || data.length === 0) {
-    return null;
-  }
-
-  // ── DATA ADA — render normal ────────────────────────────────────────────
   const isMVA = modelUsed === "moving_average";
+
   const lastActualIndex = data.reduce(
     (last, d, i) => (d.actual != null ? i : last),
     -1,
@@ -101,69 +79,36 @@ export default function SalesChart({
   const chartData = data.map((d, i) => ({
     date: d.date,
     actual: d.actual ?? null,
-    predicted: i >= lastActualIndex ? (d.predicted ?? null) : null,
+    predicted: i >= lastActualIndex ? (d.predicted ?? d.actual ?? null) : null,
     upper: d.upper ?? null,
     lower: d.lower ?? null,
   }));
 
   const allValues = data
-    .flatMap((d) => [d.actual, d.predicted])
-    .filter(Boolean) as number[];
+    .flatMap((d) => [d.actual, d.predicted, d.upper, d.lower])
+    .filter((v): v is number => typeof v === "number");
   const maxVal = Math.max(...allValues, 0);
 
   return (
-    <div
-      className="min-w-0 px-4 py-5 sm:px-6"
-      style={{
-        background: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 16,
-      }}
-    >
-      <div
-        className="flex-col gap-3 sm:flex-row sm:items-start"
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 20,
-        }}
-      >
+    <div className="glass-card border border-border p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
         <div>
-          <p style={{ fontSize: 15, fontWeight: 500, color: "#111827" }}>
+          <p className="text-sm font-bold text-white">
             Penjualan Aktual vs Prediksi
           </p>
-          <p style={{ fontSize: 12, color: "#6b7280", marginTop: 3 }}>
+          <p className="text-xs text-slate-400 mt-1">
             Tren penjualan historis dan proyeksi ke depan
           </p>
         </div>
 
-        <div
-          className="flex-wrap"
-          style={{ display: "flex", gap: 16, alignItems: "center" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div
-              style={{
-                width: 24,
-                height: 3,
-                background: "#4f46e5",
-                borderRadius: 2,
-              }}
-            />
-            <span style={{ fontSize: 11, color: "#6b7280" }}>Aktual</span>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-0.5 bg-[#F59E0B] rounded-full" />
+            <span className="text-xs text-slate-400">Aktual</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div
-              style={{
-                width: 24,
-                height: 3,
-                background: isMVA ? "#5DCAA5" : "#1D9E75",
-                borderRadius: 2,
-                borderTop: isMVA ? "none" : "2px dashed #1D9E75",
-                backgroundColor: isMVA ? "#5DCAA5" : "transparent",
-              }}
-            />
-            <span style={{ fontSize: 11, color: "#6b7280" }}>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-0.5 bg-[#009B77] border-t-2 border-dashed border-[#009B77] rounded-none" />
+            <span className="text-xs text-slate-400">
               {isMVA ? "Estimasi (MVA)" : "Prediksi"}
             </span>
           </div>
@@ -176,7 +121,7 @@ export default function SalesChart({
           margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
         >
           <CartesianGrid
-            stroke="#f3f4f6"
+            stroke="rgba(255,255,255,0.06)"
             strokeDasharray="4 8"
             vertical={false}
           />
@@ -185,119 +130,88 @@ export default function SalesChart({
             dataKey="date"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#9ca3af", fontSize: 11 }}
+            tick={{ fill: "#64748b", fontSize: 11 }}
             interval="preserveStartEnd"
             minTickGap={40}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#9ca3af", fontSize: 11 }}
-            domain={[0, Math.ceil(maxVal * 1.2)]}
+            tick={{ fill: "#64748b", fontSize: 11 }}
+            domain={[0, maxVal > 0 ? Math.ceil(maxVal * 1.2) : 10]}
             width={36}
           />
 
           <Tooltip content={<CustomTooltip />} />
 
-          {lastActualIndex >= 0 && (
+          {lastActualIndex >= 0 && chartData[lastActualIndex] && (
             <ReferenceLine
-              x={chartData[lastActualIndex]?.date}
-              stroke="#e5e7eb"
+              x={chartData[lastActualIndex].date}
+              stroke="rgba(255,255,255,0.15)"
               strokeDasharray="4 4"
               label={{
                 value: "Hari ini",
                 position: "top",
                 fontSize: 10,
-                fill: "#9ca3af",
+                fill: "#64748b",
               }}
             />
           )}
 
-          {/* ── MVA Area (Jika model Moving Average) ── */}
+          {/* Menggunakan fungsi callback pada dataKey agar lolos pengecekan tipe TypeScript */}
           {isMVA && (
-            <>
-              <Area
-                type="monotone"
-                dataKey="upper"
-                stroke="none"
-                fill="rgba(93,202,165,0.15)"
-                fillOpacity={1}
-                stackId="mva_band"
-                connectNulls={true}
-              />
-              <Area
-                type="monotone"
-                dataKey="lower"
-                stroke="none"
-                fill="transparent"
-                stackId="mva_band"
-                connectNulls={true}
-              />
-            </>
+            <Area
+              type="monotone"
+              dataKey={(d: any) => [d.lower, d.upper]}
+              name="Rentang Estimasi"
+              stroke="none"
+              fill="rgba(0,155,119,0.12)"
+              fillOpacity={1}
+              connectNulls={true}
+            />
           )}
 
-          {/* ── Garis Aktual ── */}
           <Line
             type="monotone"
             dataKey="actual"
             name="Aktual"
-            stroke="#4f46e5"
+            stroke="#F59E0B"
             strokeWidth={2.5}
             dot={false}
             connectNulls={false}
             activeDot={{
               r: 5,
-              fill: "#4f46e5",
-              stroke: "#fff",
+              fill: "#F59E0B",
+              stroke: "#0f172a",
               strokeWidth: 2,
             }}
           />
 
-          {/* ── Garis Prediksi / Estimasi ── */}
           <Line
-            type={isMVA ? "step" : "monotone"}
+            type={isMVA ? "stepAfter" : "monotone"}
             dataKey="predicted"
             name={isMVA ? "Estimasi" : "Prediksi"}
-            stroke={isMVA ? "#5DCAA5" : "#1D9E75"}
-            strokeWidth={isMVA ? 2.5 : 2}
+            stroke="#009B77"
+            strokeWidth={2.5}
             strokeDasharray={isMVA ? "none" : "6 4"}
             dot={false}
             connectNulls={false}
             activeDot={{
               r: 5,
-              fill: isMVA ? "#5DCAA5" : "#1D9E75",
-              stroke: "#fff",
+              fill: "#009B77",
+              stroke: "#0f172a",
               strokeWidth: 2,
             }}
           />
         </ComposedChart>
       </ResponsiveContainer>
 
-      <div
-        className="items-start sm:items-center"
-        style={{
-          marginTop: 12,
-          padding: "8px 12px",
-          background: "#f9fafb",
-          borderRadius: 8,
-          display: "flex",
-          gap: 8,
-        }}
-      >
-        <div
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: isMVA ? "#5DCAA5" : "#1D9E75",
-          }}
-        />
-        <p style={{ fontSize: 11, color: "#6b7280" }}>
+      <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-[#1e293b]/50">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#009B77]" />
+        <p className="text-xs text-slate-400">
           {isMVA
             ? "Estimasi menggunakan rata-rata tertimbang (Moving Average) dari data terbatas."
-            : `Prediksi menggunakan ${
-                modelUsed ? modelUsed.replace(/_/g, " ") : "Linear Regression"
-              } berdasarkan data historis penjualan.`}
+            : `Prediksi menggunakan ${modelUsed ? modelUsed.replace(/_/g, " ") : "Prophet"} berdasarkan data historis penjualan.`}
         </p>
       </div>
     </div>

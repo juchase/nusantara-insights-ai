@@ -6,222 +6,60 @@ import DemoCountdown from "@/components/dashboard/DemoCountdown";
 export default function Topbar({
   onMobileMenuClick,
 }: {
-  onMobileMenuClick: () => void; // ← hanya mobile
+  onMobileMenuClick: () => void;
 }) {
   return (
-    <header
-      className="px-3 sm:px-5 lg:px-6"
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 20,
-        height: 64,
-        background: "rgba(255,255,255,0.75)", // Diubah ke putih transparan agar backdrop-blur lebih bersih
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(229,231,235,0.6)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 16,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
+    <header className="sticky top-0 z-20 h-16 w-full glass border-b  bg-background border-border flex items-center justify-between px-3 sm:px-5 lg:px-6 gap-4">
+      {/* KIRI: Hamburger + Search */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         {/* Hamburger — mobile only */}
         <button
-          className="flex items-center justify-center sm:hidden"
           onClick={onMobileMenuClick}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10, // Diperhalus sudut kelengkungannya
-            border: "1px solid #e5e7eb",
-            background: "#fff",
-            cursor: "pointer",
-            color: "#4b5563",
-            flexShrink: 0,
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#f9fafb";
-            e.currentTarget.style.borderColor = "#d1d5db";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#fff";
-            e.currentTarget.style.borderColor = "#e5e7eb";
-          }}
+          className="flex items-center justify-center sm:hidden w-9 h-9 rounded-xl border border-border bg-[#1e293b]/40 text-slate-400 hover:text-white hover:bg-[#1e293b] transition-colors shrink-0"
         >
           <Menu size={16} />
         </button>
 
-        {/* Search Bar — Ditambahkan efek transisi ringkas saat fokus */}
-        <div
-          className="hidden lg:flex"
-          style={{
-            alignItems: "center",
-            gap: 8,
-            flex: 1,
-            maxWidth: 320, // Dipersempit sedikit agar lebih seimbang di layar lebar
-            height: 36,
-            background: "#f9fafb", // Diubah ke warna abu-abu tipis untuk membedakan kontras dari topbar
-            border: "1px solid #e5e7eb",
-            borderRadius: 10, // Menggunakan pola sudut yang seragam dengan tombol
-            padding: "0 12px",
-            transition: "all 0.15s ease",
-          }}
-          onFocusCapture={(e) => {
-            e.currentTarget.style.borderColor = "#4f46e5";
-            e.currentTarget.style.background = "#fff";
-          }}
-          onBlurCapture={(e) => {
-            e.currentTarget.style.borderColor = "#e5e7eb";
-            e.currentTarget.style.background = "#f9fafb";
-          }}
-        >
-          <Search size={14} style={{ color: "#9ca3af", flexShrink: 0 }} />
+        {/* Search Bar */}
+        <div className="hidden lg:flex items-center gap-2 flex-1 max-w-[320px] h-9 bg-[#1e293b]/60 border border-border rounded-xl px-3 transition-colors focus-within:border-[#F59E0B] focus-within:bg-[#1e293b]">
+          <Search size={14} className="text-slate-500 shrink-0" />
           <input
             placeholder="Cari dataset, laporan..."
-            style={{
-              border: "none",
-              outline: "none",
-              background: "transparent",
-              fontSize: 12.5,
-              fontWeight: 500,
-              color: "#1f2937",
-              width: "100%",
-            }}
+            className="w-full bg-transparent border-none outline-none text-sm font-medium text-white placeholder-slate-500"
           />
         </div>
       </div>
 
-      {/* Akses Konten Kanan */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          flexShrink: 0,
-        }}
-      >
+      {/* KANAN: Demo Countdown, Upload, Notifications, Avatar */}
+      <div className="flex items-center gap-3 shrink-0">
         <DemoCountdown />
-        {/* Tombol Upload Dataset */}
+
+        {/* Upload Dataset */}
         <Link
-          className="px-3.5 sm:px-4"
           href="/dashboard/upload"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 7,
-            height: 36,
-            background: "#4f46e5",
-            color: "#fff",
-            borderRadius: 10,
-            fontSize: 12.5,
-            fontWeight: 600,
-            textDecoration: "none",
-            transition: "all 0.15s ease",
-            boxShadow: "0 2px 4px rgba(79, 70, 229, 0.08)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#4338ca";
-            e.currentTarget.style.transform = "translateY(-0.5px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#4f46e5";
-            e.currentTarget.style.transform = "translateY(0px)";
-          }}
+          className="hidden sm:inline-flex items-center gap-2 h-9 px-4 rounded-full bg-[#F59E0B] text-background text-xs font-bold hover:bg-[#D97706] transition-colors shadow-lg shadow-[#F59E0B]/20"
         >
           <Upload size={14} />
-          <span className="hidden sm:inline">Upload Dataset</span>
+          Upload Dataset
+        </Link>
+        <Link
+          href="/dashboard/upload"
+          className="sm:hidden inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#F59E0B] text-background hover:bg-[#D97706] transition-colors"
+        >
+          <Upload size={14} />
         </Link>
 
-        {/* Garis Pembatas */}
-        <div
-          className="hidden sm:block"
-          style={{
-            width: 1,
-            height: 16,
-            background: "#e5e7eb",
-            margin: "0 4px",
-          }}
-        />
+        {/* Separator */}
+        <div className="hidden sm:block w-px h-4 bg-border" />
 
-        {/* Tombol Notifikasi */}
-        <button
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            border: "1px solid #e5e7eb",
-            background: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            color: "#4b5563",
-            position: "relative",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "#f9fafb";
-            e.currentTarget.style.color = "#111827";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "#fff";
-            e.currentTarget.style.color = "#4b5563";
-          }}
-        >
+        {/* Notifications */}
+        <button className="relative w-9 h-9 rounded-xl border border-border bg-[#1e293b]/40 text-slate-400 hover:text-white hover:bg-[#1e293b] transition-colors flex items-center justify-center">
           <Bell size={15} />
-          {/* Titik indikator live notifikasi bercahaya */}
-          <div
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "#ef4444", // Diubah ke warna merah cerah universal notifikasi
-              border: "1.5px solid #fff",
-              boxShadow: "0 0 4px rgba(239, 68, 68, 0.5)",
-            }}
-          />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E24B4A] border-2 border-background" />
         </button>
 
-        {/* Avatar Profil Inisial Pengguna */}
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: "linear-gradient(135deg, #4f46e5, #06b6d4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#fff",
-            cursor: "pointer",
-            letterSpacing: "0.02em",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = "0.95";
-            e.currentTarget.style.transform = "scale(1.02)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = "1";
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-        >
+        {/* Avatar */}
+        <div className="w-9 h-9 rounded-xl bg-linear-to-br from-[#F59E0B] to-[#009B77] flex items-center justify-center text-xs font-bold text-background cursor-pointer hover:opacity-90 transition-opacity">
           NI
         </div>
       </div>
