@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LogOut,
+  FileText,
 } from "lucide-react";
 import SVGComponent from "../svg/logo";
 
@@ -21,6 +22,7 @@ const NAV = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/dashboard/upload", label: "Upload Data", icon: Upload },
+      { href: "/dashboard/report", label: "Laporan", icon: FileText },
       { href: "/dashboard/products", label: "Produk", icon: Package },
       { href: "/dashboard/reviews", label: "Ulasan", icon: Star },
     ],

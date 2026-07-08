@@ -9,6 +9,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowLeft,
+  Info,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -205,23 +206,93 @@ export default function UploadPage() {
           )}
         </Button>
 
-        {/* Petunjuk Tambahan Skema Kolom */}
+        {/* Petunjuk Tambahan Skema Kolom - Versi Template Eksplisit */}
         <div className="mt-8 pt-6 border-t border-border text-left">
-          <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-            Rekomendasi Struktur Kolom Dataset
-          </h4>
-          <p className="text-xs text-slate-400 leading-relaxed font-medium">
-            Untuk hasil analisis interpretasi data terbaik, pastikan dokumen
-            tabel Anda memiliki header kolom nama{" "}
-            <code className="text-[#F59E0B] font-mono bg-[#F59E0B]/10 px-1 py-0.5 rounded border border-[#F59E0B]/20">
-              ulasan
-            </code>{" "}
-            (untuk sentimen) dan{" "}
-            <code className="text-[#F59E0B] font-mono bg-[#F59E0B]/10 px-1 py-0.5 rounded border border-[#F59E0B]/20">
-              penjualan
-            </code>{" "}
-            (untuk data tren model regresi).
-          </p>
+          <div className="mb-4">
+            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Format Dataset yang Didukung
+            </h4>
+            <p className="mt-1 text-xs text-slate-400 leading-relaxed font-medium">
+              Sistem dapat memproses data dari satu file CSV (gabungan) atau dua
+              file terpisah. Pastikan header kolom Anda sesuai dengan contoh di
+              bawah ini (nama kolom bersifat case-insensitive).
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Kartu 1: Data Ulasan */}
+            <div className="glass-card border border-border p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#F59E0B] mb-2">
+                📝 Data Ulasan (Review)
+              </p>
+              <p className="text-[10px] text-slate-500 mb-3">
+                Untuk analisis sentimen & distribusi.
+              </p>
+              <div className="bg-[#1e293b] p-3 rounded-lg border border-border">
+                <p className="text-[11px] font-mono text-slate-300">
+                  <span className="text-[#F59E0B]">review_text</span>, rating,
+                  review_date
+                </p>
+              </div>
+              <div className="mt-3 space-y-1.5">
+                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#F59E0B]">*</span> review_text: Teks
+                  ulasan pelanggan (wajib)
+                </p>
+                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#009B77]">•</span> rating: Nilai 1-5
+                  (opsional)
+                </p>
+                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#009B77]">•</span> review_date: Tanggal
+                  ulasan (opsional)
+                </p>
+              </div>
+            </div>
+
+            {/* Kartu 2: Data Penjualan */}
+            <div className="glass-card border border-border p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#F59E0B] mb-2">
+                📊 Data Penjualan (Sales)
+              </p>
+              <p className="text-[10px] text-slate-500 mb-3">
+                Untuk prediksi permintaan & tren.
+              </p>
+              <div className="bg-[#1e293b] p-3 rounded-lg border border-border">
+                <p className="text-[11px] font-mono text-slate-300">
+                  product, date,{" "}
+                  <span className="text-[#F59E0B]">quantity</span>, unit_price
+                </p>
+              </div>
+              <div className="mt-3 space-y-1.5">
+                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#F59E0B]">*</span> quantity: Jumlah
+                  barang terjual (wajib)
+                </p>
+                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#009B77]">•</span> product: Nama produk
+                  (opsional, jika kosong akan dibuat otomatis)
+                </p>
+                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#009B77]">•</span> date: Tanggal
+                  transaksi (opsional)
+                </p>
+                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                  <span className="text-[#009B77]">•</span> unit_price: Harga
+                  per unit (opsional)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 glass-card border border-border p-3.5">
+            <p className="text-[10px] text-slate-500 flex items-center gap-2">
+              <Info size={13} className="text-[#7F77DD] shrink-0" />
+              Anda dapat menggabungkan semua kolom di atas dalam satu file .CSV.
+              Sistem akan otomatis memisahkan data ulasan dan penjualan
+              berdasarkan nama header kolom.
+            </p>
+          </div>
         </div>
       </div>
     </main>
