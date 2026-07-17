@@ -45,7 +45,7 @@ export default function PricingPage() {
         {/* Navigasi Kembali */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#F59E0B] transition mb-10"
+          className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-primary transition mb-10"
         >
           <ArrowLeft size={14} />
           Kembali ke Beranda
@@ -53,10 +53,10 @@ export default function PricingPage() {
 
         {/* Header Section */}
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
             Investasi Transparan untuk UMKM
           </h1>
-          <p className="text-sm text-slate-400 mt-2 leading-relaxed">
+          <p className="text-sm text-muted mt-2 leading-relaxed">
             Pilih paket yang sesuai dengan skala operasional bisnis Anda. Semua
             data tetap dijamin aman dan berjalan offline pada server lokal Anda.
           </p>
@@ -67,34 +67,34 @@ export default function PricingPage() {
           {tiers.map((tier, idx) => (
             <div
               key={idx}
-              className={`relative flex flex-col justify-between p-8 bg-[#1e293b] rounded-3xl border backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:border-[rgba(255,255,255,0.15)] ${
+              className={`relative flex flex-col justify-between p-8 bg-card rounded-3xl border backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:border-border/80 ${
                 tier.featured
-                  ? "border-[#F59E0B] ring-2 ring-[#F59E0B]/20 shadow-[0_0_30px_rgba(245,158,11,0.15)]"
+                  ? "border-primary ring-2 ring-primary/20 shadow-[0_0_30px_rgba(245,158,11,0.15)]"
                   : "border-border"
               }`}
             >
               {tier.featured && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#F59E0B] text-background text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg shadow-[#F59E0B]/20">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-background text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg shadow-primary/20">
                   Paling Populer
                 </span>
               )}
 
               <div>
                 {/* Judul & Harga */}
-                <h3 className="text-lg font-bold text-white mb-2">
+                <h3 className="text-lg font-bold text-foreground mb-2">
                   {tier.name}
                 </h3>
                 <div className="flex items-baseline gap-1 mb-4">
-                  <span className="text-3xl font-black text-white">
+                  <span className="text-3xl font-black text-foreground">
                     {tier.price}
                   </span>
                   {tier.period && (
-                    <span className="text-xs text-slate-400 font-semibold">
+                    <span className="text-xs text-muted font-semibold">
                       {tier.period}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+                <p className="text-xs text-muted mb-6 leading-relaxed">
                   {tier.desc}
                 </p>
 
@@ -103,11 +103,11 @@ export default function PricingPage() {
                   {tier.features.map((feat, fIdx) => (
                     <li
                       key={fIdx}
-                      className="flex items-start gap-2.5 text-xs text-slate-300 font-medium"
+                      className="flex items-start gap-2.5 text-xs text-muted font-medium"
                     >
                       <Check
                         size={14}
-                        className="text-[#009B77] mt-0.5 shrink-0"
+                        className="text-secondary mt-0.5 shrink-0"
                       />
                       <span>{feat}</span>
                     </li>
@@ -119,9 +119,7 @@ export default function PricingPage() {
               <Link href={tier.href}>
                 <button
                   className={`w-full h-11 rounded-xl text-xs font-bold transition-all ${
-                    tier.featured
-                      ? "btn-primary"
-                      : "glass hover:bg-[rgba(255,255,255,0.05)] text-white"
+                    tier.featured ? "btn-primary" : "btn-outline"
                   }`}
                 >
                   {tier.cta}

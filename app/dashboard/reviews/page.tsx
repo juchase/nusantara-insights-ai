@@ -29,45 +29,29 @@ type ReviewsResponse = {
   data: Review[];
 };
 
-// Tambahkan tipe produk untuk dropdown
 type ProductSummary = {
   id: string;
   name: string;
 };
 
-const sentimentStyles: Record<
-  string,
-  { label: string; bg: string; color: string }
-> = {
-  positive: { label: "Positif", bg: "#EAF3DE", color: "#3B6D11" },
-  neutral: { label: "Netral", bg: "#f3f4f6", color: "#4b5563" },
-  negative: { label: "Negatif", bg: "#FCEBEB", color: "#A32D2D" },
-  unknown: { label: "Belum ada", bg: "#f3f4f6", color: "#6b7280" },
+const sentimentStyles: Record<string, { label: string; className: string }> = {
+  positive: {
+    label: "Positif",
+    className: "bg-secondary/15 text-secondary",
+  },
+  neutral: {
+    label: "Netral",
+    className: "bg-card text-muted",
+  },
+  negative: {
+    label: "Negatif",
+    className: "bg-danger/15 text-danger",
+  },
+  unknown: {
+    label: "Belum ada",
+    className: "bg-card text-muted",
+  },
 };
-
-function SummaryCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number | string;
-}) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700">
-          {icon}
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">{label}</p>
-          <p className="text-lg font-semibold text-gray-950">{value}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -80,13 +64,11 @@ export default function ReviewsPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Ambil ulasan
         const reviewsRes = await safeFetch<ReviewsResponse>("/api/reviews", {
           data: [],
         });
         setReviews(reviewsRes.data);
 
-        // Ambil daftar produk (untuk filter dropdown)
         const productsRes = await safeFetch<ProductSummary[]>(
           "/api/products",
           [],
@@ -143,35 +125,35 @@ export default function ReviewsPage() {
       : "0.0";
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6">
+    <div className="mx-auto max-w-[1200px] space-y-6 pb-8 pt-4 lg:space-y-8 lg:pt-6 bg-background text-foreground">
+      {/* ─── HEADER ─── */}
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-cyan-700">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-primary">
             Voice of Customer
           </p>
-          <h1 className="mt-1 text-2xl font-semibold text-gray-950">Ulasan</h1>
-          <p className="mt-2 max-w-2xl text-sm text-gray-600">
+          <h1 className="mt-1 text-2xl font-bold text-foreground">Ulasan</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
             Pantau ulasan pelanggan, sentimen, rating, dan aspek yang paling
             sering muncul.
           </p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 sm:w-80">
-            <Search size={16} className="text-gray-400" />
+          <label className="flex h-10 w-full items-center gap-2 rounded-lg bg-card border border-border px-3 sm:w-72 focus-within:border-primary">
+            <Search size={16} className="text-muted" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="w-full bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400"
+              className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
               placeholder="Cari ulasan..."
             />
           </label>
 
-          {/* Filter sentimen */}
           <select
             value={sentimentFilter}
             onChange={(event) => setSentimentFilter(event.target.value)}
-            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none"
+            className="h-10 rounded-lg bg-card border border-border px-3 text-sm text-foreground outline-none focus:border-primary"
           >
             <option value="all">Semua sentimen</option>
             <option value="positive">Positif</option>
@@ -179,11 +161,10 @@ export default function ReviewsPage() {
             <option value="negative">Negatif</option>
           </select>
 
-          {/* Filter produk */}
           <select
             value={productFilter}
             onChange={(event) => setProductFilter(event.target.value)}
-            className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none"
+            className="h-10 rounded-lg bg-card border border-border px-3 text-sm text-foreground outline-none focus:border-primary"
           >
             <option value="all">Semua produk</option>
             {products.map((product) => (
@@ -195,64 +176,83 @@ export default function ReviewsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          icon={<MessageSquareText size={18} />}
-          label="Total ulasan"
-          value={reviews.length}
-        />
-        <SummaryCard
-          icon={<Star size={18} />}
-          label="Rating rata-rata"
-          value={avgRating}
-        />
-        <SummaryCard
-          icon={<ThumbsUp size={18} />}
-          label="Positif"
-          value={positive}
-        />
-        <SummaryCard
-          icon={<ThumbsDown size={18} />}
-          label="Negatif"
-          value={negative}
-        />
+      {/* ─── 4 KARTU STATISTIK ─── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            icon: <MessageSquareText size={20} />,
+            label: "Total ulasan",
+            value: reviews.length,
+            accent: "text-tertiary",
+          },
+          {
+            icon: <Star size={20} />,
+            label: "Rating rata-rata",
+            value: avgRating,
+            accent: "text-primary",
+          },
+          {
+            icon: <ThumbsUp size={20} />,
+            label: "Positif",
+            value: positive,
+            accent: "text-secondary",
+          },
+          {
+            icon: <ThumbsDown size={20} />,
+            label: "Negatif",
+            value: negative,
+            accent: "text-danger",
+          },
+        ].map((item, idx) => (
+          <div
+            key={idx}
+            className="glass-card border border-border rounded-xl p-5 flex items-center gap-4"
+          >
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-card/80 border border-border ${item.accent}`}
+            >
+              {item.icon}
+            </div>
+            <div>
+              <p className="text-xs text-muted">{item.label}</p>
+              <p className="text-xl font-bold text-foreground">{item.value}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-        <div className="border-b border-gray-100 px-5 py-4">
-          <p className="text-sm font-medium text-gray-950">Daftar ulasan</p>
-          <p className="mt-1 text-xs text-gray-500">
-            {filteredReviews.length} ulasan ditampilkan
-          </p>
+      {/* ─── TABEL ULASAN ─── */}
+      <div className="glass-card border border-border overflow-hidden rounded-xl">
+        <div className="border-b border-border px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-sm font-medium text-foreground">Daftar ulasan</p>
+            <p className="text-xs text-muted">
+              {filteredReviews.length} ulasan ditampilkan
+            </p>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] text-left">
-            <thead className="bg-gray-50 text-xs font-medium uppercase tracking-wider text-gray-500">
+          <table className="w-full min-w-[800px] text-left">
+            <thead className="bg-card/50 text-[10px] font-bold uppercase tracking-wider text-muted border-b border-border">
               <tr>
-                <th className="px-5 py-3">Ulasan</th>
-                <th className="px-5 py-3">Produk</th>
-                <th className="px-5 py-3">Rating</th>
-                <th className="px-5 py-3">Sentimen</th>
-                <th className="px-5 py-3">Tanggal</th>
+                <th className="px-6 py-3 w-1/3">Ulasan</th>
+                <th className="px-6 py-3 w-1/4">Produk</th>
+                <th className="px-6 py-3 w-20 text-center">Rating</th>
+                <th className="px-6 py-3 w-28">Sentimen</th>
+                <th className="px-6 py-3 w-24">Tanggal</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 text-sm">
+            <tbody className="divide-y divide-border text-sm">
               {loading ? (
                 <tr>
-                  <td
-                    className="px-5 py-8 text-center text-gray-400"
-                    colSpan={5}
-                  >
+                  <td className="px-6 py-8 text-center text-muted" colSpan={5}>
                     Memuat ulasan...
                   </td>
                 </tr>
               ) : filteredReviews.length === 0 ? (
                 <tr>
-                  <td
-                    className="px-5 py-8 text-center text-gray-400"
-                    colSpan={5}
-                  >
+                  <td className="px-6 py-8 text-center text-muted" colSpan={5}>
                     Tidak ada ulasan yang cocok.
                   </td>
                 </tr>
@@ -263,35 +263,34 @@ export default function ReviewsPage() {
                     sentimentStyles.unknown;
 
                   return (
-                    <tr key={review.id} className="hover:bg-gray-50/70">
-                      <td className="max-w-[420px] px-5 py-4">
-                        <p className="line-clamp-2 text-gray-800">
+                    <tr
+                      key={review.id}
+                      className="hover:bg-card/30 transition-colors"
+                    >
+                      <td className="px-6 py-4">
+                        <p className="line-clamp-2 text-sm text-foreground">
                           {review.reviewText}
                         </p>
                       </td>
-                      <td className="px-5 py-4">
-                        <p className="font-medium text-gray-950">
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-foreground">
                           {review.product?.name ?? "-"}
                         </p>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-muted">
                           {review.product?.category ?? "Tanpa kategori"}
                         </p>
                       </td>
-                      <td className="px-5 py-4 text-gray-900">
+                      <td className="px-6 py-4 text-center font-medium text-foreground">
                         {review.rating}/5
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-6 py-4">
                         <span
-                          className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
-                          style={{
-                            background: sentiment.bg,
-                            color: sentiment.color,
-                          }}
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${sentiment.className}`}
                         >
                           {sentiment.label}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-gray-600">
+                      <td className="px-6 py-4 text-xs text-muted">
                         {new Date(review.reviewDate).toLocaleDateString(
                           "id-ID",
                           {

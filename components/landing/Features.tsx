@@ -3,37 +3,35 @@
 import { Smile, BarChart3, Lightbulb } from "lucide-react";
 
 export default function Features() {
-  // Setiap fitur diberikan skema warna tersendiri agar visual jauh lebih kaya dan tidak monoton
   const feats = [
     {
       title: "Analisis Sentimen",
       desc: "Pahami apa yang pelanggan rasakan dari setiap ulasan. Sistem mengkategorikan sentimen dan mengidentifikasi aspek produk yang paling sering dikeluhkan.",
-      icon: <Smile size={22} className="text-[#009B77]" />,
-      bgIcon: "bg-[#009B77]/10 border-[#009B77]/20",
+      icon: <Smile size={22} className="text-secondary" />,
+      bgIcon: "bg-secondary/10 border-secondary/20",
     },
     {
       title: "Prediksi Permintaan",
       desc: "Antisipasi lonjakan permintaan sebelum terjadi. Model prediksi adaptif memilih algoritma terbaik berdasarkan pola data historis penjualan kamu.",
-      icon: <BarChart3 size={22} className="text-[#7F77DD]" />,
-      bgIcon: "bg-[#7F77DD]/10 border-[#7F77DD]/20",
+      icon: <BarChart3 size={22} className="text-tertiary" />,
+      bgIcon: "bg-tertiary/10 border-tertiary/20",
     },
     {
       title: "Generator Insight AI",
       desc: "Dapatkan rekomendasi aksi bisnis yang konkret. Rule engine menganalisis data dan LLM menyajikannya dalam bahasa yang mudah dipahami.",
-      icon: <Lightbulb size={22} className="text-[#F59E0B]" />,
-      bgIcon: "bg-[#F59E0B]/10 border-[#F59E0B]/20",
+      icon: <Lightbulb size={22} className="text-primary" />,
+      bgIcon: "bg-primary/10 border-primary/20",
     },
   ];
 
   return (
-    // Menggunakan py-24 untuk menjaga ritme vertical spacing yang lega antar-section landing page
     <section className="py-24 bg-background text-center border-y border-border">
       {/* Header Utama Section */}
       <div className="max-w-3xl mx-auto mb-16 px-6">
-        <h2 className="text-3xl lg:text-4xl font-black text-white mb-4 tracking-tight leading-tight">
+        <h2 className="text-3xl lg:text-4xl font-black text-foreground mb-4 tracking-tight leading-tight">
           Dibangun untuk Kecerdasan Bisnis Nyata
         </h2>
-        <p className="text-sm lg:text-base text-slate-400 max-w-xl mx-auto leading-relaxed">
+        <p className="text-sm lg:text-base text-muted max-w-xl mx-auto leading-relaxed">
           Fitur kecerdasan buatan terintegrasi yang dirancang khusus untuk
           menyederhanakan data operasional UMKM Indonesia.
         </p>
@@ -54,17 +52,17 @@ export default function Features() {
             </div>
 
             {/* Teks Judul */}
-            <h3 className="font-bold text-lg mb-3 text-white tracking-tight transition-colors duration-200 group-hover:text-[#F59E0B]">
+            <h3 className="font-bold text-lg mb-3 text-foreground tracking-tight transition-colors duration-200 group-hover:text-primary">
               {f.title}
             </h3>
 
             {/* Teks Deskripsi */}
-            <p className="text-slate-400 text-xs lg:text-sm leading-relaxed font-medium">
+            <p className="text-muted text-xs lg:text-sm leading-relaxed font-medium">
               {f.desc}
             </p>
 
-            {/* Garis Aksen Dekoratif Tipis di Bagian Bawah Kartu Saat di-Hover */}
-            <div className="absolute bottom-0 inset-x-8 h-[2px] bg-linear-to-r from-transparent via-[#F59E0B]/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            {/* Garis Aksen Dekoratif */}
+            <div className="absolute bottom-0 inset-x-8 h-[2px] bg-linear-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           </div>
         ))}
       </div>

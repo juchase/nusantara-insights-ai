@@ -9,17 +9,17 @@ export default function DocsPage() {
       <div className="max-w-4xl mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#F59E0B] transition mb-10"
+          className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-primary transition mb-10"
         >
           <ArrowLeft size={14} />
           Kembali ke Beranda
         </Link>
 
         <div className="border-b border-border pb-6 mb-8">
-          <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
             Dokumentasi API
           </h1>
-          <p className="text-sm text-slate-400 mt-2">
+          <p className="text-sm text-muted mt-2">
             Panduan integrasi modul pemrosesan data otomatis untuk pengembang
             lokal.
           </p>
@@ -27,7 +27,7 @@ export default function DocsPage() {
 
         <div className="space-y-8">
           {/* Deskripsi Atas */}
-          <p className="text-sm text-slate-300 leading-relaxed">
+          <p className="text-sm text-muted leading-relaxed">
             API NusantaraInsight AI memungkinkan sistem kasir atau platform toko
             online mandiri Anda untuk mengirimkan ulasan mentah dan menerima
             klaster analisis sentimen Bahasa Indonesia secara instan.
@@ -35,13 +35,13 @@ export default function DocsPage() {
 
           {/* Endpoint Section */}
           <section className="space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Terminal size={18} className="text-[#F59E0B]" /> Analisis
-              Sentimen Instan
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Terminal size={18} className="text-primary" /> Analisis Sentimen
+              Instan
             </h2>
 
-            <div className="flex items-center gap-3 bg-[#1e293b] text-xs font-mono p-3 rounded-xl text-white border border-border">
-              <span className="bg-[#009B77] text-background font-bold px-2 py-0.5 rounded">
+            <div className="flex items-center gap-3 bg-card text-xs font-mono p-3 rounded-xl text-foreground border border-border">
+              <span className="bg-secondary text-background font-bold px-2 py-0.5 rounded">
                 POST
               </span>
               <span>/api/v1/analyze-sentiment</span>
@@ -49,10 +49,10 @@ export default function DocsPage() {
 
             {/* Code Block Request */}
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+              <p className="text-xs font-bold text-muted flex items-center gap-1.5">
                 <Code2 size={14} /> Contoh Payload Masukan (JSON)
               </p>
-              <pre className="bg-[#1e293b] text-[#F59E0B] p-4 rounded-xl text-xs font-mono overflow-x-auto border border-border">
+              <pre className="bg-card text-primary p-4 rounded-xl text-xs font-mono overflow-x-auto border border-border">
                 {`{
   "review_text": "Pelayanan kasir sangat lambat, tapi produknya sangat gurih dan renyah.",
   "lang": "id"
@@ -62,10 +62,10 @@ export default function DocsPage() {
 
             {/* Code Block Response */}
             <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+              <p className="text-xs font-bold text-muted flex items-center gap-1.5">
                 <Play size={14} /> Respon Balikan AI (JSON)
               </p>
-              <pre className="bg-[#1e293b] text-[#009B77] p-4 rounded-xl text-xs font-mono overflow-x-auto border border-border">
+              <pre className="bg-card text-secondary p-4 rounded-xl text-xs font-mono overflow-x-auto border border-border">
                 {`{
   "status": "success",
   "sentiment": "mixed",

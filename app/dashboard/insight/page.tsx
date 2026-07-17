@@ -23,6 +23,7 @@ export default function InsightPage() {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [insight, setInsight] = useState<InsightResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [stats, setStats] = useState({
     totalReviews: 0,
     avgRating: 0,
@@ -30,17 +31,47 @@ export default function InsightPage() {
     sentimentStats: { positive: 0, neutral: 0, negative: 0 },
   });
 
-  const fetchInsight = useCallback(
-    async (productId?: string) => {
-      const id = productId ?? selectedProduct;
-      if (!id) return;
+  // ── Ambil insight dari DATABASE (bukan generate) ──
+  const fetchInsightFromDB = useCallback(async (productId: string) => {
+    if (!productId) return;
+    setLoading(true);
+    setInsight(null);
+    try {
+      const data = await safeFetch<InsightResponse>(
+        `/api/insights/${productId}`,
+        {
+          executive_summary: "",
+          summary: "",
+          health_score: 0,
+          health_label: "",
+          insights: [],
+          recommendations: [],
+          dominant_issue: "",
+          risk_level: "low",
+          llm_used: false,
+          metrics: undefined,
+          confidence: 0,
+          confidence_context: null,
+          modelVersion: "prophet",
+          freq: "D",
+        },
+      );
+      if (data.summary || data.executive_summary) setInsight(data);
+    } catch (error) {
+      console.error("Gagal fetch insight dari DB:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-      setLoading(true);
-      setInsight(null);
-
+  // ── Generate ulang insight (panggil FastAPI) ──
+  const regenerateInsight = useCallback(
+    async (productId: string) => {
+      if (!productId) return;
+      setGenerating(true);
       try {
-        const data = await safeFetch<InsightResponse>(
-          `http://127.0.0.1:8000/generate-insight/${id}`,
+        await safeFetch<InsightResponse>(
+          `http://127.0.0.1:8000/generate-insight/${productId}`,
           {
             executive_summary: "",
             summary: "",
@@ -57,18 +88,19 @@ export default function InsightPage() {
             modelVersion: "prophet",
             freq: "D",
           },
+          { method: "GET" },
         );
-
-        if (data.summary || data.executive_summary) setInsight(data);
+        await fetchInsightFromDB(productId);
       } catch (error) {
-        console.error("Gagal fetch insight:", error);
+        console.error("Gagal generate insight:", error);
       } finally {
-        setLoading(false);
+        setGenerating(false);
       }
     },
-    [selectedProduct],
+    [fetchInsightFromDB],
   );
 
+  // ── Initial load data ──
   useEffect(() => {
     const loadInitialData = async () => {
       const [productData, analytics] = await Promise.all([
@@ -98,22 +130,23 @@ export default function InsightPage() {
     loadInitialData();
   }, []);
 
+  // ── Saat produk berubah, ambil insight dari DB ──
   useEffect(() => {
     if (selectedProduct) {
-      fetchInsight(selectedProduct);
+      fetchInsightFromDB(selectedProduct);
     }
-  }, [selectedProduct, fetchInsight]);
+  }, [selectedProduct, fetchInsightFromDB]);
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6">
+    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6 bg-background text-foreground">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#F59E0B] mb-1">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-1">
             AI Decision Support
           </p>
-          <h1 className="text-2xl font-bold text-white">AI Insight</h1>
-          <p className="text-sm text-slate-400 mt-2 max-w-lg">
+          <h1 className="text-2xl font-bold text-foreground">AI Insight</h1>
+          <p className="text-sm text-muted mt-2 max-w-lg">
             Analisis kesehatan produk, risiko, isu dominan, dan rekomendasi
             bisnis berbasis rule engine dan LLM.
           </p>
@@ -121,16 +154,16 @@ export default function InsightPage() {
 
         {/* Tombol Generate Ulang */}
         <button
-          onClick={() => fetchInsight()}
-          disabled={loading || !selectedProduct}
+          onClick={() => regenerateInsight(selectedProduct)}
+          disabled={generating || loading || !selectedProduct}
           className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-sm font-medium transition-colors ${
-            loading || !selectedProduct
-              ? "bg-[#1e293b] text-slate-500 cursor-not-allowed"
-              : "bg-[#F59E0B]/10 border border-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/20"
+            generating || loading || !selectedProduct
+              ? "bg-card text-muted cursor-not-allowed"
+              : "bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20"
           }`}
         >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          {loading ? "Memproses..." : "Generate Ulang"}
+          <RefreshCw size={14} className={generating ? "animate-spin" : ""} />
+          {generating ? "Memproses..." : "Generate Ulang"}
         </button>
       </div>
 

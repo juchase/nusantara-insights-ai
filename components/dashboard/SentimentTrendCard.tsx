@@ -6,26 +6,22 @@ import SentimentTrendCardSkeleton from "@/components/dashboard/skeleton/Sentimen
 
 const TREND_CONFIG = {
   improving: {
-    color: "text-[#009B77]",
-    bg: "bg-[#009B77]/15",
+    className: "bg-secondary/15 text-secondary",
     icon: <TrendingUp size={14} />,
     arrow: "↑",
   },
   declining: {
-    color: "text-[#E24B4A]",
-    bg: "bg-[#E24B4A]/15",
+    className: "bg-danger/15 text-danger",
     icon: <TrendingDown size={14} />,
     arrow: "↓",
   },
   stable: {
-    color: "text-[#64748b]",
-    bg: "bg-[#64748b]/15",
+    className: "bg-muted/15 text-muted",
     icon: <Minus size={14} />,
     arrow: "→",
   },
   insufficient_data: {
-    color: "text-slate-500",
-    bg: "bg-[#1e293b]",
+    className: "bg-card text-muted",
     icon: <Info size={14} />,
     arrow: "—",
   },
@@ -49,17 +45,17 @@ export default function SentimentTrendCard({
       <div className="glass-card border border-border p-5">
         {/* Judul dengan Tooltip */}
         <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
-          <p className="text-sm font-bold text-white">Tren Sentimen</p>
-          <Info size={14} className="text-slate-500" />
+          <p className="text-sm font-bold text-foreground">Tren Sentimen</p>
+          <Info size={14} className="text-muted" />
           {/* Tooltip Content */}
           <div className="absolute left-0 top-full mt-2 w-60 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
-            <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+            <p className="text-[11px] text-muted font-normal normal-case tracking-normal leading-relaxed">
               Membandingkan rasio ulasan positif antara dua rentang waktu untuk
               melihat arah perkembangan kepuasan pelanggan.
             </p>
           </div>
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-muted">
           {data.message ?? "Belum ada data tren"}
         </p>
       </div>
@@ -76,22 +72,22 @@ export default function SentimentTrendCard({
         <div>
           {/* Judul dengan Tooltip */}
           <div className="flex items-center gap-1.5 group cursor-help w-fit relative">
-            <p className="text-sm font-bold text-white">Tren Sentimen</p>
-            <Info size={14} className="text-slate-500" />
+            <p className="text-sm font-bold text-foreground">Tren Sentimen</p>
+            <Info size={14} className="text-muted" />
             {/* Tooltip Content */}
             <div className="absolute left-0 top-full mt-2 w-60 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 pointer-events-none">
-              <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+              <p className="text-[11px] text-muted font-normal normal-case tracking-normal leading-relaxed">
                 Membandingkan rasio ulasan positif antara dua rentang waktu
                 untuk melihat arah perkembangan kepuasan pelanggan.
               </p>
             </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             Periode awal vs periode akhir
           </p>
         </div>
         <span
-          className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${cfg.bg} ${cfg.color}`}
+          className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${cfg.className}`}
         >
           {cfg.icon}
           {data.label}
@@ -100,17 +96,17 @@ export default function SentimentTrendCard({
 
       <div className="flex items-center gap-3 mb-4">
         {/* Periode Awal */}
-        <div className="flex-1 bg-[#1e293b] rounded-lg p-3 text-center">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+        <div className="flex-1 bg-card rounded-lg p-3 text-center">
+          <p className="text-[10px] text-muted uppercase tracking-wider mb-1">
             Periode Awal
           </p>
-          <p className="text-xl font-bold text-white">
+          <p className="text-xl font-bold text-foreground">
             {data.first_period_positive}%
           </p>
-          <p className="text-[9px] text-slate-500 mt-1 wrap-break-word">
+          <p className="text-[9px] text-muted mt-1 wrap-break-word">
             {data.first_period_range}
           </p>
-          <p className="text-[9px] text-slate-500">
+          <p className="text-[9px] text-muted">
             {data.first_period_count} ulasan
           </p>
         </div>
@@ -120,51 +116,61 @@ export default function SentimentTrendCard({
           <span
             className="text-lg font-bold"
             style={{
-              color: cfg.color.split("-")[1]
-                ? `#${cfg.color.split("-")[1]}`
-                : "#64748b",
+              color: cfg.className.includes("secondary")
+                ? "var(--color-secondary)"
+                : cfg.className.includes("danger")
+                  ? "var(--color-danger)"
+                  : "var(--color-muted)",
             }}
           >
             {cfg.arrow}
           </span>
-          <span className={`text-[10px] font-bold ${cfg.color}`}>{delta}</span>
+          <span className={`text-[10px] font-bold ${cfg.className}`}>
+            {delta}
+          </span>
         </div>
 
         {/* Periode Akhir */}
-        <div className="flex-1 bg-[#1e293b] rounded-lg p-3 text-center">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+        <div className="flex-1 bg-card rounded-lg p-3 text-center">
+          <p className="text-[10px] text-muted uppercase tracking-wider mb-1">
             Periode Akhir
           </p>
           <p
             className="text-xl font-bold"
             style={{
-              color: cfg.color.split("-")[1]
-                ? `#${cfg.color.split("-")[1]}`
-                : "#64748b",
+              color: cfg.className.includes("secondary")
+                ? "var(--color-secondary)"
+                : cfg.className.includes("danger")
+                  ? "var(--color-danger)"
+                  : "var(--color-muted)",
             }}
           >
             {data.second_period_positive}%
           </p>
-          <p className="text-[9px] text-slate-500 mt-1 wrap-break-word">
+          <p className="text-[9px] text-muted mt-1 wrap-break-word">
             {data.second_period_range}
           </p>
-          <p className="text-[9px] text-slate-500">
+          <p className="text-[9px] text-muted">
             {data.second_period_count} ulasan
           </p>
         </div>
       </div>
 
       {/* Pesan Kesimpulan */}
-      <div className={`flex items-center gap-2 rounded-lg p-2.5 ${cfg.bg}`}>
+      <div
+        className={`flex items-center gap-2 rounded-lg p-2.5 ${cfg.className}`}
+      >
         <div
           className="w-1.5 h-1.5 rounded-full"
           style={{
-            backgroundColor: cfg.color.split("-")[1]
-              ? `#${cfg.color.split("-")[1]}`
-              : "#64748b",
+            backgroundColor: cfg.className.includes("secondary")
+              ? "var(--color-secondary)"
+              : cfg.className.includes("danger")
+                ? "var(--color-danger)"
+                : "var(--color-muted)",
           }}
         />
-        <p className={`text-xs font-medium ${cfg.color}`}>{data.message}</p>
+        <p className={`text-xs font-medium ${cfg.className}`}>{data.message}</p>
       </div>
     </div>
   );

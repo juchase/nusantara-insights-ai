@@ -204,9 +204,6 @@ export async function POST(req: NextRequest) {
           }),
         );
 
-        // ── Setelah setiap chunk, panggil update-keyword per produk ──────
-        // Namun lebih baik panggil setelah semua review selesai, di luar loop chunk.
-        // Di sini kita hanya kumpulkan productId, nanti proses di akhir.
         success += results.filter(Boolean).length;
         skipped += results.length - results.filter(Boolean).length;
       }
@@ -305,6 +302,16 @@ export async function POST(req: NextRequest) {
     console.log(
       `🎉 Pipeline selesai — Prophet: ${prophetSuccess}/${products.length} | Insight: ${insightSuccess}/${products.length}`,
     );
+
+    // ── KIRIM NOTIFIKASI KE USER ──────────────────────────────────────────
+    await prisma.notification.create({
+      data: {
+        userId: userPayload.userId,
+        title: "📊 Dataset Berhasil Diupload",
+        message: `Dataset '${file.name}' telah diproses. ${success} data baru berhasil ditambahkan.`,
+        type: "success",
+      },
+    });
 
     return NextResponse.json({
       message: "Proses upload data selesai dengan sukses",

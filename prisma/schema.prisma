@@ -15,6 +15,7 @@ enum UserRole {
 model User {
   id        String   @id @default(uuid())
   name      String
+  avatar    String?
   email     String   @unique
   password  String
   role      UserRole @default(USER)
@@ -24,6 +25,7 @@ model User {
   expiresAt DateTime?
 
   products Product[]
+  notifications Notification[]
 }
 
 model Product {
@@ -136,4 +138,16 @@ model KeywordSummary {
   product   Product  @relation(fields: [productId], references: [id])
 
   @@unique([productId, word])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  message     String
+  type        String   // 'info', 'success', 'warning', 'error'
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

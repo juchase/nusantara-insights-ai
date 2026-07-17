@@ -1,6 +1,7 @@
 import uuid
 import json
-from fastapi import APIRouter, Depends
+import requests
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
@@ -20,6 +21,7 @@ router = APIRouter()
 def generate_insight(product_id: str, db: Session = Depends(get_db)):
     current_time = datetime.now()
 
+    # ── 1. Forecasting ──────────────────────────────────────────────────────
     forecast_result = predict_and_save(product_id)
 
     # ── Ambil data dari forecasting ──────────────────────────────────────────
@@ -47,11 +49,19 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         forecast_summary = {}
         model_used = "prophet"
         freq = "D"
-    product_row = db.execute(text("""
-        SELECT name FROM "Product" WHERE id = :pid
-    """), {"pid": product_id}).fetchone()
-    product_name = product_row[0] if product_row else "Produk ini"
 
+    # ── 2. Ambil data produk ────────────────────────────────────────────────
+    product_row = db.execute(text("""
+        SELECT name, "userId" FROM "Product" WHERE id = :pid
+    """), {"pid": product_id}).fetchone()
+
+    if not product_row:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product_name = product_row[0]   # name
+    user_id = product_row[1]        # userId
+
+    # ── 3. Aggregate metrics ──────────────────────────────────────────────
     data = aggregate_product_metrics(product_id=product_id, db=db)
 
     positive = float(data.get("positive_percentage") or 0)
@@ -60,40 +70,17 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     keyword  = data.get("top_keyword")
     category = data.get("top_category")
 
-    if forecast_result.get("status") == "success":
-        growth = float(forecast_result.get("growth", 0))
-        growth_display = forecast_result.get("growth_display", "meningkat")
-        confidence = float(forecast_result.get("confidence", 0))
-        confidence_context = forecast_result.get("confidence_context", {
-            "label": "Akurasi Rendah",
-            "message": "Data tidak cukup",
-            "color": "red"
-        })
-        forecast_summary = forecast_result.get("forecast_summary", {})
-        model_used = forecast_result.get("model_used", "prophet")
-        freq = forecast_result.get("freq", "D")
-    else:
-        growth = 0.0
-        growth_display = "meningkat"
-        confidence = 0.0
-        confidence_context = {
-            "label": "Gagal Prediksi",
-            "message": "Terjadi kesalahan pada forecasting.",
-            "color": "red"
-        }
-        forecast_summary = {}
-        model_used = "prophet"
-        freq = "D"
+    # ── 4. Health Score & Risk ──────────────────────────────────────────────
+    score = calculate_health_score(positive, negative, growth)
+    label = get_health_label(score)
+    risk_level = "high" if score < 35 else "medium" if score < 55 else "low"
 
     # Tentukan trend dari growth
     trend = "up" if growth > 5 else "down" if growth < -5 else "stable"
 
     print(f"📌 growth_display yang dikirim ke LLM: '{growth_display}'")
 
-    score = calculate_health_score(positive, negative, growth)
-    label = get_health_label(score)
-    risk_level = "high" if score < 35 else "medium" if score < 55 else "low"
-
+    # ── 5. Generate insights ──────────────────────────────────────────────
     insights, recommendations, raw_sentences = generate_structured_insights(
         product_id=product_id,
         positive=positive,
@@ -122,7 +109,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     rule_summary = " ".join(raw_sentences[:3])
     top_rec = recommendations[0] if recommendations else ""
 
-    # ── Pre-filter LLM ──────────────────────────────────────────────────
+    # ── 6. Pre-filter LLM ──────────────────────────────────────────────────
     total_neg_neutral = db.execute(text("""
         SELECT COUNT(*) FROM "Review"
         WHERE "productId" = :pid AND sentiment IN ('negative', 'neutral')
@@ -163,7 +150,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         final_summary = rule_summary
         llm_used = False
 
-    # ── Simpan ke tabel Insight ──────────────────────────────────────────
+    # ── 7. Simpan ke tabel Insight ──────────────────────────────────────────
     insights_json = json.dumps(insights, ensure_ascii=False)
     recommendations_json = json.dumps(recommendations, ensure_ascii=False)
 
@@ -221,7 +208,37 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
     try:
         db.execute(text(insert_sql), insert_params)
         db.commit()
+
+        # ── Kirim notifikasi ─────────────────────────────────────────────────────
+        notif_url = "http://localhost:3000/api/notifications"  # Sesuaikan jika deploy
+
+        # 1. Notifikasi Insight Selesai
+        payload = {
+            "userId": str(user_id),
+            "title": "Insight Baru Tersedia",
+            "message": f"Insight untuk produk '{product_name}' sudah siap.",
+            "type": "info"
+        }
+        try:
+            requests.post(notif_url, json=payload)
+        except Exception as e:
+            print(f"⚠️ Gagal kirim notifikasi insight: {e}")
+
+        # 2. Jika risk_level == 'high'
+        if risk_level == 'high':
+            payload_risk = {
+                "userId": str(user_id),
+                "title": "⚠️ Risiko Tinggi Terdeteksi",
+                "message": f"Produk '{product_name}' memerlukan perhatian segera.",
+                "type": "warning"
+            }
+            try:
+                requests.post(notif_url, json=payload_risk)
+            except Exception as e:
+                print(f"⚠️ Gagal kirim notifikasi risiko tinggi: {e}")
+                
         print(f"✅ Insight saved — {product_name} | confidence: {confidence}% | LLM Used: {llm_used}")
+
     except Exception as e:
         db.rollback()
         print(f"❌ INSERT ERROR: {e}")

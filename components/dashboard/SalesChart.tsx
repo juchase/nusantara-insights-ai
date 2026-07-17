@@ -21,7 +21,6 @@ type ForecastPoint = {
   lower?: number | null;
 };
 
-// Membuat tipe data kustom eksplisit untuk menghindari error mismatch Recharts
 type CustomTooltipProps = {
   active?: boolean;
   payload?: Array<{
@@ -36,8 +35,8 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="bg-[#1e293b] border border-border rounded-xl p-3 text-xs shadow-xl shadow-black/20">
-      <p className="font-semibold text-white mb-1">{label}</p>
+    <div className="bg-card border border-border rounded-xl p-3 text-xs shadow-xl shadow-black/20">
+      <p className="font-semibold text-foreground mb-1">{label}</p>
       {payload.map((p) => {
         if (p.value === null || p.value === undefined) return null;
         return (
@@ -46,8 +45,8 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
               className="w-2 h-2 rounded-full"
               style={{ background: p.color }}
             />
-            <span className="text-slate-400">{p.name}:</span>
-            <span className="font-bold text-white">
+            <span className="text-muted">{p.name}:</span>
+            <span className="font-bold text-foreground">
               {Math.round(p.value).toLocaleString("id-ID")} unit
             </span>
           </div>
@@ -93,22 +92,22 @@ export default function SalesChart({
     <div className="glass-card border border-border p-5 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
         <div>
-          <p className="text-sm font-bold text-white">
+          <p className="text-sm font-bold text-foreground">
             Penjualan Aktual vs Prediksi
           </p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             Tren penjualan historis dan proyeksi ke depan
           </p>
         </div>
 
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-0.5 bg-[#F59E0B] rounded-full" />
-            <span className="text-xs text-slate-400">Aktual</span>
+            <div className="w-5 h-0.5 bg-primary rounded-full" />
+            <span className="text-xs text-muted">Aktual</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-5 h-0.5 bg-[#009B77] border-t-2 border-dashed border-[#009B77] rounded-none" />
-            <span className="text-xs text-slate-400">
+            <div className="w-5 h-0.5 bg-secondary border-t-2 border-dashed border-secondary rounded-none" />
+            <span className="text-xs text-muted">
               {isMVA ? "Estimasi (MVA)" : "Prediksi"}
             </span>
           </div>
@@ -121,7 +120,7 @@ export default function SalesChart({
           margin={{ top: 8, right: 8, left: -18, bottom: 0 }}
         >
           <CartesianGrid
-            stroke="rgba(255,255,255,0.06)"
+            stroke="var(--color-border)"
             strokeDasharray="4 8"
             vertical={false}
           />
@@ -130,14 +129,14 @@ export default function SalesChart({
             dataKey="date"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#64748b", fontSize: 11 }}
+            tick={{ fill: "var(--color-muted)", fontSize: 11 }}
             interval="preserveStartEnd"
             minTickGap={40}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#64748b", fontSize: 11 }}
+            tick={{ fill: "var(--color-muted)", fontSize: 11 }}
             domain={[0, maxVal > 0 ? Math.ceil(maxVal * 1.2) : 10]}
             width={36}
           />
@@ -147,18 +146,17 @@ export default function SalesChart({
           {lastActualIndex >= 0 && chartData[lastActualIndex] && (
             <ReferenceLine
               x={chartData[lastActualIndex].date}
-              stroke="rgba(255,255,255,0.15)"
+              stroke="var(--color-border)"
               strokeDasharray="4 4"
               label={{
                 value: "Hari ini",
                 position: "top",
                 fontSize: 10,
-                fill: "#64748b",
+                fill: "var(--color-muted)",
               }}
             />
           )}
 
-          {/* Menggunakan fungsi callback pada dataKey agar lolos pengecekan tipe TypeScript */}
           {isMVA && (
             <Area
               type="monotone"
@@ -175,14 +173,14 @@ export default function SalesChart({
             type="monotone"
             dataKey="actual"
             name="Aktual"
-            stroke="#F59E0B"
+            stroke="var(--color-primary)"
             strokeWidth={2.5}
             dot={false}
             connectNulls={false}
             activeDot={{
               r: 5,
-              fill: "#F59E0B",
-              stroke: "#0f172a",
+              fill: "var(--color-primary)",
+              stroke: "var(--color-background)",
               strokeWidth: 2,
             }}
           />
@@ -191,24 +189,24 @@ export default function SalesChart({
             type={isMVA ? "stepAfter" : "monotone"}
             dataKey="predicted"
             name={isMVA ? "Estimasi" : "Prediksi"}
-            stroke="#009B77"
+            stroke="var(--color-secondary)"
             strokeWidth={2.5}
             strokeDasharray={isMVA ? "none" : "6 4"}
             dot={false}
             connectNulls={false}
             activeDot={{
               r: 5,
-              fill: "#009B77",
-              stroke: "#0f172a",
+              fill: "var(--color-secondary)",
+              stroke: "var(--color-background)",
               strokeWidth: 2,
             }}
           />
         </ComposedChart>
       </ResponsiveContainer>
 
-      <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-[#1e293b]/50">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#009B77]" />
-        <p className="text-xs text-slate-400">
+      <div className="flex items-center gap-2 mt-3 p-3 rounded-lg bg-card/50">
+        <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
+        <p className="text-xs text-muted">
           {isMVA
             ? "Estimasi menggunakan rata-rata tertimbang (Moving Average) dari data terbatas."
             : `Prediksi menggunakan ${modelUsed ? modelUsed.replace(/_/g, " ") : "Prophet"} berdasarkan data historis penjualan.`}

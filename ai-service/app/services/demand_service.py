@@ -179,7 +179,7 @@ def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: s
     avg_pred = weighted_avg
 
     # ── Logika low-volume untuk Moving Average ──────────────────────────────
-    if avg_pred < 30 and abs(raw_growth) > 50:
+    if avg_pred < 30 or abs(raw_growth) > 50:
         growth = 0.0
         growth_display = f"+{round(avg_pred)} unit"
     else:
@@ -190,6 +190,7 @@ def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: s
             growth_display = f"{growth:.1f}%"
         else:
             growth_display = "stabil"
+
 
     return {
         "status": "success",
@@ -326,7 +327,7 @@ def predict_and_save(product_id: str):
             raw_growth = round(((avg_pred - last_actual) / last_actual) * 100, 1) if last_actual > 0 else 0
 
             # Logika low-volume untuk produk harian (volume rendah)
-            if avg_pred < 10 and abs(raw_growth) > 50:
+            if avg_pred < 10 or abs(raw_growth) > 50:
                 growth = 0.0
                 growth_display = f"+{round(avg_pred)} unit"
             else:
@@ -447,7 +448,7 @@ def _forecast_weekly_fallback(db, product_id: str, df_daily: pd.DataFrame):
 
     # ── Logika low-volume untuk Prophet mingguan ────────────────────────────
     # Untuk mingguan, jika avg_pred < 10 dan growth ekstrem, set growth = 0
-    if avg_pred < 10 and abs(raw_growth) > 50:
+    if avg_pred < 10 or abs(raw_growth) > 50:
         growth = 0.0
         growth_display = f"+{round(avg_pred)} unit"
     else:

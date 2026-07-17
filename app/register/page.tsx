@@ -17,7 +17,7 @@ export default function RegisterPage() {
 
   const inputContainerClass = "relative mt-2 flex items-center";
   const inputClass =
-    "w-full rounded-xl border border-[rgba(255,255,255,0.06)] bg-[#1e293b] pl-11 pr-4 py-3 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B]";
+    "w-full rounded-xl border border-border bg-card pl-11 pr-4 py-3 text-base text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-primary";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,12 +52,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen w-full flex-col items-center justify-center bg-background px-4 py-12 text-white antialiased sm:px-6 lg:px-8">
+    <main className="relative flex min-h-screen w-full flex-col items-center justify-center bg-background px-4 py-12 text-foreground antialiased sm:px-6 lg:px-8">
       {/* Tombol Kembali ke Beranda */}
-      <div className="absolute top-6 left-6 z-50">
+      <div className="absolute top-6 left-112 z-50">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-[#1e293b] px-4 py-2 text-xs font-bold text-slate-400 transition hover:border-[#F59E0B]/30 hover:text-[#F59E0B]"
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-xs font-bold text-muted transition hover:border-primary/30 hover:text-primary"
         >
           <ArrowLeft size={14} />
           Kembali
@@ -65,20 +65,20 @@ export default function RegisterPage() {
       </div>
 
       {/* Bagian Konten Form Utama */}
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md mt-8">
         {/* Header Identitas Brand */}
         <div className="mb-8 text-left">
           <div className="mb-3 flex items-center gap-2">
             <SVGComponent width={40} height={40} viewBox="0 0 200 200" />
-            <p className="text-xs font-bold tracking-wider uppercase text-[#F59E0B]">
+            <p className="text-xs font-bold tracking-wider uppercase text-primary">
               NusantaraInsight AI
             </p>
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-white">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Buat Akun Baru
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-400">
+          <p className="mt-2 text-sm leading-relaxed text-muted">
             Bergabunglah sekarang dan mulailah memanfaatkan kecerdasan data
             untuk mengembangkan bisnis UMKM Anda.
           </p>
@@ -87,21 +87,18 @@ export default function RegisterPage() {
         {/* Formulir Pendaftaran */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-400">
+            <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-xs font-semibold text-danger">
               {error}
             </div>
           )}
 
           {/* Field Nama */}
           <div>
-            <label
-              htmlFor="name"
-              className="text-sm font-semibold text-slate-200"
-            >
+            <label htmlFor="name" className="text-sm font-semibold text-muted">
               Nama Lengkap
             </label>
             <div className={inputContainerClass}>
-              <User className="absolute left-4 text-slate-500" size={16} />
+              <User className="absolute left-4 text-muted" size={16} />
               <input
                 id="name"
                 name="name"
@@ -118,14 +115,11 @@ export default function RegisterPage() {
 
           {/* Field Email */}
           <div>
-            <label
-              htmlFor="email"
-              className="text-sm font-semibold text-slate-200"
-            >
+            <label htmlFor="email" className="text-sm font-semibold text-muted">
               Email Bisnis
             </label>
             <div className={inputContainerClass}>
-              <Mail className="absolute left-4 text-slate-500" size={16} />
+              <Mail className="absolute left-4 text-muted" size={16} />
               <input
                 id="email"
                 name="email"
@@ -144,12 +138,12 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="password"
-              className="text-sm font-semibold text-slate-200"
+              className="text-sm font-semibold text-muted"
             >
               Kata Sandi
             </label>
             <div className={inputContainerClass}>
-              <Lock className="absolute left-4 text-slate-500" size={16} />
+              <Lock className="absolute left-4 text-muted" size={16} />
               <input
                 id="password"
                 name="password"
@@ -168,12 +162,12 @@ export default function RegisterPage() {
           <div>
             <label
               htmlFor="confirmPassword"
-              className="text-sm font-semibold text-slate-200"
+              className="text-sm font-semibold text-muted"
             >
               Konfirmasi Kata Sandi
             </label>
             <div className={inputContainerClass}>
-              <Lock className="absolute left-4 text-slate-500" size={16} />
+              <Lock className="absolute left-4 text-muted" size={16} />
               <input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -191,7 +185,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="group mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#F59E0B] px-4 text-sm font-bold text-background transition hover:bg-[#D97706] focus:outline-none focus:ring-4 focus:ring-[#F59E0B]/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-background transition hover:bg-primary/80 focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? (
               <>
@@ -212,11 +206,11 @@ export default function RegisterPage() {
 
         {/* Tautan Navigasi ke Halaman Login */}
         <div className="mt-8 border-t border-border pt-5 text-center">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted">
             Sudah punya akun?{" "}
             <Link
               href="/login"
-              className="font-bold text-[#F59E0B] transition hover:text-[#D97706]"
+              className="font-bold text-primary transition hover:text-primary/80"
             >
               Masuk di sini
             </Link>
@@ -225,7 +219,7 @@ export default function RegisterPage() {
       </div>
 
       {/* Footer Hak Cipta */}
-      <p className="mt-12 text-[11px] font-medium text-slate-500">
+      <p className="mt-12 text-[11px] font-medium text-muted">
         &copy; {new Date().getFullYear()} NusantaraInsight AI. Hak cipta
         dilindungi undang-undang.
       </p>

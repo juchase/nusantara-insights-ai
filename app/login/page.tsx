@@ -24,7 +24,7 @@ export default function LoginPage() {
 
   const inputContainerClass = "relative mt-1 flex items-center";
   const inputClass =
-    "w-full rounded-xl border border-[rgba(255,255,255,0.06)] bg-[#1e293b] pl-11 pr-4 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B]";
+    "w-full rounded-xl border border-border bg-card pl-11 pr-4 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-primary";
 
   const highlights = [
     {
@@ -73,18 +73,18 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="grid h-screen w-full bg-background text-white antialiased lg:grid-cols-[1.05fr_0.95fr] lg:overflow-hidden">
+    <main className="grid h-screen w-full bg-background text-foreground antialiased lg:grid-cols-[1.05fr_0.95fr] lg:overflow-hidden">
       {/* SISI KIRI: Visual Tech & Brand Authority */}
-      <section className="relative hidden h-full flex-col justify-between bg-background p-12 text-white lg:flex xl:p-16">
+      <section className="relative hidden h-full flex-col justify-between bg-background p-12 lg:flex xl:p-16">
         {/* Pola Grid Halus AI */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-size-[4rem_4rem] mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%) opacity-20" />
-        <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-[#F59E0B]/10 blur-[120px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-border)_1px,transparent_1px),linear-gradient(to_bottom,var(--color-border)_1px,transparent_1px)] bg-size-[4rem_4rem] mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%) opacity-20" />
+        <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-primary/10 blur-[120px]" />
 
         {/* Navigasi Kembali */}
         <div className="relative z-10">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-[#1e293b] px-3.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-[#F59E0B] hover:text-white"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-muted transition hover:border-primary hover:text-foreground"
           >
             <ArrowLeft size={14} />
             Kembali
@@ -95,16 +95,16 @@ export default function LoginPage() {
         <div className="relative z-10 my-auto max-w-lg py-4">
           <div className="mb-5 flex items-center gap-3">
             <SVGComponent width={40} height={40} viewBox="0 0 200 200" />
-            <span className="text-xs font-black tracking-wider uppercase text-white">
+            <span className="text-xs font-black tracking-wider uppercase text-foreground">
               NusantaraInsight AI
             </span>
           </div>
 
           <h1 className="text-3xl font-extrabold leading-[1.2] tracking-tight xl:text-4xl">
             Bantu UMKM Anda <br />
-            <span className="text-[#F59E0B]">membaca pasar</span> lebih tajam.
+            <span className="text-primary">membaca pasar</span> lebih tajam.
           </h1>
-          <p className="mt-3 text-xs leading-relaxed text-slate-400">
+          <p className="mt-3 text-xs leading-relaxed text-muted">
             Masuk ke dashboard analitik yang dirancang khusus untuk pelaku usaha
             lokal. Data tetap aman, prediksi tetap akurat, dan semua berjalan
             tanpa bergantung pada internet.
@@ -115,16 +115,16 @@ export default function LoginPage() {
             {highlights.map((item) => (
               <div
                 key={item.title}
-                className="flex items-start gap-4 rounded-xl border border-border bg-[#1e293b]/50 p-3.5 backdrop-blur-sm"
+                className="flex items-start gap-4 rounded-xl border border-border bg-card/50 p-3.5 backdrop-blur-sm"
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
                   {item.icon}
                 </div>
                 <div>
-                  <h3 className="text-xs font-bold text-slate-100">
+                  <h3 className="text-xs font-bold text-foreground">
                     {item.title}
                   </h3>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
                     {item.desc}
                   </p>
                 </div>
@@ -133,7 +133,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="relative z-10 text-[11px] text-slate-500">
+        <p className="relative z-10 text-[11px] text-muted">
           &copy; {new Date().getFullYear()} NusantaraInsight AI
         </p>
       </section>
@@ -143,27 +143,27 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-md">
           {/* Header Mobile */}
           <div className="mb-6 flex flex-col items-center lg:hidden">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F59E0B] text-background">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-background">
               <SVGComponent width={24} height={24} viewBox="0 0 200 200" />
             </div>
-            <h2 className="mt-2.5 text-sm font-black tracking-tight text-white">
+            <h2 className="mt-2.5 text-sm font-black tracking-tight text-foreground">
               NusantaraInsight AI
             </h2>
           </div>
 
           {/* Judul Form */}
           <div className="mb-6 text-left">
-            <h2 className="text-xl font-black tracking-tight text-white sm:text-2xl">
+            <h2 className="text-xl font-black tracking-tight text-foreground sm:text-2xl">
               Masuk ke Dasbor
             </h2>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-muted">
               Masukkan email dan kata sandi untuk memulai analisis bisnis Anda.
             </p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             {error && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-[11px] font-semibold text-red-400">
+              <div className="rounded-xl border border-danger/20 bg-danger/10 px-4 py-2.5 text-[11px] font-semibold text-danger">
                 {error}
               </div>
             )}
@@ -172,12 +172,12 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="text-[11px] font-bold text-slate-400"
+                className="text-[11px] font-bold text-muted"
               >
                 Email
               </label>
               <div className={inputContainerClass}>
-                <Mail className="absolute left-4 text-slate-500" size={14} />
+                <Mail className="absolute left-4 text-muted" size={14} />
                 <input
                   id="email"
                   type="email"
@@ -196,19 +196,19 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="password"
-                  className="text-[11px] font-bold text-slate-400"
+                  className="text-[11px] font-bold text-muted"
                 >
                   Kata Sandi
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-[11px] font-semibold text-[#F59E0B] transition hover:text-[#D97706]"
+                  className="text-[11px] font-semibold text-primary transition hover:text-primary/80"
                 >
                   Lupa?
                 </Link>
               </div>
               <div className={inputContainerClass}>
-                <Lock className="absolute left-4 text-slate-500" size={14} />
+                <Lock className="absolute left-4 text-muted" size={14} />
                 <input
                   id="password"
                   type="password"
@@ -226,7 +226,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="group mt-1 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#F59E0B] px-4 text-xs font-bold text-background transition hover:bg-[#D97706] focus:outline-none focus:ring-2 focus:ring-[#F59E0B] disabled:cursor-not-allowed disabled:opacity-60"
+              className="group mt-1 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-background transition hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isLoading ? (
                 <>
@@ -247,11 +247,11 @@ export default function LoginPage() {
 
           {/* Footer Registrasi */}
           <div className="mt-6 border-t border-border pt-5 text-center">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted">
               Belum punya akun?{" "}
               <Link
                 href="/register"
-                className="font-bold text-[#F59E0B] transition hover:text-[#D97706]"
+                className="font-bold text-primary transition hover:text-primary/80"
               >
                 Daftar Sekarang
               </Link>

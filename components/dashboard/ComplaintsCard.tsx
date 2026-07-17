@@ -19,10 +19,10 @@ export default function ComplaintsCard({
     <div className="glass-card border border-border p-5">
       {/* Header dengan Tooltip Utama */}
       <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
-        <p className="text-sm font-bold text-white">Keluhan Pelanggan</p>
-        <Info size={14} className="text-slate-500" />
+        <p className="text-sm font-bold text-foreground">Keluhan Pelanggan</p>
+        <Info size={14} className="text-muted" />
         <div className="absolute left-0 top-full mt-2 w-64 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-30 pointer-events-none">
-          <p className="text-[11px] text-slate-300 font-normal normal-case tracking-normal leading-relaxed">
+          <p className="text-[11px] text-muted font-normal normal-case tracking-normal leading-relaxed">
             Distribusi topik komplain yang diekstraksi otomatis oleh AI dari
             ulasan bersentimen negatif guna membantu tim operasional memetakan
             masalah utama produk.
@@ -30,7 +30,7 @@ export default function ComplaintsCard({
         </div>
       </div>
 
-      <p className="text-xs text-slate-400 mb-4">
+      <p className="text-xs text-muted mb-4">
         Kategori keluhan yang paling sering muncul di ulasan produk ini
       </p>
 
@@ -41,36 +41,37 @@ export default function ComplaintsCard({
             className="flex items-center gap-3 group/row cursor-help relative"
           >
             {/* Nama Kategori */}
-            <span className="text-xs text-slate-400 w-24 shrink-0 truncate capitalize">
+            <span className="text-xs text-muted w-24 shrink-0 truncate capitalize">
               {category}
             </span>
 
             {/* Bar Progres dengan Tooltip Detail */}
-            <div className="flex-1 h-2 bg-[#1e293b] rounded-full overflow-hidden relative">
+            <div className="flex-1 h-2 bg-card rounded-full overflow-hidden relative">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${(count / maxCount) * 100}%`,
-                  background: i === 0 ? "#E24B4A" : "#7F77DD",
+                  background:
+                    i === 0 ? "var(--color-danger)" : "var(--color-tertiary)",
                 }}
               />
             </div>
 
             {/* Jumlah Sebutan */}
-            <span className="text-xs text-slate-400 w-12 text-right shrink-0">
+            <span className="text-xs text-muted w-12 text-right shrink-0">
               {count} sebutan
             </span>
 
             {/* Tooltip Baris Kategori */}
             <div className="absolute bottom-full left-24 mb-1 w-56 p-2 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover/row:opacity-100 group-hover/row:visible transition-all duration-150 z-20 pointer-events-none">
-              <p className="text-[10px] text-slate-300 font-normal leading-relaxed">
+              <p className="text-[10px] text-muted font-normal leading-relaxed">
                 Masalah{" "}
-                <span className="text-white font-medium capitalize">
+                <span className="text-foreground font-medium capitalize">
                   "{category}"
                 </span>{" "}
                 telah diidentifikasi sebanyak{" "}
-                <span className="text-white font-bold">{count} kali</span> pada
-                riwayat umpan balik pelanggan.
+                <span className="text-foreground font-bold">{count} kali</span>{" "}
+                pada riwayat umpan balik pelanggan.
               </p>
             </div>
           </div>

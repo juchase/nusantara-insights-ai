@@ -77,6 +77,9 @@ export default function UploadPage() {
       setSuccessMessage("Dataset berhasil diunggah dan dianalisis 🎉");
       setFile(null);
 
+      // ── KIRIM EVENT KE TOPBAR ──────────────────────────────────────────────
+      window.dispatchEvent(new Event("notifications-updated"));
+
       // Refresh & redirect otomatis ke dashboard kerja
       setTimeout(() => {
         router.push("/dashboard");
@@ -98,7 +101,7 @@ export default function UploadPage() {
         {/* Navigasi Kembali */}
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#F59E0B] transition mb-6"
+          className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-primary transition mb-6"
         >
           <ArrowLeft size={14} />
           Kembali ke Dasbor
@@ -106,10 +109,10 @@ export default function UploadPage() {
 
         {/* Judul Utama */}
         <div className="mb-8 text-left">
-          <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+          <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             Unggah Berkas Dataset
           </h1>
-          <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
+          <p className="mt-1.5 text-xs text-muted leading-relaxed">
             Sistem intelijen bisnis kami akan memproses data ulasan transaksi
             lokal secara instan lewat algoritma analitik internal sandbox.
           </p>
@@ -131,10 +134,10 @@ export default function UploadPage() {
           }}
           className={`group relative cursor-pointer border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-300 ${
             dragging
-              ? "bg-[#F59E0B]/10 border-[#F59E0B] shadow-inner"
+              ? "bg-primary/10 border-primary shadow-inner"
               : file
-                ? "bg-[#009B77]/10 border-[#009B77]/60 shadow-sm"
-                : "glass border-border hover:bg-[#1e293b] hover:border-[#F59E0B]/40"
+                ? "bg-secondary/10 border-secondary/60 shadow-sm"
+                : "glass border-border hover:bg-card hover:border-primary/40"
           }`}
         >
           {/* Sembunyikan elemen input asli */}
@@ -150,22 +153,22 @@ export default function UploadPage() {
           />
 
           {/* Render Ikon Dinamis */}
-          <div className="mx-auto w-12 h-12 rounded-xl flex items-center justify-center border transition-transform duration-300 group-hover:scale-105 mb-4 bg-[#1e293b] border-border">
+          <div className="mx-auto w-12 h-12 rounded-xl flex items-center justify-center border transition-transform duration-300 group-hover:scale-105 mb-4 bg-card border-border">
             {file ? (
-              <FileSpreadsheet className="text-[#009B77]" size={22} />
+              <FileSpreadsheet className="text-secondary" size={22} />
             ) : (
               <UploadCloud
-                className="text-slate-400 group-hover:text-[#F59E0B]"
+                className="text-muted group-hover:text-primary"
                 size={22}
               />
             )}
           </div>
 
           <div className="space-y-1">
-            <p className="text-sm font-bold text-white">
+            <p className="text-sm font-bold text-foreground">
               {file ? file.name : "Seret & jatuhkan berkas di sini"}
             </p>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs text-muted font-medium">
               {file
                 ? `Ukuran kapasitas dokumen: ${(file.size / 1024).toFixed(1)} KB`
                 : "Mendukung format ekstensi .CSV atau .XLSX (Maksimal 5MB)"}
@@ -176,14 +179,14 @@ export default function UploadPage() {
         {/* Manajemen Banner Pesan Dinamis */}
         <div className="mt-4 min-h-[40px]">
           {errorMessage && (
-            <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400 animate-fadeIn">
+            <div className="flex items-start gap-2 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-xs font-semibold text-danger animate-fadeIn">
               <AlertCircle size={15} className="mt-0.5 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="flex items-start gap-2 rounded-xl border border-[#009B77]/20 bg-[#009B77]/10 px-4 py-3 text-xs font-semibold text-[#009B77] animate-fadeIn">
+            <div className="flex items-start gap-2 rounded-xl border border-secondary/20 bg-secondary/10 px-4 py-3 text-xs font-semibold text-secondary animate-fadeIn">
               <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
               <span>{successMessage}</span>
             </div>
@@ -194,7 +197,7 @@ export default function UploadPage() {
         <Button
           onClick={handleUpload}
           disabled={loading || !file}
-          className="w-full h-11 bg-[#F59E0B] hover:bg-[#D97706] text-background font-bold text-xs rounded-xl shadow-lg shadow-[#F59E0B]/20 transition-all focus:outline-none focus:ring-4 focus:ring-[#F59E0B]/20 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+          className="w-full h-11 bg-primary hover:bg-primary/80 text-background font-bold text-xs rounded-xl shadow-lg shadow-primary/20 transition-all focus:outline-none focus:ring-4 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 mt-2"
         >
           {loading ? (
             <>
@@ -209,10 +212,10 @@ export default function UploadPage() {
         {/* Petunjuk Tambahan Skema Kolom - Versi Template Eksplisit */}
         <div className="mt-8 pt-6 border-t border-border text-left">
           <div className="mb-4">
-            <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <h4 className="text-[11px] font-bold text-muted uppercase tracking-wider">
               Format Dataset yang Didukung
             </h4>
-            <p className="mt-1 text-xs text-slate-400 leading-relaxed font-medium">
+            <p className="mt-1 text-xs text-muted leading-relaxed font-medium">
               Sistem dapat memproses data dari satu file CSV (gabungan) atau dua
               file terpisah. Pastikan header kolom Anda sesuai dengan contoh di
               bawah ini (nama kolom bersifat case-insensitive).
@@ -222,29 +225,29 @@ export default function UploadPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Kartu 1: Data Ulasan */}
             <div className="glass-card border border-border p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#F59E0B] mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary mb-2">
                 📝 Data Ulasan (Review)
               </p>
-              <p className="text-[10px] text-slate-500 mb-3">
+              <p className="text-[10px] text-muted mb-3">
                 Untuk analisis sentimen & distribusi.
               </p>
-              <div className="bg-[#1e293b] p-3 rounded-lg border border-border">
-                <p className="text-[11px] font-mono text-slate-300">
-                  <span className="text-[#F59E0B]">review_text</span>, rating,
+              <div className="bg-card p-3 rounded-lg border border-border">
+                <p className="text-[11px] font-mono text-foreground">
+                  <span className="text-primary">review_text</span>, rating,
                   review_date
                 </p>
               </div>
               <div className="mt-3 space-y-1.5">
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-[#F59E0B]">*</span> review_text: Teks
+                <p className="text-[10px] text-muted flex items-center gap-1.5">
+                  <span className="text-primary">*</span> review_text: Teks
                   ulasan pelanggan (wajib)
                 </p>
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-[#009B77]">•</span> rating: Nilai 1-5
+                <p className="text-[10px] text-muted flex items-center gap-1.5">
+                  <span className="text-secondary">•</span> rating: Nilai 1-5
                   (opsional)
                 </p>
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-[#009B77]">•</span> review_date: Tanggal
+                <p className="text-[10px] text-muted flex items-center gap-1.5">
+                  <span className="text-secondary">•</span> review_date: Tanggal
                   ulasan (opsional)
                 </p>
               </div>
@@ -252,33 +255,33 @@ export default function UploadPage() {
 
             {/* Kartu 2: Data Penjualan */}
             <div className="glass-card border border-border p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#F59E0B] mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary mb-2">
                 📊 Data Penjualan (Sales)
               </p>
-              <p className="text-[10px] text-slate-500 mb-3">
+              <p className="text-[10px] text-muted mb-3">
                 Untuk prediksi permintaan & tren.
               </p>
-              <div className="bg-[#1e293b] p-3 rounded-lg border border-border">
-                <p className="text-[11px] font-mono text-slate-300">
-                  product, date,{" "}
-                  <span className="text-[#F59E0B]">quantity</span>, unit_price
+              <div className="bg-card p-3 rounded-lg border border-border">
+                <p className="text-[11px] font-mono text-foreground">
+                  product, date, <span className="text-primary">quantity</span>,
+                  unit_price
                 </p>
               </div>
               <div className="mt-3 space-y-1.5">
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-[#F59E0B]">*</span> quantity: Jumlah
+                <p className="text-[10px] text-muted flex items-center gap-1.5">
+                  <span className="text-primary">*</span> quantity: Jumlah
                   barang terjual (wajib)
                 </p>
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-[#009B77]">•</span> product: Nama produk
+                <p className="text-[10px] text-muted flex items-center gap-1.5">
+                  <span className="text-secondary">•</span> product: Nama produk
                   (opsional, jika kosong akan dibuat otomatis)
                 </p>
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-[#009B77]">•</span> date: Tanggal
+                <p className="text-[10px] text-muted flex items-center gap-1.5">
+                  <span className="text-secondary">•</span> date: Tanggal
                   transaksi (opsional)
                 </p>
-                <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                  <span className="text-[#009B77]">•</span> unit_price: Harga
+                <p className="text-[10px] text-muted flex items-center gap-1.5">
+                  <span className="text-secondary">•</span> unit_price: Harga
                   per unit (opsional)
                 </p>
               </div>
@@ -286,8 +289,8 @@ export default function UploadPage() {
           </div>
 
           <div className="mt-4 glass-card border border-border p-3.5">
-            <p className="text-[10px] text-slate-500 flex items-center gap-2">
-              <Info size={13} className="text-[#7F77DD] shrink-0" />
+            <p className="text-[10px] text-muted flex items-center gap-2">
+              <Info size={13} className="text-tertiary shrink-0" />
               Anda dapat menggabungkan semua kolom di atas dalam satu file .CSV.
               Sistem akan otomatis memisahkan data ulasan dan penjualan
               berdasarkan nama header kolom.

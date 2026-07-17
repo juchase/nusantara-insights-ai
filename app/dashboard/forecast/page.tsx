@@ -76,6 +76,7 @@ export default function ForecastPage() {
   const [forecastSummary, setForecastSummary] = useState<any>(null);
   const [freq, setFreq] = useState<"D" | "W">("D");
 
+  // Ambil daftar produk saat pertama kali
   useEffect(() => {
     const loadProducts = async () => {
       const data = await safeFetch<Product[]>("/api/products", []);
@@ -85,25 +86,10 @@ export default function ForecastPage() {
     loadProducts();
   }, []);
 
-  const handleRefresh = async (productId: string) => {
+  // Fungsi untuk mengambil data prediksi dari DB (tidak generate)
+  const fetchForecastData = async (productId: string) => {
     if (!productId) return;
-    setLoading(true);
-
     try {
-      const predictData = await safeFetch<PredictDemandResponse>(
-        `http://localhost:8000/predict-demand/${productId}`,
-        { confidence: 0 },
-        { method: "POST" },
-      );
-
-      setConfidence(predictData.confidence || 0);
-      setConfidenceContext(predictData.confidence_context || null);
-      setModelUsed(predictData.model_used || "");
-      setFreq(predictData.freq || "D");
-      setForecastSummary(predictData.forecast_summary || null);
-
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
       const result = await safeFetch<{
         sales: SalesPoint[];
         predictions: PredictionPoint[];
@@ -118,41 +104,71 @@ export default function ForecastPage() {
       setGrowth(calculateGrowth(merged));
     } catch (error) {
       console.error("Gagal load forecast:", error);
+    }
+  };
+
+  // Load initial saat produk dipilih (hanya ambil dari DB)
+  useEffect(() => {
+    if (selectedProduct) {
+      setLoading(true);
+      fetchForecastData(selectedProduct).finally(() => setLoading(false));
+    }
+  }, [selectedProduct]);
+
+  // Fungsi refresh: generate baru + ambil data terbaru
+  const handleRefresh = async (productId: string) => {
+    if (!productId) return;
+    setLoading(true);
+    try {
+      // 1. Panggil endpoint untuk generate forecasting baru
+      const predictData = await safeFetch<PredictDemandResponse>(
+        `http://localhost:8000/predict-demand/${productId}`,
+        { confidence: 0 },
+        { method: "POST" },
+      );
+
+      setConfidence(predictData.confidence || 0);
+      setConfidenceContext(predictData.confidence_context || null);
+      setModelUsed(predictData.model_used || "");
+      setFreq(predictData.freq || "D");
+      setForecastSummary(predictData.forecast_summary || null);
+
+      // 2. Tunggu sebentar agar database selesai menulis
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      // 3. Ambil data terbaru dari database
+      await fetchForecastData(productId);
+    } catch (error) {
+      console.error("Gagal refresh forecast:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (selectedProduct) {
-      handleRefresh(selectedProduct);
-    }
-  }, [selectedProduct]);
-
   const selectedName =
     products.find((product) => product.id === selectedProduct)?.name ?? "-";
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6">
+    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6 bg-background text-foreground">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-[#F59E0B]">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">
             Demand Intelligence
           </p>
-          <h1 className="mt-1 text-2xl font-bold text-white">Forecast</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
+          <h1 className="mt-1 text-2xl font-bold text-foreground">Forecast</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted">
             Prediksi permintaan berbasis data penjualan historis untuk produk
             aktif.
           </p>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="flex h-10 items-center gap-2 rounded-lg bg-[#1e293b]/60 border border-border px-3 focus-within:border-[#F59E0B]">
-            <PackageSearch size={16} className="text-slate-400" />
+          <label className="flex h-10 items-center gap-2 rounded-lg bg-card/60 border border-border px-3 focus-within:border-primary">
+            <PackageSearch size={16} className="text-muted" />
             <select
               value={selectedProduct}
               onChange={(event) => setSelectedProduct(event.target.value)}
-              className="w-full min-w-64 bg-transparent text-sm text-white outline-none"
+              className="w-full min-w-64 bg-transparent text-sm text-foreground outline-none"
             >
               {products.length === 0 ? (
                 <option value="">Tidak ada produk</option>
@@ -170,7 +186,7 @@ export default function ForecastPage() {
             type="button"
             onClick={() => handleRefresh(selectedProduct)}
             disabled={!selectedProduct || loading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-4 text-sm font-bold text-background disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#D97706] transition-colors"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-background disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/80 transition-colors"
           >
             <RefreshCcw size={15} className={loading ? "animate-spin" : ""} />
             Refresh
@@ -179,8 +195,8 @@ export default function ForecastPage() {
       </div>
 
       <div className="glass-card border border-border p-5">
-        <p className="text-sm font-medium text-white">{selectedName}</p>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="text-sm font-medium text-foreground">{selectedName}</p>
+        <p className="mt-1 text-xs text-muted">
           {loading
             ? "Memuat prediksi terbaru..."
             : `${forecastData.length} titik data aktual dan prediksi tersedia`}
@@ -207,7 +223,7 @@ export default function ForecastPage() {
 
       {/* Tabel Detail Prediksi 7 Hari */}
       <div className="glass-card border border-border p-5 mt-4">
-        <p className="text-sm font-medium text-white mb-4">
+        <p className="text-sm font-medium text-foreground mb-4">
           Detail Prediksi 7 Hari
         </p>
         <div className="overflow-x-auto">
@@ -217,7 +233,7 @@ export default function ForecastPage() {
                 {["Tanggal", "Prediksi (unit)", "Keterangan"].map((h) => (
                   <th
                     key={h}
-                    className="text-left text-[11px] font-medium uppercase tracking-wider text-slate-400 py-2 px-2 border-b border-border"
+                    className="text-left text-[11px] font-medium uppercase tracking-wider text-muted py-2 px-2 border-b border-border"
                   >
                     {h}
                   </th>
@@ -230,16 +246,14 @@ export default function ForecastPage() {
                 .map((d, i) => (
                   <tr
                     key={i}
-                    className="border-b border-[rgba(255,255,255,0.04)] last:border-0"
+                    className="border-b border-border/10 last:border-0"
                   >
-                    <td className="text-sm text-slate-300 py-3 px-2">
-                      {d.date}
-                    </td>
-                    <td className="text-sm font-medium text-white py-3 px-2">
+                    <td className="text-sm text-muted py-3 px-2">{d.date}</td>
+                    <td className="text-sm font-medium text-foreground py-3 px-2">
                       {Math.round(d.predicted ?? 0)} unit
                     </td>
                     <td className="py-3 px-2">
-                      <span className="inline-block text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-[#7F77DD]/15 text-[#7F77DD] border border-[#7F77DD]/20">
+                      <span className="inline-block text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/20">
                         Prediksi AI
                       </span>
                     </td>

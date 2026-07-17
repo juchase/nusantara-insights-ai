@@ -1,15 +1,54 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* ── Konfigurasi Tema Tailwind v4 ──────────────────── */
+/* ── Custom Scrollbar (tetap gelap) ───────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #0f172a;
+}
+
+/* ── Theme Variables (Dark default, Light via [data-theme]) ── */
 @theme {
   --color-background: #0f172a;
   --color-foreground: #dae2fd;
+  --color-card: #1e293b;
+  --color-card-hover: #334155;
   --color-border: rgba(255, 255, 255, 0.06);
-  --color-ring: #f59e0b;
+  --color-primary: #f59e0b;
+  --color-secondary: #009b77;
+  --color-tertiary: #7f77dd;
+  --color-muted: #94a3b8;
+  --color-danger: #e24b4a;
 }
 
-/* ── Layer Base (Reset & Font) ─────────────────────── */
+[data-theme="light"] {
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+  --color-card: #ffffff;
+  --color-card-hover: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-primary: #f59e0b;
+  --color-secondary: #009b77;
+  --color-tertiary: #7f77dd;
+  --color-muted: #64748b;
+  --color-danger: #e24b4a;
+}
+
+/* ── Layer Base ────────────────────────────────────────── */
 @layer base {
   html {
     font-family: "Inter", sans-serif;
@@ -24,72 +63,147 @@
   }
 }
 
-/* ── Utility Class Kustom (Glassmorphism, Tombol, dll.) ── */
+/* ── Utility Classes (without @apply on custom variables) ── */
 @utility glass {
-  background-color: #1e293b;
+  background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  @apply rounded-xl p-5;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 1.25rem;
 }
 
 @utility glass-card {
-  background-color: #1e293b;
+  background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  @apply rounded-xl p-5 sm:p-6;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 1.25rem;
 }
 
 @utility glass-card-lg {
-  background-color: #1e293b;
+  background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  @apply rounded-2xl p-6 sm:p-8;
+  border: 1px solid var(--color-border);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
 }
 
 @utility input-field {
-  background-color: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  @apply rounded-xl px-4 py-2 text-sm text-white placeholder-slate-400 focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B] outline-none transition;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-foreground);
+  outline: none;
+  transition: all 0.2s;
+}
+.input-field:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
 @utility btn-primary {
-  background-color: #f59e0b;
-  color: #0f172a;
-  @apply font-bold rounded-full px-6 py-3 text-sm hover:bg-[#D97706] transition active:translate-y-px shadow-lg shadow-[#F59E0B]/20;
+  background-color: var(--color-primary);
+  color: var(--color-background);
+  font-weight: bold;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+.btn-primary:hover {
+  opacity: 0.9;
+}
+.btn-primary:active {
+  transform: translateY(1px);
 }
 
 @utility btn-outline {
   background-color: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  @apply text-white rounded-full px-6 py-3 text-sm font-medium hover:bg-[rgba(255,255,255,0.04)] transition;
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.btn-outline:hover {
+  background-color: var(--color-card-hover);
 }
 
 @utility pill-success {
   background-color: rgba(0, 155, 119, 0.15);
   color: #009b77;
-  @apply rounded-full px-2.5 py-1 text-xs font-semibold;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 @utility pill-warning {
   background-color: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
-  @apply rounded-full px-2.5 py-1 text-xs font-semibold;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 @utility pill-danger {
   background-color: rgba(226, 75, 74, 0.15);
   color: #e24b4a;
-  @apply rounded-full px-2.5 py-1 text-xs font-semibold;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
-/* ── Chart colors ──────────────────────────────────── */
-.chart-actual {
-  stroke: #f59e0b;
+@utility text-foreground {
+  color: var(--color-foreground);
 }
-.chart-forecast {
-  stroke: #009b77;
-  stroke-dasharray: 4 4;
+@utility text-muted {
+  color: var(--color-muted);
+}
+@utility bg-background {
+  background-color: var(--color-background);
+}
+@utility bg-card {
+  background-color: var(--color-card);
+}
+@utility bg-card-hover {
+  background-color: var(--color-card-hover);
+}
+@utility border-border {
+  border-color: var(--color-border);
+}
+@utility bg-secondary {
+  background-color: var(--color-secondary);
+}
+@utility text-secondary {
+  color: var(--color-secondary);
+}
+@utility text-primary {
+  color: var(--color-primary);
+}
+
+@utility text-danger {
+  color: var(--color-danger);
+}
+@utility border-danger {
+  border-color: var(--color-danger);
+}
+@utility bg-danger {
+  background-color: var(--color-danger);
+}
+
+@utility bg-danger {
+  background-color: var(--color-danger);
+}
+@utility bg-tertiary {
+  background-color: var(--color-tertiary);
 }

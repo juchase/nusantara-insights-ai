@@ -63,7 +63,7 @@ export default function DemoCountdown() {
   if (!isDemo) return null;
 
   return (
-    <div className="hidden sm:block glass border border-border px-4 py-1.5 rounded-full text-xs font-medium text-[#F59E0B]">
+    <div className="hidden sm:block glass border border-border px-4 py-1.5 rounded-full text-xs font-medium text-primary">
       Demo Session {timeLeft || "...loading"}
     </div>
   );

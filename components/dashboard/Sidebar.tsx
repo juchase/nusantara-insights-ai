@@ -3,15 +3,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  Upload,
   Package,
   Star,
   TrendingUp,
   Brain,
-  Settings,
   PanelLeftClose,
   PanelLeftOpen,
-  LogOut,
   FileText,
 } from "lucide-react";
 import SVGComponent from "../svg/logo";
@@ -21,7 +18,6 @@ const NAV = [
     section: "Menu Utama",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/dashboard/upload", label: "Upload Data", icon: Upload },
       { href: "/dashboard/report", label: "Laporan", icon: FileText },
       { href: "/dashboard/products", label: "Produk", icon: Package },
       { href: "/dashboard/reviews", label: "Ulasan", icon: Star },
@@ -32,12 +28,6 @@ const NAV = [
     items: [
       { href: "/dashboard/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/dashboard/insight", label: "AI Insight", icon: Brain },
-    ],
-  },
-  {
-    section: "Lainnya",
-    items: [
-      { href: "/dashboard/settings", label: "Pengaturan", icon: Settings },
     ],
   },
 ];
@@ -64,7 +54,7 @@ function SidebarContent({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e293b] text-foreground">
+    <div className="flex flex-col h-full bg-card text-foreground">
       {/* ── HEADER ────────────────────────────────────── */}
       <div
         className={`h-16 flex items-center border-b border-border shrink-0 overflow-hidden transition-all duration-200 ${
@@ -79,8 +69,10 @@ function SidebarContent({
           <SVGComponent />
           {!visuallyCollapsed && (
             <div className="whitespace-nowrap overflow-hidden">
-              <p className="text-sm font-bold text-white">NusantaraInsight</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">
+              <p className="text-sm font-bold text-foreground">
+                NusantaraInsight
+              </p>
+              <p className="text-[10px] text-muted mt-0.5">
                 AI Business Intelligence
               </p>
             </div>
@@ -90,7 +82,7 @@ function SidebarContent({
         {showToggle && onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            className={`flex items-center justify-center w-7 h-7 rounded-lg border border-border bg-[#1e293b]/50 text-slate-400 hover:text-white hover:bg-[#1e293b] transition-colors cursor-pointer shrink-0 ${
+            className={`flex items-center justify-center w-7 h-7 rounded-lg border border-border bg-card/50 text-muted hover:text-foreground hover:bg-card transition-colors cursor-pointer shrink-0 ${
               visuallyCollapsed ? "ml-0" : "mr-3"
             }`}
             title={visuallyCollapsed ? "Perluas sidebar" : "Perkecil sidebar"}
@@ -109,7 +101,7 @@ function SidebarContent({
         {NAV.map(({ section, items }) => (
           <div key={section}>
             <p
-              className={`text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500 pt-3 pb-1 px-2 transition-opacity duration-200 ${
+              className={`text-[10px] font-bold uppercase tracking-[0.06em] text-muted pt-3 pb-1 px-2 transition-opacity duration-200 ${
                 visuallyCollapsed
                   ? "opacity-0 h-0 overflow-hidden p-0"
                   : "opacity-100 mb-2"
@@ -131,8 +123,8 @@ function SidebarContent({
                       : "justify-start px-2"
                   } ${
                     active
-                      ? "text-[#F59E0B] bg-[#F59E0B]/10 border-l-4 border-[#F59E0B]"
-                      : "text-slate-400 hover:text-white hover:bg-[rgba(255,255,255,0.05)]"
+                      ? "text-primary bg-primary/10 border-l-4 border-primary"
+                      : "text-muted hover:text-foreground hover:bg-card/50"
                   }`}
                 >
                   <Icon size={16} className="shrink-0 ml-2" />
@@ -158,34 +150,16 @@ function SidebarContent({
         {!visuallyCollapsed && (
           <div className="glass p-3.5 rounded-xl border border-border">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#009B77]" />
-              <p className="text-[11px] font-bold text-white">Sistem Aktif</p>
+              <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
+              <p className="text-[11px] font-bold text-foreground">
+                Sistem Aktif
+              </p>
             </div>
-            <p className="text-[10px] text-slate-400 leading-tight">
+            <p className="text-[10px] text-muted leading-tight">
               Rule Engine + LLM berjalan normal
             </p>
           </div>
         )}
-
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          title={visuallyCollapsed ? "Keluar" : undefined}
-          className={`flex items-center gap-3 py-2.5 px-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors w-full ${
-            visuallyCollapsed ? "justify-center" : "justify-start"
-          }`}
-        >
-          <LogOut size={15} className="shrink-0" />
-          <span
-            className={`transition-all duration-200 ${
-              visuallyCollapsed
-                ? "opacity-0 max-w-0"
-                : "opacity-100 max-w-[120px]"
-            }`}
-          >
-            Keluar
-          </span>
-        </button>
       </div>
     </div>
   );
@@ -214,7 +188,7 @@ export default function Sidebar({
             className="fixed inset-0 z-40 bg-black/60 lg:hidden"
             onClick={onNavigate}
           />
-          <aside className="fixed left-0 top-0 z-50 lg:hidden w-[260px] h-full bg-[#1e293b] border-r border-border overflow-hidden flex flex-col">
+          <aside className="fixed left-0 top-0 z-50 lg:hidden w-[260px] h-full bg-card border-r border-border overflow-hidden flex flex-col">
             <SidebarContent
               visuallyCollapsed={false}
               onNavigate={onNavigate}
@@ -226,7 +200,7 @@ export default function Sidebar({
 
       {/* ── DESKTOP SIDEBAR ──────────────────────────── */}
       <aside
-        className="hidden lg:flex flex-col h-full bg-[#1e293b] border-r border-border sticky top-0 z-30 overflow-hidden"
+        className="hidden lg:flex flex-col h-full bg-card border-r border-border sticky top-0 z-30 overflow-hidden"
         style={{
           width: sidebarWidth,
           minWidth: sidebarWidth,
