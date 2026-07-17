@@ -71,7 +71,7 @@ export default function InsightPage() {
       setGenerating(true);
 
       const ai_url =
-        process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
       try {
         await safeFetch<InsightResponse>(
           `${ai_url}/generate-insight/${productId}`,

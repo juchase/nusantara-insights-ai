@@ -217,7 +217,7 @@ export default function ReportPage() {
         try {
           // a. Ambil metrik AI (confidence, growth, forecast_summary)
           const ai_url =
-            process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+            process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
           const aiRes = await fetch(`${ai_url}/predict-demand/${p.id}`, {
             method: "POST",
           });

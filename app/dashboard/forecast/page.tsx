@@ -122,7 +122,7 @@ export default function ForecastPage() {
     try {
       // 1. Panggil endpoint untuk generate forecasting baru
       const ai_url =
-        process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
       const predictData = await safeFetch<PredictDemandResponse>(
         `${ai_url}/predict-demand/${productId}`,
         { confidence: 0 },
