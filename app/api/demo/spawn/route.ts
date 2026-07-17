@@ -5,6 +5,8 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { Product } from "@prisma/client";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   try {
     const demoUserId = crypto.randomUUID();
