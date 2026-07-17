@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
+import os
 
 from database import get_db
 from app.services.aggregation_service import aggregate_product_metrics, calculate_sentiment_trend
@@ -210,7 +211,7 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         db.commit()
 
         # ── Kirim notifikasi ─────────────────────────────────────────────────────
-        notif_url = "http://localhost:3000/api/notifications"  # Sesuaikan jika deploy
+        notif_url = os.getenv("NEXTJS_PUBLIC_URL", "http://localhost:3000") + "/api/notifications"
 
         # 1. Notifikasi Insight Selesai
         payload = {

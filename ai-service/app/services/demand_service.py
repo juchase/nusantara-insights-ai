@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
-
 def _get_prophet():
     from prophet import Prophet
     return Prophet
@@ -131,30 +130,13 @@ def calculate_confidence(forecast: pd.DataFrame, data_points: int, diagnosis: di
         context = {"label": "Akurasi Rendah", "message": msg, "color": "red"}
     return confidence, context
 
-
-def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: str = "W"):
-    """Prediksi menggunakan Weighted Moving Average"""
-    last_weeks = df["y"].tail(min(3, len(df))).values
-    weights = [0.5, 0.3, 0.2][:len(last_weeks)]
-    weighted_avg = np.average(last_weeks, weights=weights) if len(last_weeks) > 0 else 0
-
-    if freq == "W":
-        future_dates = pd.date_range(start=df["ds"].max() + pd.Timedelta(weeks=1), periods=4, freq="W-MON")
-    else:
-        future_dates = pd.date_range(start=df["ds"].max() + pd.Timedelta(days=1), periods=7, freq="D")
-
-    forecast_future = pd.DataFrame({
-        "ds": future_dates,
-        "yhat": weighted_avg,
-        "yhat_lower": max(0, weighted_avg * 0.7),
-        "yhat_upper": weighted_avg * 1.3,
-    })
-
+def _save_forecast(forecast_future: pd.DataFrame, db, product_id: str, model_version: str, growth: float, confidence: float, freq: str):
+    """Simpan prediksi ke database dan kembalikan ringkasan."""
     db.execute(text("""
         DELETE FROM "Prediction" WHERE "productId" = :product_id
     """), {"product_id": product_id})
+    
     for _, row in forecast_future.iterrows():
-        # ── PERBAIKAN: Tambahkan modelVersion ──
         db.execute(text("""
             INSERT INTO "Prediction" (
                 "id", "productId", "predictionDate",
@@ -171,44 +153,35 @@ def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: s
             "pred_value": int(round(row["yhat"])),
             "pred_upper": int(round(row["yhat_upper"])),
             "pred_lower": int(round(row["yhat_lower"])),
-            "model_version": "moving_average"
+            "model_version": model_version
         })
     db.commit()
 
-    raw_growth = round(((weighted_avg - df["y"].mean()) / df["y"].mean()) * 100, 1) if df["y"].mean() > 0 else 0
-    avg_pred = weighted_avg
-
-    # ── Logika low-volume untuk Moving Average ──────────────────────────────
-    if avg_pred < 30 or abs(raw_growth) > 50:
-        growth = 0.0
-        growth_display = f"+{round(avg_pred)} unit"
+    # Growth display
+    if freq == "D":
+        unit_label = "unit/hari"
     else:
-        growth = raw_growth
-        if growth > 0:
-            growth_display = f"+{growth:.1f}%"
-        elif growth < 0:
-            growth_display = f"{growth:.1f}%"
-        else:
-            growth_display = "stabil"
+        unit_label = "unit/minggu"
 
+    avg_pred = float(forecast_future["yhat"].mean())
 
     return {
         "status": "success",
         "totalInserted": len(forecast_future),
         "growth": growth,
-        "growth_display": growth_display,
-        "confidence": 35.0,
+        "growth_display": f"+{round(avg_pred)} {unit_label}" if growth >= 0 else f"{round(avg_pred)} {unit_label}",
+        "confidence": confidence,
         "confidence_context": {
-            "label": "Estimasi Kasar",
-            "message": f"Data sangat terbatas, prediksi menggunakan rata-rata tertimbang.",
-            "color": "amber",
+            "label": "Estimasi Kasar" if confidence < 40 else "Akurasi Sedang",
+            "message": "Data sangat terbatas, prediksi menggunakan rata-rata tertimbang." if confidence < 40 else "Data cukup, prediksi cukup andal.",
+            "color": "amber" if confidence < 40 else "green",
         },
-        "model_used": "moving_average",
+        "model_used": model_version,
         "freq": freq,
-        "data_points": len(df),
+        "data_points": 0, # akan diisi oleh pemanggil
         "diagnosis": {},
         "forecast_summary": {
-            "avg": round(weighted_avg, 1),
+            "avg": round(avg_pred, 1),
             "min": round(forecast_future["yhat"].min(), 1),
             "max": round(forecast_future["yhat"].max(), 1),
             "lower": round(forecast_future["yhat_lower"].mean(), 1),
@@ -216,6 +189,50 @@ def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: s
         }
     }
 
+def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: str = "W"):
+    """Prediksi menggunakan Weighted Moving Average dengan penanganan data kosong"""
+    # Jika data kosong, buat prediksi default 0
+    if df.empty or df["ds"].isna().all():
+        periods = 7 if freq == "D" else 4
+        start_date = pd.Timestamp.now().normalize()
+        future_dates = pd.date_range(start=start_date, periods=periods, freq="D" if freq == "D" else "W-MON")
+        forecast_future = pd.DataFrame({
+            "ds": future_dates,
+            "yhat": 0,
+            "yhat_lower": 0,
+            "yhat_upper": 0,
+        })
+        return _save_forecast(
+            forecast_future, db, product_id, "moving_average_default",
+            growth=0, confidence=0, freq=freq
+        )
+
+    # Data tidak kosong – lanjutkan WMA normal
+    last_weeks = df["y"].tail(min(3, len(df))).values
+    weights = [0.5, 0.3, 0.2][:len(last_weeks)]
+    weighted_avg = np.average(last_weeks, weights=weights) if len(last_weeks) > 0 else 0
+
+    if freq == "W":
+        future_dates = pd.date_range(start=df["ds"].max() + pd.Timedelta(weeks=1), periods=4, freq="W-MON")
+    else:
+        future_dates = pd.date_range(start=df["ds"].max() + pd.Timedelta(days=1), periods=7, freq="D")
+
+    forecast_future = pd.DataFrame({
+        "ds": future_dates,
+        "yhat": weighted_avg,
+        "yhat_lower": max(0, weighted_avg * 0.7),
+        "yhat_upper": weighted_avg * 1.3,
+    })
+
+    raw_growth = round(((weighted_avg - df["y"].mean()) / df["y"].mean()) * 100, 1) if df["y"].mean() > 0 else 0
+    avg_pred = weighted_avg
+    growth = raw_growth if abs(raw_growth) <= 50 else 0
+    confidence = 35.0  # WMA fallback confidence
+
+    return _save_forecast(
+        forecast_future, db, product_id, "moving_average",
+        growth=growth, confidence=confidence, freq=freq
+    )
 
 def predict_and_save(product_id: str):
     db = SessionLocal()
