@@ -89,6 +89,7 @@ model Review {
   rating     Int
   sentiment  String?
   reviewDate DateTime
+  aspect     String?
 
   createdAt DateTime @default(now())
 
