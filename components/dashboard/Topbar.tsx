@@ -14,6 +14,7 @@ import { useState, useEffect, useRef } from "react";
 import DemoCountdown from "@/components/dashboard/DemoCountdown";
 import { safeFetch } from "@/lib/safe-fetch";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 type Notification = {
   id: string;
@@ -151,12 +152,7 @@ export default function Topbar({
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      window.location.href = "/login";
-    } catch (error) {
-      console.error(error);
-    }
+    await signOut({ callbackUrl: "/login" });
   };
 
   const toggleDropdown = () => setIsAvatarDropdownOpen((prev) => !prev);
