@@ -740,23 +740,23 @@ export default function ReportPage() {
 
   // ─── UI ──────────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6">
+    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6 bg-background text-foreground">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-[#F59E0B] transition mb-3"
+            className="inline-flex items-center gap-2 text-xs font-bold text-muted hover:text-primary transition mb-3"
           >
             <ArrowLeft size={14} />
             Kembali ke Dashboard
           </Link>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#F59E0B] mb-1">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-1">
             Report Builder
           </p>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-foreground">
             Ekspor Laporan Multi-Produk
           </h1>
-          <p className="text-sm text-slate-400 mt-2 max-w-lg">
+          <p className="text-sm text-muted mt-2 max-w-lg">
             Pilih beberapa produk untuk membuat laporan perbandingan performa,
             sentimen, dan risiko.
           </p>
@@ -766,10 +766,10 @@ export default function ReportPage() {
           <div className="relative group">
             <button
               disabled={exporting || selectedIds.size === 0}
-              className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-white text-sm font-medium transition-colors ${
+              className={`inline-flex items-center gap-2 h-9 px-4 rounded-lg text-foreground text-sm font-medium transition-colors ${
                 exporting || selectedIds.size === 0
-                  ? "bg-slate-600 cursor-not-allowed opacity-50"
-                  : "bg-[#009B77] hover:bg-[#007A5E]"
+                  ? "bg-card text-muted cursor-not-allowed opacity-50"
+                  : "bg-secondary hover:bg-secondary/80"
               }`}
             >
               {exporting ? (
@@ -782,19 +782,19 @@ export default function ReportPage() {
             <div className="absolute right-0 top-full mt-1 w-36 glass-card border border-border p-1 rounded-lg hidden group-hover:block z-20">
               <button
                 onClick={() => handleExport("pdf")}
-                className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#1e293b] rounded flex items-center gap-2 transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-card rounded flex items-center gap-2 transition-colors"
               >
                 <FileOutput size={14} /> PDF
               </button>
               <button
                 onClick={() => handleExport("word")}
-                className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#1e293b] rounded flex items-center gap-2 transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-card rounded flex items-center gap-2 transition-colors"
               >
                 <FileText size={14} /> Word
               </button>
               <button
                 onClick={() => handleExport("excel")}
-                className="w-full text-left px-3 py-2 text-sm text-white hover:bg-[#1e293b] rounded flex items-center gap-2 transition-colors"
+                className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-card rounded flex items-center gap-2 transition-colors"
               >
                 <FileSpreadsheet size={14} /> Excel
               </button>
@@ -804,27 +804,28 @@ export default function ReportPage() {
       </div>
 
       {/* Filter & Tabel produk */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#1e293b]/50 p-3 rounded-xl border border-border">
-        <div className="flex items-center gap-2 text-xs text-slate-400">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card/50 p-3 rounded-xl border border-border">
+        <div className="flex items-center gap-2 text-xs text-muted">
           <span>
-            Dipilih: <strong className="text-white">{selectedIds.size}</strong>{" "}
+            Dipilih:{" "}
+            <strong className="text-foreground">{selectedIds.size}</strong>{" "}
             produk
           </span>
           <button
             onClick={toggleSelectAll}
-            className="text-[#F59E0B] hover:text-[#D97706] transition underline"
+            className="text-primary hover:text-primary/80 transition underline"
           >
             {selectedIds.size === filteredProducts.length
               ? "Hapus semua"
               : "Pilih semua"}
           </button>
         </div>
-        <label className="flex items-center gap-2 h-9 w-full sm:w-64 rounded-lg bg-[#1e293b] border border-border px-3 focus-within:border-[#F59E0B]">
-          <Search size={14} className="text-slate-400" />
+        <label className="flex items-center gap-2 h-9 w-full sm:w-64 rounded-lg bg-card border border-border px-3 focus-within:border-primary">
+          <Search size={14} className="text-muted" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
             placeholder="Cari produk..."
           />
         </label>
@@ -833,10 +834,10 @@ export default function ReportPage() {
       <div className="glass-card border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[600px] text-left">
-            <thead className="bg-[#1e293b]/50 text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-border">
+            <thead className="bg-card/50 text-xs font-bold uppercase tracking-wider text-muted border-b border-border">
               <tr>
                 <th className="px-4 py-3 w-10 text-center">
-                  <input type="checkbox" className="accent-[#F59E0B]" />
+                  <input type="checkbox" className="accent-primary" />
                 </th>
                 <th className="px-4 py-3">Nama Produk</th>
                 <th className="px-4 py-3">Kategori</th>
@@ -847,19 +848,13 @@ export default function ReportPage() {
             <tbody className="divide-y divide-border text-sm">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-8 text-center text-slate-500"
-                  >
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
                     Memuat produk...
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-8 text-center text-slate-500"
-                  >
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted">
                     Tidak ada produk ditemukan.
                   </td>
                 </tr>
@@ -869,30 +864,30 @@ export default function ReportPage() {
                   const risk = insight?.riskLevel || "low";
                   const riskColor =
                     risk === "low"
-                      ? "text-[#009B77]"
+                      ? "text-secondary"
                       : risk === "medium"
-                        ? "text-[#F59E0B]"
-                        : "text-[#E24B4A]";
+                        ? "text-primary"
+                        : "text-danger";
                   return (
                     <tr
                       key={p.id}
-                      className="hover:bg-[#1e293b]/30 transition-colors"
+                      className="hover:bg-card/30 transition-colors"
                     >
                       <td className="px-4 py-3 text-center">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(p.id)}
                           onChange={() => toggleSelect(p.id)}
-                          className="accent-[#F59E0B] w-4 h-4 cursor-pointer"
+                          className="accent-primary w-4 h-4 cursor-pointer"
                         />
                       </td>
-                      <td className="px-4 py-3 font-medium text-white">
+                      <td className="px-4 py-3 font-medium text-foreground">
                         {p.name}
                       </td>
-                      <td className="px-4 py-3 text-slate-400">
+                      <td className="px-4 py-3 text-muted">
                         {p.category ?? "-"}
                       </td>
-                      <td className="px-4 py-3 text-center font-bold text-white">
+                      <td className="px-4 py-3 text-center font-bold text-foreground">
                         {insight?.healthScore ?? "-"}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -913,7 +908,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <div className="text-center text-xs text-slate-500">
+      <div className="text-center text-xs text-muted">
         Pastikan produk yang dipilih sudah memiliki data insight (Generate
         Insight terlebih dahulu di Dashboard).
       </div>

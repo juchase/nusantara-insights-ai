@@ -35,6 +35,17 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
+      // Periksa apakah user memiliki password (bukan login Google)
+      if (!dbUser.password) {
+        return NextResponse.json(
+          {
+            error:
+              "Akun ini tidak memiliki password. Gunakan login Google atau atur password melalui fitur lupa password.",
+          },
+          { status: 400 },
+        );
+      }
+
       const isValid = await bcrypt.compare(currentPassword, dbUser.password);
       if (!isValid) {
         return NextResponse.json(
