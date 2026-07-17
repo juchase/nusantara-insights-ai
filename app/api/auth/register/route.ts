@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { z } from "zod";
 
 const prisma = new PrismaClient();
 
+// Validasi input menggunakan Zod
 const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Nama minimal 2 karakter"),
+  email: z.string().email("Email tidak valid"),
+  password: z.string().min(6, "Password minimal 6 karakter"),
 });
 
 export async function POST(request: NextRequest) {
@@ -17,24 +17,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, password } = registerSchema.parse(body);
 
+    // Cek apakah email sudah terdaftar
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: "Email sudah terdaftar" },
         { status: 409 },
       );
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Buat user baru
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
+        // role otomatis 'USER' dari schema
       },
       select: {
         id: true,
@@ -44,36 +48,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || "fallback-secret",
-      { expiresIn: "7d" },
-    );
-
-    const response = NextResponse.json({
-      message: "Registration successful",
+    // ── Kembalikan respons sukses ──
+    // (Jangan set cookie JWT manual, karena sekarang menggunakan NextAuth)
+    return NextResponse.json({
+      message: "Registrasi berhasil",
       user,
     });
-
-    response.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    return response;
   } catch (error) {
+    // Jika error validasi Zod
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Validation failed", details: error.issues },
+        { error: "Validasi gagal", details: error.issues },
         { status: 400 },
       );
     }
 
-    console.error("Registration error:", error);
+    console.error("Error registrasi:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Terjadi kesalahan server" },
       { status: 500 },
     );
   }

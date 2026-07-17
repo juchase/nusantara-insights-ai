@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Mail, Lock, User, Loader2, ArrowRight } from "lucide-react";
 import SVGComponent from "@/components/svg/logo";
+import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -31,15 +32,17 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (response.ok) {
+      if (res.ok) {
+        // Auto-login setelah registrasi
+        await signIn("credentials", { email, password, redirect: false });
         router.push("/dashboard");
       } else {
         setError(data.error || "Registrasi gagal. Silakan coba lagi.");
