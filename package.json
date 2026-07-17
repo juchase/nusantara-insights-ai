@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "getKeyword": "ts-node -P tsconfig.server.json script/getKeyword.ts"
+    "getKeyword": "ts-node -P tsconfig.server.json script/getKeyword.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

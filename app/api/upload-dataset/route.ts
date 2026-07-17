@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { extractAspect } from "@/lib/aspect-extractor";
 import { getUserFromRequest } from "@/lib/auth";
 
-const AI_URL = "http://127.0.0.1:8000";
+const AI_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 export async function POST(req: NextRequest) {
   try {

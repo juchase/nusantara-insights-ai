@@ -216,12 +216,11 @@ export default function ReportPage() {
       const forecastPromises = productReports.map(async (p) => {
         try {
           // a. Ambil metrik AI (confidence, growth, forecast_summary)
-          const aiRes = await fetch(
-            `http://localhost:8000/predict-demand/${p.id}`,
-            {
-              method: "POST",
-            },
-          );
+          const ai_url =
+            process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+          const aiRes = await fetch(`${ai_url}/predict-demand/${p.id}`, {
+            method: "POST",
+          });
           let aiData: PredictDemandResponse | null = null;
           if (aiRes.ok) {
             aiData = await aiRes.json();

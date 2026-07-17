@@ -56,13 +56,17 @@ export async function POST(request: NextRequest) {
 
   try {
     // 🔌 call FastAPI backend untuk prediksi sentimen Linear SVC
-    const aiRes = await fetch("http://127.0.0.1:8000/analyze", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const aiRes = await fetch(
+      process.env.NEXT_PUBLIC_API_BASE_URL + "/analyze" ??
+        "http://127.0.0.1:8000/analyze",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: reviewText }),
       },
-      body: JSON.stringify({ text: reviewText }),
-    });
+    );
 
     if (!aiRes.ok) {
       throw new Error("FastAPI service error");
