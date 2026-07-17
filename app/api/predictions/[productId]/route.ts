@@ -5,10 +5,9 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { productId: string } },
+  { params }: { params: Promise<{ productId: string }> },
 ) {
   const userPayload = getUserFromRequest(req);
-
   if (!userPayload) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
