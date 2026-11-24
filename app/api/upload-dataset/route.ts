@@ -4,9 +4,57 @@ import { NextRequest, NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/lib/prisma";
 import { extractAspect } from "@/lib/aspect-extractor";
-import { getUserFromRequest } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 const AI_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+
+function parseDateOnly(value: unknown): Date | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const raw = String(value).trim();
+
+  if (!raw) return null;
+
+  let year: number;
+  let month: number;
+  let day: number;
+
+  // Format ISO: YYYY-MM-DD
+  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+
+  if (isoMatch) {
+    year = Number(isoMatch[1]);
+    month = Number(isoMatch[2]);
+    day = Number(isoMatch[3]);
+  } else {
+    // Format Indonesia: DD/MM/YYYY
+    const dmyMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+    if (!dmyMatch) {
+      return null;
+    }
+
+    day = Number(dmyMatch[1]);
+    month = Number(dmyMatch[2]);
+    year = Number(dmyMatch[3]);
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  // Validasi tanggal.
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,13 +70,13 @@ export async function POST(req: NextRequest) {
     const data = parsed.data as any[];
     console.log("📊 TOTAL BARIS DATA CSV:", data.length);
 
-    const userPayload = getUserFromRequest(req);
-    if (!userPayload) {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: userPayload.userId },
+      where: { id: session.user.id },
     });
 
     if (!user) {
@@ -40,6 +88,8 @@ export async function POST(req: NextRequest) {
 
     let success = 0;
     let skipped = 0;
+
+    const salesProductIds = new Set<string>();
 
     const normalize = (obj: any) => {
       const newObj: any = {};
@@ -80,127 +130,188 @@ export async function POST(req: NextRequest) {
         const chunk = batch.slice(j, j + CONCURRENT_LIMIT);
 
         const results = await Promise.all(
-          chunk.map(async (item, index) => {
-            try {
-              const normalized = normalize(item);
-              const productName = (
-                normalized.product || "General Product"
-              ).trim();
-              const reviewText =
-                normalized.reviewtext ||
-                normalized.review ||
-                normalized.review_text;
+          chunk.map(async (item) => {
+            const normalized = normalize(item);
 
-              if (!reviewText) {
-                console.warn("⚠️ Baris dilewati: teks ulasan kosong.");
-                return null;
-              }
+            const productName = String(
+              normalized.product || "General Product",
+            ).trim();
 
-              const rating = Number(normalized.rating || 3);
-              const dateValue = normalized.date || normalized.review_date;
-              let reviewDate: Date;
+            const productId = productCache.get(productName);
 
-              if (dateValue) {
-                reviewDate = new Date(dateValue);
-              } else {
-                const base = new Date();
-                base.setDate(base.getDate() - (i + j + index));
-                reviewDate = base;
-              }
-
-              if (isNaN(reviewDate.getTime())) {
-                console.error(`❌ Format tanggal tidak valid: ${productName}`);
-                return null;
-              }
-
-              const cachedProductId = productCache.get(productName);
-              if (!cachedProductId) return null;
-
-              const aspect = extractAspect(reviewText);
-              let sentiment = "neutral";
-
-              try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-                const aiRes = await fetch(`${AI_URL}/analyze`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ text: reviewText }),
-                  signal: controller.signal,
-                });
-
-                clearTimeout(timeoutId);
-                if (aiRes.ok) {
-                  const aiData = await aiRes.json();
-                  sentiment = aiData?.sentiment || "neutral";
-                }
-              } catch {
-                sentiment = "neutral";
-              }
-
-              // ── Cek duplikat review ──────────────────────────────────────
-              try {
-                await prisma.review.upsert({
-                  where: {
-                    productId_reviewText_reviewDate: {
-                      productId: cachedProductId,
-                      reviewText,
-                      reviewDate,
-                    },
-                  },
-                  update: {}, // no change needed if it already exists
-                  create: {
-                    productId: cachedProductId,
-                    reviewText,
-                    rating,
-                    reviewDate,
-                    sentiment,
-                  },
-                });
-              } catch (err: any) {
-                // Jika error unik constraint (P2002), lewati saja agar proses tidak berhenti
-                if (err.code === "P2002") {
-                  console.warn(
-                    `⚠ Lewati duplikat review: "${reviewText.substring(0, 20)}..."`,
-                  );
-                  // Jangan di-throw, cukup return null agar tidak dihitung sebagai success
-                  return null;
-                }
-                // Jika error lain, lempar ke luar agar Promise.all menangkapnya
-                throw err;
-              }
-
-              // ── UPSERT Sales ──────────────────────────────────────────────
-              const salesValue = Number(normalized.sales);
-              const salesDate = dateValue ? new Date(dateValue) : reviewDate;
-
-              if (
-                !isNaN(salesValue) &&
-                salesValue > 0 &&
-                !isNaN(salesDate.getTime())
-              ) {
-                await prisma.sales.upsert({
-                  where: {
-                    productId_date: {
-                      productId: cachedProductId,
-                      date: salesDate,
-                    },
-                  },
-                  update: { quantity: salesValue },
-                  create: {
-                    productId: cachedProductId,
-                    date: salesDate,
-                    quantity: salesValue,
-                  },
-                });
-              }
-
-              return true;
-            } catch (err) {
-              console.error("❌ Error pemrosesan baris:", err);
-              return null;
+            if (!productId) {
+              console.error(`Produk tidak ditemukan: ${productName}`);
+              return false;
             }
+
+            const reviewText = String(
+              normalized.reviewtext ||
+                normalized.review ||
+                normalized.review_text ||
+                "",
+            ).trim();
+
+            const dateValue = normalized.date || normalized.review_date;
+
+            // Tanggal wajib valid jika baris berisi review atau sales.
+            if (!dateValue) {
+              console.warn(`Tanggal kosong: ${productName}`);
+              return false;
+            }
+
+            const recordDate = parseDateOnly(dateValue);
+
+            console.log("[UPLOAD DATE DEBUG]", {
+              product: productName,
+              rawDate: dateValue,
+              parsedDate: recordDate?.toISOString() ?? null,
+            });
+
+            if (!recordDate) {
+              console.warn(`Tanggal tidak valid: ${dateValue}`);
+              return false;
+            }
+
+            if (Number.isNaN(recordDate.getTime())) {
+              console.warn(`Tanggal tidak valid: ${dateValue}`);
+              return false;
+            }
+
+            let rowProcessed = false;
+
+            // ==========================================
+            // 1. SIMPAN SALES SECARA INDEPENDEN
+            // ==========================================
+            const rawSales = normalized.sales;
+            const hasSales =
+              rawSales !== undefined &&
+              rawSales !== null &&
+              String(rawSales).trim() !== "";
+
+            if (hasSales) {
+              const salesValue = Number(rawSales);
+
+              if (Number.isInteger(salesValue) && salesValue >= 0) {
+                try {
+                  const savedSales = await prisma.sales.upsert({
+                    where: {
+                      productId_date: {
+                        productId,
+                        date: recordDate,
+                      },
+                    },
+                    update: {
+                      quantity: salesValue,
+                    },
+                    create: {
+                      productId,
+                      date: recordDate,
+                      quantity: salesValue,
+                    },
+                  });
+
+                  console.log("[DB SALES SAVED]", {
+                    id: savedSales.id,
+                    productId: savedSales.productId,
+                    quantity: savedSales.quantity,
+                  });
+
+                  salesProductIds.add(productId);
+                  rowProcessed = true;
+                } catch (error) {
+                  console.error(`Gagal menyimpan sales ${productName}:`, error);
+                }
+              } else {
+                console.warn(`Nilai sales tidak valid: ${rawSales}`);
+              }
+            }
+
+            // ==========================================
+            // 2. SIMPAN REVIEW JIKA ADA TEKS ULASAN
+            // ==========================================
+            if (reviewText) {
+              const rating = Number(normalized.rating);
+
+              // Rating harus 1-5. Jangan membuat rating default.
+              if (Number.isInteger(rating) && rating >= 1 && rating <= 5) {
+                try {
+                  const aspect = extractAspect(reviewText);
+                  let sentiment = "neutral";
+
+                  try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(
+                      () => controller.abort(),
+                      3000,
+                    );
+
+                    try {
+                      const aiRes = await fetch(`${AI_URL}/analyze`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          text: reviewText,
+                        }),
+                        signal: controller.signal,
+                      });
+
+                      if (aiRes.ok) {
+                        const aiData = await aiRes.json();
+                        sentiment = aiData?.sentiment || "neutral";
+                      }
+                    } finally {
+                      clearTimeout(timeoutId);
+                    }
+                  } catch {
+                    sentiment = "neutral";
+                  }
+
+                  const savedReview = await prisma.review.upsert({
+                    where: {
+                      productId_reviewText_reviewDate: {
+                        productId,
+                        reviewText,
+                        reviewDate: recordDate,
+                      },
+                    },
+                    update: {},
+                    create: {
+                      productId,
+                      reviewText,
+                      rating,
+                      reviewDate: recordDate,
+                      sentiment,
+                      aspect,
+                    },
+                  });
+
+                  console.log("[DB REVIEW SAVED]", {
+                    id: savedReview.id,
+                    productId: savedReview.productId,
+                    rating: savedReview.rating,
+                  });
+
+                  rowProcessed = true;
+                } catch (error: any) {
+                  if (error?.code === "P2002") {
+                    console.warn(`Review duplikat dilewati: ${productName}`);
+                  } else {
+                    console.error(
+                      `Gagal menyimpan review ${productName}:`,
+                      error,
+                    );
+                  }
+                }
+              } else {
+                console.warn(
+                  `Review dilewati karena rating tidak valid: ${productName}`,
+                );
+              }
+            }
+
+            return rowProcessed;
           }),
         );
 
@@ -232,7 +343,9 @@ export async function POST(req: NextRequest) {
     }
 
     // ── TRIGGER PROPHET + INSIGHT ────────────────────────────────────────────
-    const products = Array.from(productCache.entries());
+    const products = Array.from(productCache.entries()).filter(
+      ([, productId]) => salesProductIds.has(productId),
+    );
 
     // Prophet paralel
     console.log(
@@ -306,7 +419,7 @@ export async function POST(req: NextRequest) {
     // ── KIRIM NOTIFIKASI KE USER ──────────────────────────────────────────
     await prisma.notification.create({
       data: {
-        userId: userPayload.userId,
+        userId: session.user.id,
         title: "📊 Dataset Berhasil Diupload",
         message: `Dataset '${file.name}' telah diproses. ${success} data baru berhasil ditambahkan.`,
         type: "success",

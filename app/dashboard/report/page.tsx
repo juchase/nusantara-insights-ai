@@ -739,7 +739,7 @@ export default function ReportPage() {
 
   // ─── UI ──────────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6 bg-background text-foreground">
+    <div className="mx-auto max-w-300 space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6 bg-background text-foreground">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <Link
@@ -832,7 +832,7 @@ export default function ReportPage() {
 
       <div className="glass-card border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px] text-left">
+          <table className="w-full min-w-150 text-left">
             <thead className="bg-card/50 text-xs font-bold uppercase tracking-wider text-muted border-b border-border">
               <tr>
                 <th className="px-4 py-3 w-10 text-center">

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { signToken } from "@/lib/auth";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { Product } from "@prisma/client";
@@ -11,14 +10,13 @@ export async function POST(request: NextRequest) {
   try {
     const demoUserId = crypto.randomUUID();
     const email = `demo_${demoUserId}@temp.nusantarainsight.ai`;
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 jam
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const hashedPassword = await bcrypt.hash("demo123", 10);
 
     let newProduct: Product | undefined;
-    const hashedPassword = await bcrypt.hash("demo123", 10);
 
     // ── Transaksi atomik ──────────────────────────────────────────────────
     await prisma.$transaction(async (tx) => {
-      // 1. Buat user demo
       const newUser = await tx.user.create({
         data: {
           id: demoUserId,
@@ -31,7 +29,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 2. Cari produk template
+      // Cari produk template
       const templateProduct = await tx.product.findFirst({
         include: { reviews: true, sales: true },
         where: { name: { contains: "semprotan angin" } },
@@ -40,7 +38,6 @@ export async function POST(request: NextRequest) {
       let productId: string;
 
       if (templateProduct) {
-        // ── Clone produk template ──────────────────────────────────────────
         const cloned = await tx.product.create({
           data: {
             id: crypto.randomUUID(),
@@ -51,28 +48,28 @@ export async function POST(request: NextRequest) {
         });
         productId = cloned.id;
 
-        // Clone reviews
-        if (templateProduct.reviews.length > 0) {
-          const reviewData = templateProduct.reviews.map((review) => ({
+        // Clone reviews – hanya ambil field yang diperlukan, tanpa menyebarkan id/productId
+        if (templateProduct.reviews.length) {
+          const reviewData = templateProduct.reviews.map((r) => ({
             id: crypto.randomUUID(),
             productId: cloned.id,
-            reviewText: review.reviewText,
-            rating: review.rating,
-            sentiment: review.sentiment,
-            reviewDate: review.reviewDate,
+            reviewText: r.reviewText,
+            rating: r.rating,
+            sentiment: r.sentiment,
+            reviewDate: r.reviewDate,
             createdAt: new Date(),
           }));
           await tx.review.createMany({ data: reviewData });
         }
 
         // Clone sales
-        if (templateProduct.sales.length > 0) {
-          const salesData = templateProduct.sales.map((sale) => ({
+        if (templateProduct.sales.length) {
+          const salesData = templateProduct.sales.map((s) => ({
             id: crypto.randomUUID(),
             productId: cloned.id,
-            date: sale.date,
-            quantity: sale.quantity,
-            promotionFlag: sale.promotionFlag,
+            date: s.date,
+            quantity: s.quantity,
+            promotionFlag: s.promotionFlag,
           }));
           await tx.sales.createMany({ data: salesData });
         }
@@ -88,7 +85,7 @@ export async function POST(request: NextRequest) {
         });
         productId = dummyProduct.id;
 
-        // Review dummy
+        // Review dummy (5 data)
         const reviews = [
           {
             id: crypto.randomUUID(),
@@ -97,6 +94,7 @@ export async function POST(request: NextRequest) {
             rating: 5,
             sentiment: "positive",
             reviewDate: new Date("2025-10-01"),
+            createdAt: new Date(),
           },
           {
             id: crypto.randomUUID(),
@@ -105,6 +103,7 @@ export async function POST(request: NextRequest) {
             rating: 4,
             sentiment: "positive",
             reviewDate: new Date("2025-10-05"),
+            createdAt: new Date(),
           },
           {
             id: crypto.randomUUID(),
@@ -113,6 +112,7 @@ export async function POST(request: NextRequest) {
             rating: 3,
             sentiment: "neutral",
             reviewDate: new Date("2025-10-10"),
+            createdAt: new Date(),
           },
           {
             id: crypto.randomUUID(),
@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
             rating: 2,
             sentiment: "negative",
             reviewDate: new Date("2025-10-12"),
+            createdAt: new Date(),
           },
           {
             id: crypto.randomUUID(),
@@ -129,6 +130,7 @@ export async function POST(request: NextRequest) {
             rating: 4,
             sentiment: "positive",
             reviewDate: new Date("2025-10-15"),
+            createdAt: new Date(),
           },
         ];
         await tx.review.createMany({ data: reviews });
@@ -157,33 +159,19 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // ── Notifikasi dummy untuk user demo ──────────────────────────────
+      // ── Notifikasi dummy ──────────────────────────────────────────────
       const dummyNotifications = [
         {
           title: "Selamat Datang di NusantaraInsight AI!",
-          message:
-            "Anda sekarang menggunakan mode Demo. Upload dataset Anda untuk mulai analisis.",
+          message: "Anda sekarang menggunakan mode Demo.",
           type: "info",
         },
         {
           title: "Produk Demo Berhasil Dibuat",
-          message: `Produk "Semprotan Angin Air Gun Duster" telah ditambahkan ke dashboard Anda.`,
+          message: `Produk "Semprotan Angin Air Gun Duster" telah ditambahkan.`,
           type: "success",
         },
-        {
-          title: "Insight Tersedia",
-          message:
-            "AI telah menganalisis data. Cek halaman AI Insight untuk rekomendasi.",
-          type: "info",
-        },
-        {
-          title: "Tips Penggunaan",
-          message:
-            "Gunakan halaman Upload Data untuk menambahkan dataset ulasan dan penjualan.",
-          type: "info",
-        },
       ];
-
       await tx.notification.createMany({
         data: dummyNotifications.map((n) => ({
           userId: demoUserId,
@@ -193,53 +181,31 @@ export async function POST(request: NextRequest) {
         })),
       });
 
-      const found = await tx.product.findUnique({
-        where: { id: productId },
-      });
-      if (!found) throw new Error("Produk tidak ditemukan setelah transaksi.");
+      const found = await tx.product.findUnique({ where: { id: productId } });
+      if (!found) throw new Error("Produk tidak ditemukan");
       newProduct = found;
     });
 
-    // ── Panggil AI Pipeline (async, jangan tunggu) ──────────────────────
+    // ── Panggil FastAPI (async, jangan tunggu) ─────────────────────────────
     try {
-      if (!newProduct)
-        throw new Error("Produk tidak ditemukan setelah transaksi.");
-      await fetch(`http://localhost:8000/generate-insight/${newProduct.id}`, {
-        method: "GET",
-      });
-    } catch (error) {
-      console.warn(
-        "⚠️ FastAPI tidak dijangkau. Insight akan di-generate nanti.",
-      );
+      if (newProduct) {
+        await fetch(`http://localhost:8000/generate-insight/${newProduct.id}`, {
+          method: "GET",
+        });
+      }
+    } catch {
+      console.warn("FastAPI tidak dijangkau.");
     }
 
-    // ── Token & Cookie ──────────────────────────────────────────────────
-    const token = signToken(
-      {
-        userId: demoUserId,
-        role: "DEMO",
-        isDemo: true,
-        expiresAt: expiresAt.toISOString(),
-      },
-      "2h",
-    );
-
-    const response = NextResponse.json({
+    // ── Kembalikan credentials untuk auto-login di client ────────────────
+    return NextResponse.json({
       success: true,
       expiresAt: expiresAt.toISOString(),
+      credentials: {
+        email,
+        password: "demo123",
+      },
     });
-
-    response.cookies.set({
-      name: "token",
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 2 * 60 * 60,
-      path: "/",
-    });
-
-    return response;
   } catch (error) {
     console.error("❌ Gagal membuat demo sandbox:", error);
     return NextResponse.json(

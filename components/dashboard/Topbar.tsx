@@ -14,7 +14,7 @@ import { useState, useEffect, useRef } from "react";
 import DemoCountdown from "@/components/dashboard/DemoCountdown";
 import { safeFetch } from "@/lib/safe-fetch";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 type Notification = {
   id: string;
@@ -36,7 +36,7 @@ export default function Topbar({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const { data: session } = useSession();
 
   useEffect(() => {
     const loadAvatar = () => {
@@ -304,7 +304,18 @@ export default function Topbar({
           </button>
 
           {isAvatarDropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-48 glass-card border border-border rounded-lg p-1 shadow-xl z-30">
+            <div className="absolute right-0 top-full mt-2 w-56 glass-card border border-border rounded-lg p-1 shadow-xl z-30">
+              {/* ─── HEADER PROFIL ─── */}
+              <div className="px-3 py-3 border-b border-border mb-1">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {session?.user?.name || "Pengguna"}
+                </p>
+                <p className="text-xs text-muted truncate">
+                  {session?.user?.email || ""}
+                </p>
+              </div>
+
+              {/* ─── MENU ITEMS ─── */}
               <Link
                 href="/dashboard/profile"
                 onClick={() => setIsAvatarDropdownOpen(false)}

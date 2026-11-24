@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { getUserFromRequest } from "@/lib/auth";
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function GET(request: NextRequest) {
-  const userPayload = getUserFromRequest(request);
-
-  if (!userPayload) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const reviews = await prisma.review.findMany({
     where: {
       product: {
-        userId: userPayload.userId, // Melompat ke tabel Product untuk cek userId
+        userId: session.user.id, // Melompat ke tabel Product untuk cek userId
       },
     },
     include: {
@@ -37,9 +37,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const userPayload = getUserFromRequest(request);
-
-  if (!userPayload) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

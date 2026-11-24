@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserFromRequest } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,13 +35,13 @@ export async function POST(req: NextRequest) {
 
 // GET: Ambil notifikasi user (urutan terbaru)
 export async function GET(req: NextRequest) {
-  const user = getUserFromRequest(req);
-  if (!user) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const notifications = await prisma.notification.findMany({
-    where: { userId: user.userId },
+    where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
     take: 20, // Batasi jumlah
   });
@@ -49,8 +51,8 @@ export async function GET(req: NextRequest) {
 
 // PATCH: Tandai notifikasi sebagai sudah dibaca
 export async function PATCH(req: NextRequest) {
-  const user = getUserFromRequest(req);
-  if (!user) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -60,7 +62,7 @@ export async function PATCH(req: NextRequest) {
   if (!notificationId) {
     // Tandai semua sebagai dibaca
     await prisma.notification.updateMany({
-      where: { userId: user.userId, read: false },
+      where: { userId: session.user.id, read: false },
       data: { read: true },
     });
     return NextResponse.json({ success: true });
@@ -68,7 +70,7 @@ export async function PATCH(req: NextRequest) {
 
   // Tandai satu notifikasi
   await prisma.notification.update({
-    where: { id: notificationId, userId: user.userId },
+    where: { id: notificationId, userId: session.user.id },
     data: { read: true },
   });
 
@@ -76,15 +78,15 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = getUserFromRequest(req);
-  if (!user) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     // Hapus semua notifikasi user ini
     await prisma.notification.deleteMany({
-      where: { userId: user.userId },
+      where: { userId: session.user.id },
     });
 
     return NextResponse.json({ success: true });
