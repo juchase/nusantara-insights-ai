@@ -9,6 +9,53 @@ import { authOptions } from "../auth/[...nextauth]/route";
 
 const AI_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
+function parseDateOnly(value: unknown): Date | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const raw = String(value).trim();
+
+  if (!raw) return null;
+
+  let year: number;
+  let month: number;
+  let day: number;
+
+  // Format ISO: YYYY-MM-DD
+  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+
+  if (isoMatch) {
+    year = Number(isoMatch[1]);
+    month = Number(isoMatch[2]);
+    day = Number(isoMatch[3]);
+  } else {
+    // Format Indonesia: DD/MM/YYYY
+    const dmyMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+    if (!dmyMatch) {
+      return null;
+    }
+
+    day = Number(dmyMatch[1]);
+    month = Number(dmyMatch[2]);
+    year = Number(dmyMatch[3]);
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  // Validasi tanggal.
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -112,7 +159,18 @@ export async function POST(req: NextRequest) {
               return false;
             }
 
-            const recordDate = new Date(dateValue);
+            const recordDate = parseDateOnly(dateValue);
+
+            console.log("[UPLOAD DATE DEBUG]", {
+              product: productName,
+              rawDate: dateValue,
+              parsedDate: recordDate?.toISOString() ?? null,
+            });
+
+            if (!recordDate) {
+              console.warn(`Tanggal tidak valid: ${dateValue}`);
+              return false;
+            }
 
             if (Number.isNaN(recordDate.getTime())) {
               console.warn(`Tanggal tidak valid: ${dateValue}`);
@@ -135,7 +193,7 @@ export async function POST(req: NextRequest) {
 
               if (Number.isInteger(salesValue) && salesValue >= 0) {
                 try {
-                  await prisma.sales.upsert({
+                  const savedSales = await prisma.sales.upsert({
                     where: {
                       productId_date: {
                         productId,
@@ -150,6 +208,12 @@ export async function POST(req: NextRequest) {
                       date: recordDate,
                       quantity: salesValue,
                     },
+                  });
+
+                  console.log("[DB SALES SAVED]", {
+                    id: savedSales.id,
+                    productId: savedSales.productId,
+                    quantity: savedSales.quantity,
                   });
 
                   salesProductIds.add(productId);
@@ -204,7 +268,7 @@ export async function POST(req: NextRequest) {
                     sentiment = "neutral";
                   }
 
-                  await prisma.review.upsert({
+                  const savedReview = await prisma.review.upsert({
                     where: {
                       productId_reviewText_reviewDate: {
                         productId,
@@ -221,6 +285,12 @@ export async function POST(req: NextRequest) {
                       sentiment,
                       aspect,
                     },
+                  });
+
+                  console.log("[DB REVIEW SAVED]", {
+                    id: savedReview.id,
+                    productId: savedReview.productId,
+                    rating: savedReview.rating,
                   });
 
                   rowProcessed = true;
