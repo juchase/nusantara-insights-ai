@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth";
 import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ productId: string }> },
 ) {
-  const userPayload = getUserFromRequest(req);
-  if (!userPayload) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -17,7 +18,7 @@ export async function GET(
 
     // 1. Validasi kepemilikan produk
     const product = await prisma.product.findFirst({
-      where: { id: productId, userId: userPayload.userId },
+      where: { id: productId, userId: session.user.id },
     });
 
     if (!product) {
@@ -26,7 +27,7 @@ export async function GET(
 
     // 2. Ambil insight terbaru
     const insight = await prisma.insight.findFirst({
-      where: { productId, product: { userId: userPayload.userId } },
+      where: { productId, product: { userId: session.user.id } },
       orderBy: { createdAt: "desc" },
     });
 

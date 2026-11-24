@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
-  const userPayload = getUserFromRequest(req);
+  const session = await getServerSession(authOptions);
 
-  if (!userPayload) {
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
   const product = await prisma.product.findFirst({
     where: {
       id: productId,
-      userId: userPayload.userId,
+      userId: session.user.id,
     },
   });
 

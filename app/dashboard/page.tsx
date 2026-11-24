@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { InsightResponse } from "@/types/insight";
 
 import { safeFetch } from "@/lib/safe-fetch";
@@ -15,6 +16,7 @@ import ProductRanking from "@/components/dashboard/ProductRanking";
 import RiskOverview from "@/components/dashboard/RiskOverview";
 import SentimentTrendCard from "@/components/dashboard/SentimentTrendCard";
 import { mergeForecastData } from "@/lib/mergeForecastData";
+import { Loader2 } from "lucide-react";
 
 type Product = { id: string; name: string };
 
@@ -46,12 +48,14 @@ type DashboardAnalyticsResponse = {
 };
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
   const [chartData, setChartData] = useState<SentimentTimelinePoint[]>([]);
   const [forecastData, setForecastData] = useState<ForecastPoint[]>([]);
   const [growth, setGrowth] = useState<number>(0);
   const [topKeywords, setTopKeywords] = useState<[string, number][]>([]);
-  const [authLoading, setAuthLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
@@ -77,26 +81,16 @@ export default function DashboardPage() {
     color: "green" | "amber" | "red";
   } | null>(null);
   const [modelUsed, setModelUsed] = useState<string>("");
-  const [freq, setFreq] = useState<"D" | "W">("D"); // ← Tambahan state frekuensi
+  const [freq, setFreq] = useState<"D" | "W">("D");
 
-  const router = useRouter();
-
-  // ── AUTH ──────────────────────────────────────────────────────────────────
+  // ── AUTH CHECK ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (!res.ok) return router.push("/login");
-        const data = await res.json();
-        setUser(data.user);
-      } catch {
-        router.push("/login");
-      } finally {
-        setAuthLoading(false);
-      }
-    };
-    checkAuth();
-  }, [router]);
+    if (status === "loading" || isRedirecting) return;
+    if (!session) {
+      setIsRedirecting(true);
+      router.push("/login");
+    }
+  }, [session, status, router, isRedirecting]);
 
   // ── PRODUCTS ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -107,14 +101,13 @@ export default function DashboardPage() {
         if (data.length > 0) {
           setSelectedProduct(data[0].id);
         } else {
-          // Fix loading state for empty product list
           setAnalyticsLoading(false);
           setForecastLoading(false);
           setInsightLoading(false);
           setComplaintsLoading(false);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching products:", err);
         setAnalyticsLoading(false);
         setForecastLoading(false);
         setInsightLoading(false);
@@ -123,12 +116,12 @@ export default function DashboardPage() {
         setProductsLoaded(true);
       }
     };
-    fetchProducts();
-  }, []);
+    if (session) fetchProducts();
+  }, [session]);
 
   // ── ANALYTICS ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || !session) return;
 
     const loadAnalytics = async () => {
       try {
@@ -154,28 +147,24 @@ export default function DashboardPage() {
         setAnalyticsLoading(false);
       }
     };
-
     loadAnalytics();
-  }, [selectedProduct, products.length]);
+  }, [selectedProduct, products.length, session]);
 
   // ── INSIGHT ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || !session) return;
 
     const loadInsight = async () => {
       try {
         setInsightLoading(true);
-
         const insightData = await safeFetch<any>(
           `/api/insights/${selectedProduct}`,
           null,
         );
-
         if (!insightData) {
           setInsight(null);
           return;
         }
-
         setInsight({
           executive_summary:
             insightData.executive_summary || "Belum ada ringkasan.",
@@ -189,65 +178,55 @@ export default function DashboardPage() {
           llm_used: insightData.llm_used ?? false,
           metrics: insightData.metrics,
           sentiment_trend: insightData.sentiment_trend,
-          // ── tambahan ──
           confidence: insightData.confidence ?? 0,
           confidence_context: insightData.confidence_context ?? null,
           modelVersion: insightData.modelVersion || "prophet",
           freq: insightData.freq || "D",
         });
-
         if (insightData.forecastSummary) {
           setForecastSummary(insightData.forecastSummary);
         }
-
         const growthPct = insightData.metrics?.growth_percentage ?? 0;
         setGrowth(growthPct);
-
         setConfidence(insightData.confidence ?? 0);
         setConfidenceContext(insightData.confidence_context ?? null);
-        setModelUsed(insightData.modelVersion || "prophet"); // ← ambil modelVersion
-        setFreq(insightData.freq || "D"); // ← ambil freq
+        setModelUsed(insightData.modelVersion || "prophet");
+        setFreq(insightData.freq || "D");
       } finally {
         setInsightLoading(false);
       }
     };
-
     loadInsight();
-  }, [selectedProduct]);
+  }, [selectedProduct, session]);
 
   // ── FORECAST ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || !session) return;
 
     const loadForecast = async () => {
       try {
         setForecastLoading(true);
-
         const forecast = await safeFetch(
           `/api/predictions/${selectedProduct}`,
           { sales: [], predictions: [] },
         );
-
         setForecastData(
           mergeForecastData(
             forecast.sales,
             forecast.predictions,
           ) as ForecastPoint[],
         );
-
-        // modelUsed sudah diset di insight useEffect, tapi jika forecasting sendiri gagal, fallback
         if (!modelUsed) setModelUsed("prophet");
       } finally {
         setForecastLoading(false);
       }
     };
-
     loadForecast();
-  }, [selectedProduct, modelUsed]);
+  }, [selectedProduct, modelUsed, session]);
 
   // ── COMPLAINTS ────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || !session) return;
 
     const loadComplaints = async () => {
       try {
@@ -261,13 +240,26 @@ export default function DashboardPage() {
         setComplaintsLoading(false);
       }
     };
-
     loadComplaints();
-  }, [selectedProduct]);
+  }, [selectedProduct, session]);
+
+  // ── LOADING UI ────────────────────────────────────────────────────────────
+  if (status === "loading" || isRedirecting) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-sm text-muted">Memuat dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) return null; // tidak akan pernah dirender karena redirect
 
   // ── RENDER ────────────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto max-w-[1200px] space-y-4 pb-8 sm:space-y-5 lg:space-y-6 lg:pb-10 bg-background text-foreground">
+    <div className="mx-auto max-w-300 space-y-4 pb-8 sm:space-y-5 lg:space-y-6 lg:pb-10 bg-background text-foreground">
       <InsightCard
         insight={insight}
         products={products}
@@ -310,7 +302,7 @@ export default function DashboardPage() {
           confidenceContext={confidenceContext}
           modelUsed={modelUsed}
           forecastSummary={forecastSummary}
-          freq={freq} // ← FREKUENSI DINAMIS
+          freq={freq}
           loading={forecastLoading}
         />
       </div>

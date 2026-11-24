@@ -1,10 +1,12 @@
-import { getUserFromRequest } from "@/lib/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]/route";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const user = getUserFromRequest(req);
-  if (!user)
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   // Contoh: hapus semua refresh token atau session
   // Jika Anda menggunakan JWT dan tidak ada session di DB, Anda bisa memaksa user ganti password atau gunakan blacklist.

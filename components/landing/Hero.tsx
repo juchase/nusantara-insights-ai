@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import SVGComponent from "../svg/logo";
+import { signIn } from "next-auth/react";
 
 export default function Hero() {
   const router = useRouter();
@@ -36,7 +37,6 @@ export default function Hero() {
       }
 
       const data = await res.json();
-
       if (data.expiresAt) {
         localStorage.setItem(
           "demoExpireAt",
@@ -44,7 +44,15 @@ export default function Hero() {
         );
       }
 
+      // Auto-login
+      await signIn("credentials", {
+        email: data.credentials.email,
+        password: data.credentials.password,
+        redirect: false,
+      });
+
       router.push("/dashboard");
+
       router.refresh();
     } catch (err: any) {
       console.error(err);

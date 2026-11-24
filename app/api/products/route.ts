@@ -1,51 +1,55 @@
-import { getUserFromRequest } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function GET(request: NextRequest) {
-  const userPayload = getUserFromRequest(request);
-
-  if (!userPayload) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const products = await prisma.product.findMany({
-    where: {
-      userId: userPayload.userId,
-    },
-
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      createdAt: true,
-
-      _count: {
-        select: {
-          reviews: true,
-          sales: true,
-          predictions: true,
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        createdAt: true,
+        _count: {
+          select: {
+            reviews: true,
+            sales: true,
+            predictions: true,
+          },
+        },
+        insights: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+          select: {
+            healthScore: true,
+            riskLevel: true,
+            dominantIssue: true,
+            updatedAt: true,
+          },
         },
       },
-
-      insights: {
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 1,
-        select: {
-          healthScore: true,
-          riskLevel: true,
-          dominantIssue: true,
-          updatedAt: true,
-        },
+      orderBy: {
+        createdAt: "desc",
       },
-    },
+    });
 
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  return Response.json(products);
+    return NextResponse.json(products);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
 }
