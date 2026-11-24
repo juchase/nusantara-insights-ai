@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
             if (hasSales) {
               const salesValue = Number(rawSales);
 
-              if (Number.isFinite(salesValue) && salesValue >= 0) {
+              if (Number.isInteger(salesValue) && salesValue >= 0) {
                 try {
                   await prisma.sales.upsert({
                     where: {
@@ -219,6 +219,7 @@ export async function POST(req: NextRequest) {
                       rating,
                       reviewDate: recordDate,
                       sentiment,
+                      aspect,
                     },
                   });
 
