@@ -1,35 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserFromRequest } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { userId, title, message, type } = body;
+    const internalSecret = process.env.INTERNAL_API_SECRET;
+    const suppliedSecret = req.headers.get("x-internal-api-secret");
+    const isTrustedInternalCall = Boolean(
+      internalSecret && suppliedSecret && suppliedSecret === internalSecret,
+    );
 
-    if (!userId || !title || !message) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    let authenticatedUserId: string | undefined;
+    if (!isTrustedInternalCall) {
+      const session = await getServerSession(authOptions);
+      authenticatedUserId = session?.user?.id;
+      if (!authenticatedUserId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
+    const body = await req.json();
+    const { title, message, type } = body ?? {};
+    const userId = isTrustedInternalCall ? body?.userId : authenticatedUserId;
+    const allowedTypes = new Set(["info", "success", "warning", "error"]);
+
+    if (
+      typeof userId !== "string" || !userId ||
+      typeof title !== "string" || !title.trim() || title.length > 160 ||
+      typeof message !== "string" || !message.trim() || message.length > 2000 ||
+      (type !== undefined && !allowedTypes.has(type))
+    ) {
+      return NextResponse.json({ error: "Invalid notification payload" }, { status: 400 });
     }
 
     const notification = await prisma.notification.create({
       data: {
         userId,
-        title,
-        message,
+        title: title.trim(),
+        message: message.trim(),
         type: type || "info",
         read: false,
       },
     });
 
-    return NextResponse.json(notification);
+    return NextResponse.json(notification, { status: 201 });
   } catch (error) {
     console.error("Gagal membuat notifikasi:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 

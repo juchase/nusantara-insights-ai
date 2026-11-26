@@ -2,48 +2,27 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PackageSearch, RefreshCcw } from "lucide-react";
-
 import ForecastChart from "@/components/dashboard/ForecastChart";
 import SalesChart from "@/components/dashboard/SalesChart";
 import { mergeForecastData } from "@/lib/mergeForecastData";
 import { safeFetch } from "@/lib/safe-fetch";
 
 type Product = { id: string; name: string };
-type ForecastPoint = {
-  date: string;
-  actual?: number | null;
-  predicted?: number | null;
-  upper?: number | null;
-  lower?: number | null;
-};
+type ForecastPoint = { date: string; actual?: number | null; predicted?: number | null };
 type SalesPoint = { date: string; quantity: number };
-type PredictionPoint = {
-  predictionDate: string;
-  predictedSales: number;
-  freq?: string;
-  modelVersion?: string | null;
-  upperBound?: number | null;
-  lowerBound?: number | null;
-};
-type ForecastV2Response = {
-  success: boolean;
-  status: string;
-  product_id: string;
-  freq: "D" | "W";
-  model_used: string;
-  strategy: string;
-  fallback_used: boolean;
-  data_points: number;
-  totalInserted: number;
-  forecast: Array<{ date: string; predicted_sales: number }>;
+type PredictionPoint = { predictionDate: string; predictedSales: number; freq?: string; modelVersion?: string | null };
+type Confidence = { score: number | null; status: "available" | "unavailable"; reason?: string | null; label: string; message: string; color: "green" | "yellow" | "red" | "gray" };
+type Validation = { mae: number | null; rmse: number | null; wape: number | null; n_predictions: number };
+type ForecastResponse = {
+  status: string; product_id: string; freq: "D" | "W"; model_selected: string; model_used: string;
+  strategy: string; fallback_used: boolean; data_points: number; totalInserted: number;
+  validation: Validation; confidence: Confidence;
   forecast_summary: { avg: number; min: number; max: number };
 };
 
-function weekEndingMonday(dateValue: string): string {
-  // Pandas resample("W-MON") labels each bucket with its ending Monday.
-  const date = new Date(`${dateValue.slice(0, 10)}T00:00:00.000Z`);
-  const day = date.getUTCDay();
-  const daysUntilMonday = (8 - day) % 7;
+function weekEndingMonday(value: string): string {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+  const daysUntilMonday = (8 - date.getUTCDay()) % 7;
   date.setUTCDate(date.getUTCDate() + daysUntilMonday);
   return date.toISOString().slice(0, 10);
 }
@@ -54,20 +33,22 @@ function aggregateWeeklySales(sales: SalesPoint[]): SalesPoint[] {
     const monday = weekEndingMonday(sale.date);
     totals.set(monday, (totals.get(monday) ?? 0) + sale.quantity);
   }
-  return Array.from(totals, ([date, quantity]) => ({ date, quantity })).sort(
-    (a, b) => a.date.localeCompare(b.date),
-  );
+  return Array.from(totals, ([date, quantity]) => ({ date, quantity })).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function calculateGrowth(data: ForecastPoint[]): number {
-  const actual = data.filter((item) => item.actual != null).map((item) => item.actual ?? 0);
-  const predicted = data.filter((item) => item.predicted != null).map((item) => item.predicted ?? 0);
+  const actual = data.filter((point) => point.actual != null).map((point) => point.actual ?? 0);
+  const predicted = data.filter((point) => point.predicted != null).map((point) => point.predicted ?? 0);
   if (!actual.length || !predicted.length) return 0;
   const lastActual = actual[actual.length - 1];
-  const avgPredicted = predicted.reduce((sum, value) => sum + value, 0) / predicted.length;
-  if (lastActual === 0) return 0;
-  return Number((((avgPredicted - lastActual) / lastActual) * 100).toFixed(1));
+  const averagePredicted = predicted.reduce((sum, value) => sum + value, 0) / predicted.length;
+  return lastActual === 0 ? 0 : Number((((averagePredicted - lastActual) / lastActual) * 100).toFixed(1));
 }
+
+const unavailableConfidence: Confidence = {
+  score: null, status: "unavailable", reason: "not_loaded", label: "Belum tersedia",
+  message: "Jalankan Forecasting V2 untuk memperoleh hasil validasi.", color: "gray",
+};
 
 export default function ForecastPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -78,6 +59,8 @@ export default function ForecastPage() {
   const [strategy, setStrategy] = useState("");
   const [fallbackUsed, setFallbackUsed] = useState(false);
   const [dataPoints, setDataPoints] = useState(0);
+  const [confidence, setConfidence] = useState<Confidence>(unavailableConfidence);
+  const [validation, setValidation] = useState<Validation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [freq, setFreq] = useState<"D" | "W">("D");
@@ -88,7 +71,7 @@ export default function ForecastPage() {
       const data = await safeFetch<Product[]>("/api/products", []);
       if (!active) return;
       setProducts(data);
-      if (data.length > 0) setSelectedProduct(data[0].id);
+      if (data.length) setSelectedProduct(data[0].id);
       else setLoading(false);
     };
     void loadProducts();
@@ -96,51 +79,53 @@ export default function ForecastPage() {
   }, []);
 
   const fetchForecastData = useCallback(async (productId: string, frequency: "D" | "W") => {
-    const response = await fetch(
-      `/api/predictions/${encodeURIComponent(productId)}?freq=${frequency}`,
-      { cache: "no-store" },
-    );
+    const response = await fetch(`/api/predictions/${encodeURIComponent(productId)}?freq=${frequency}`, { cache: "no-store" });
     if (!response.ok) throw new Error("Gagal mengambil histori dan prediksi dari database.");
     const result = await response.json() as { sales: SalesPoint[]; predictions: PredictionPoint[] };
     const sales = frequency === "W" ? aggregateWeeklySales(result.sales) : result.sales;
     const predictions = result.predictions.filter((point) => !point.freq || point.freq === frequency);
     const latestModel = [...predictions].reverse().find((point) => point.modelVersion)?.modelVersion;
-    if (latestModel) setModelUsed(latestModel);
+    if (latestModel) setModelUsed(latestModel.split(":").pop() ?? latestModel);
     const merged = mergeForecastData(sales, predictions) as ForecastPoint[];
     setForecastData(merged);
     setGrowth(calculateGrowth(merged));
   }, []);
 
+  const fetchSavedSelection = useCallback(async (productId: string, frequency: "D" | "W") => {
+    const response = await fetch(`/api/forecast/selection/${encodeURIComponent(productId)}?frequency=${frequency}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Gagal mengambil status confidence dari database.");
+    const result = await response.json() as ForecastResponse;
+    setConfidence(result.confidence ?? unavailableConfidence);
+    setValidation(result.validation ?? null);
+    setModelUsed(result.model_used ?? result.model_selected ?? "");
+    setStrategy(result.strategy ?? "");
+    setFallbackUsed(Boolean(result.fallback_used));
+    setDataPoints(Number(result.data_points ?? 0));
+  }, []);
+
   useEffect(() => {
     if (!selectedProduct) return;
     let active = true;
-    setLoading(true);
-    setError("");
-    fetchForecastData(selectedProduct, freq)
-      .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : "Gagal memuat forecast.");
-      })
+    setLoading(true); setError("");
+    Promise.all([fetchForecastData(selectedProduct, freq), fetchSavedSelection(selectedProduct, freq)])
+      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Gagal memuat forecast."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [selectedProduct, freq, fetchForecastData]);
+  }, [selectedProduct, freq, fetchForecastData, fetchSavedSelection]);
 
   const handleRefresh = async () => {
     if (!selectedProduct || loading) return;
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     try {
-      const response = await fetch(
-        `/api/forecast/v2/${encodeURIComponent(selectedProduct)}?frequency=${freq}`,
-        { method: "POST" },
-      );
-      const result = await response.json() as ForecastV2Response & { error?: string; detail?: unknown };
-      if (!response.ok) {
-        throw new Error(result.error || "Forecasting V2 gagal dijalankan.");
-      }
-      setModelUsed(result.model_used);
-      setStrategy(result.strategy);
-      setFallbackUsed(result.fallback_used);
-      setDataPoints(result.data_points);
+      const response = await fetch(`/api/forecast/v2/${encodeURIComponent(selectedProduct)}?frequency=${freq}`, { method: "POST" });
+      const result = await response.json() as ForecastResponse & { error?: string };
+      if (!response.ok) throw new Error(result.error || "Forecasting V2 gagal dijalankan.");
+      setConfidence(result.confidence ?? unavailableConfidence);
+      setValidation(result.validation ?? null);
+      setModelUsed(result.model_used ?? "");
+      setStrategy(result.strategy ?? "");
+      setFallbackUsed(Boolean(result.fallback_used));
+      setDataPoints(Number(result.data_points ?? 0));
       await fetchForecastData(selectedProduct, freq);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menjalankan Forecasting V2.");
@@ -158,80 +143,56 @@ export default function ForecastPage() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Demand Intelligence</p>
           <h1 className="mt-1 text-2xl font-bold text-foreground">Forecast</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted">
-            Prediksi permintaan dari Forecasting V2 menggunakan keputusan model Phase 3.6.
-          </p>
+          <p className="mt-2 max-w-2xl text-sm text-muted">Prediksi permintaan dari Forecasting V2 dengan confidence berbasis Validation WAPE.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <label className="flex h-10 items-center gap-2 rounded-lg bg-card/60 border border-border px-3 focus-within:border-primary">
             <PackageSearch size={16} className="text-muted" />
-            <select value={selectedProduct} onChange={(event) => setSelectedProduct(event.target.value)}
-              className="w-full min-w-64 bg-transparent text-sm text-foreground outline-none">
-              {products.length === 0 ? <option value="">Tidak ada produk</option> :
-                products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+            <select value={selectedProduct} onChange={(event) => setSelectedProduct(event.target.value)} className="w-full min-w-64 bg-transparent text-sm text-foreground outline-none">
+              {products.length === 0 ? <option value="">Tidak ada produk</option> : products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
             </select>
           </label>
           <div className="inline-flex h-10 rounded-lg border border-border bg-card/60 p-1">
             {(["D", "W"] as const).map((value) => (
-              <button key={value} type="button" onClick={() => setFreq(value)}
-                className={`rounded-md px-3 text-xs font-semibold transition-colors ${freq === value ? "bg-primary text-background" : "text-muted hover:text-foreground"}`}>
+              <button key={value} type="button" onClick={() => setFreq(value)} className={`rounded-md px-3 text-xs font-semibold transition-colors ${freq === value ? "bg-primary text-background" : "text-muted hover:text-foreground"}`}>
                 {value === "D" ? "Daily" : "Weekly"}
               </button>
             ))}
           </div>
-          <button type="button" onClick={handleRefresh} disabled={!selectedProduct || loading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-background disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/80 transition-colors">
-            <RefreshCcw size={15} className={loading ? "animate-spin" : ""} />
-            Generate {freq === "D" ? "Daily" : "Weekly"}
+          <button type="button" onClick={handleRefresh} disabled={!selectedProduct || loading} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-background disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/80 transition-colors">
+            <RefreshCcw size={15} className={loading ? "animate-spin" : ""} /> Generate {freq === "D" ? "Daily" : "Weekly"}
           </button>
         </div>
       </div>
 
       <div className="glass-card border border-border p-5">
         <p className="text-sm font-medium text-foreground">{selectedName}</p>
-        <p className="mt-1 text-xs text-muted">
-          {loading ? "Memuat prediksi..." : `${forecastData.length} titik data · horizon ${horizonLabel}`}
-        </p>
-        {modelUsed && (
-          <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full bg-secondary/15 px-2.5 py-1 text-secondary">Model: {modelUsed}</span>
-            <span className="rounded-full bg-card px-2.5 py-1 text-muted">Strategi: {strategy}</span>
-            <span className={`rounded-full px-2.5 py-1 ${fallbackUsed ? "bg-primary/15 text-primary" : "bg-secondary/15 text-secondary"}`}>
-              {fallbackUsed ? "Fallback digunakan" : "Model selection berhasil"}
-            </span>
-            <span className="rounded-full bg-card px-2.5 py-1 text-muted">{dataPoints} data historis</span>
-          </div>
-        )}
+        <p className="mt-1 text-xs text-muted">{loading ? "Memuat prediksi..." : `${forecastData.length} titik data · horizon ${horizonLabel}`}</p>
+        {modelUsed && <div className="mt-3 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-secondary/15 px-2.5 py-1 text-secondary">Model: {modelUsed}</span>
+          {strategy && <span className="rounded-full bg-card px-2.5 py-1 text-muted">Strategi: {strategy}</span>}
+          <span className={`rounded-full px-2.5 py-1 ${fallbackUsed ? "bg-primary/15 text-primary" : "bg-secondary/15 text-secondary"}`}>{fallbackUsed ? "Fallback digunakan" : "Model selection berhasil"}</span>
+          {dataPoints > 0 && <span className="rounded-full bg-card px-2.5 py-1 text-muted">{dataPoints} data historis</span>}
+        </div>}
         {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <ForecastChart data={forecastData} growth={growth} confidence={0}
-          confidenceContext={null} modelUsed={modelUsed} forecastSummary={null}
-          freq={freq} loading={loading} />
+        <ForecastChart data={forecastData} growth={growth} confidence={confidence.score} confidenceContext={confidence} validation={validation} fallbackUsed={fallbackUsed} modelUsed={modelUsed} forecastSummary={null} freq={freq} loading={loading} />
         <SalesChart data={forecastData} modelUsed={modelUsed} loading={loading} />
       </div>
 
       <div className="glass-card border border-border p-5 mt-4">
         <p className="text-sm font-medium text-foreground mb-4">Detail Prediksi {freq === "D" ? "7 Hari" : "4 Minggu"}</p>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead><tr>{["Tanggal", "Prediksi (unit)", "Keterangan"].map((heading) => (
-              <th key={heading} className="text-left text-[11px] font-medium uppercase tracking-wider text-muted py-2 px-2 border-b border-border">{heading}</th>
-            ))}</tr></thead>
-            <tbody>
-              {forecastData.filter((point) => point.predicted != null).map((point) => (
-                <tr key={point.date} className="border-b border-border/10 last:border-0">
-                  <td className="text-sm text-muted py-3 px-2">{point.date}</td>
-                  <td className="text-sm font-medium text-foreground py-3 px-2">{Number(point.predicted ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })} unit</td>
-                  <td className="py-3 px-2"><span className="inline-block text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/20">Forecasting V2</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!loading && forecastData.every((point) => point.predicted == null) &&
-            <p className="py-4 text-center text-sm text-muted">Belum ada prediksi. Klik Generate untuk menjalankan Forecasting V2.</p>}
-        </div>
+        <div className="overflow-x-auto"><table className="w-full border-collapse">
+          <thead><tr>{["Tanggal", "Prediksi (unit)", "Keterangan"].map((heading) => <th key={heading} className="text-left text-[11px] font-medium uppercase tracking-wider text-muted py-2 px-2 border-b border-border">{heading}</th>)}</tr></thead>
+          <tbody>{forecastData.filter((point) => point.predicted != null).map((point) => <tr key={point.date} className="border-b border-border/10 last:border-0">
+            <td className="text-sm text-muted py-3 px-2">{point.date}</td>
+            <td className="text-sm font-medium text-foreground py-3 px-2">{Number(point.predicted ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })} unit</td>
+            <td className="py-3 px-2"><span className="inline-block text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/20">Forecasting V2</span></td>
+          </tr>)}</tbody>
+        </table>
+        {!loading && forecastData.every((point) => point.predicted == null) && <p className="py-4 text-center text-sm text-muted">Belum ada prediksi. Klik Generate untuk menjalankan Forecasting V2.</p>}</div>
       </div>
     </div>
   );

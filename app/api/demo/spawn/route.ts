@@ -186,15 +186,49 @@ export async function POST(request: NextRequest) {
       newProduct = found;
     });
 
-    // ── Panggil FastAPI (async, jangan tunggu) ─────────────────────────────
+    // ── Forecasting V2 + Insight dari hasil tersimpan ─────────────────────
     try {
-      if (newProduct) {
-        await fetch(`http://localhost:8000/generate-insight/${newProduct.id}`, {
-          method: "GET",
-        });
+      const aiServiceUrl =
+        process.env.AI_SERVICE_URL ||
+        process.env.NEXT_PUBLIC_API_BASE_URL ||
+        "http://localhost:8000";
+      const internalSecret = process.env.INTERNAL_API_SECRET;
+
+      if (newProduct && internalSecret) {
+        for (const frequency of ["D", "W"] as const) {
+          const forecastResponse = await fetch(
+            `${aiServiceUrl}/forecast/v2/${encodeURIComponent(newProduct.id)}?frequency=${frequency}`,
+            {
+              method: "POST",
+              headers: { "x-internal-api-secret": internalSecret },
+              cache: "no-store",
+            },
+          );
+          if (!forecastResponse.ok) {
+            console.warn(`Forecasting V2 ${frequency} demo gagal: ${forecastResponse.status}`);
+          }
+        }
+
+        const insightResponse = await fetch(
+          `${aiServiceUrl}/generate-insight/${encodeURIComponent(newProduct.id)}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-api-secret": internalSecret,
+            },
+            body: JSON.stringify({ frequency: "D" }),
+            cache: "no-store",
+          },
+        );
+        if (!insightResponse.ok) {
+          console.warn(`Generate Insight demo gagal: ${insightResponse.status}`);
+        }
+      } else if (!internalSecret) {
+        console.warn("INTERNAL_API_SECRET belum dikonfigurasi; forecasting demo dilewati.");
       }
-    } catch {
-      console.warn("FastAPI tidak dijangkau.");
+    } catch (error) {
+      console.warn("FastAPI tidak dijangkau saat menyiapkan demo:", error);
     }
 
     // ── Kembalikan credentials untuk auto-login di client ────────────────

@@ -1,51 +1,40 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   context: { params: Promise<{ productId: string }> },
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const { productId } = await context.params;
-
-    // 1. Validasi kepemilikan produk
     const product = await prisma.product.findFirst({
       where: { id: productId, userId: session.user.id },
+      select: { id: true },
     });
-
     if (!product) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // 2. Ambil insight terbaru
     const insight = await prisma.insight.findFirst({
       where: { productId, product: { userId: session.user.id } },
       orderBy: { createdAt: "desc" },
     });
+    if (!insight) return NextResponse.json(null, { status: 200 });
 
-    if (!insight) {
-      return NextResponse.json(null, { status: 200 });
-    }
-
-    const freq = (insight.freq ?? "D") as "D" | "W";
-    const modelVersion = insight.modelVersion ?? "prophet";
-    const takeCount = freq === "W" ? 4 : 7;
-    const predictions = await prisma.prediction.findMany({
-      where: { productId },
-      orderBy: { predictionDate: "asc" },
-      take: takeCount,
-    });
-
-    // 4. Ambil data review untuk sentimen
-    const [reviewStats, allReviews] = await Promise.all([
+    const freq = insight.freq === "W" ? "W" : "D";
+    const [predictions, reviewStats, allReviews, selection] = await Promise.all([
+      prisma.prediction.findMany({
+        where: { productId, freq },
+        orderBy: { predictionDate: "asc" },
+        take: freq === "W" ? 4 : 7,
+      }),
       prisma.review.groupBy({
         by: ["sentiment"],
         where: { productId },
@@ -56,32 +45,20 @@ export async function GET(
         select: { sentiment: true, reviewDate: true },
         orderBy: { reviewDate: "asc" },
       }),
+      prisma.forecastModelSelection.findUnique({
+        where: { productId_frequency: { productId, frequency: freq } },
+      }),
     ]);
 
-    // ── Hitung persentase sentimen global ──
-    const totalReviews = reviewStats.reduce(
-      (sum, r) => sum + r._count.sentiment,
-      0,
-    );
-    const positiveCount =
-      reviewStats.find((r) => r.sentiment === "positive")?._count.sentiment ??
-      0;
-    const negativeCount =
-      reviewStats.find((r) => r.sentiment === "negative")?._count.sentiment ??
-      0;
-    const neutralCount =
-      reviewStats.find((r) => r.sentiment === "neutral")?._count.sentiment ?? 0;
+    const totalReviews = reviewStats.reduce((sum, row) => sum + row._count.sentiment, 0);
+    const countFor = (sentiment: string) =>
+      reviewStats.find((row) => row.sentiment === sentiment)?._count.sentiment ?? 0;
+    const positiveCount = countFor("positive");
+    const negativeCount = countFor("negative");
+    const neutralCount = countFor("neutral");
+    const percentage = (count: number) => totalReviews ? Math.round((count / totalReviews) * 1000) / 10 : 0;
 
-    const positivePercentage =
-      totalReviews > 0 ? (positiveCount / totalReviews) * 100 : 0;
-    const negativePercentage =
-      totalReviews > 0 ? (negativeCount / totalReviews) * 100 : 0;
-    const neutralPercentage =
-      totalReviews > 0 ? (neutralCount / totalReviews) * 100 : 0;
-
-    // ── Hitung tren sentimen (periode) ──
-    let sentimentTrendResponse;
-
+    let sentimentTrendResponse: Record<string, unknown>;
     if (allReviews.length < 10) {
       sentimentTrendResponse = {
         status: "insufficient_data",
@@ -93,107 +70,57 @@ export async function GET(
         message: "Minimal 10 ulasan diperlukan untuk analisis tren",
       };
     } else {
-      const mid = Math.floor(allReviews.length / 2);
-      const firstPeriod = allReviews.slice(0, mid);
-      const secondPeriod = allReviews.slice(mid);
-
-      const calcPosPct = (reviewsArray: typeof allReviews) => {
-        if (reviewsArray.length === 0) return 0;
-        const pos = reviewsArray.filter(
-          (r) => r.sentiment === "positive",
-        ).length;
-        return Math.round((pos / reviewsArray.length) * 1000) / 10;
-      };
-
-      const firstPos = calcPosPct(firstPeriod);
-      const secondPos = calcPosPct(secondPeriod);
-      const delta = Math.round((secondPos - firstPos) * 10) / 10;
-
-      const formatDate = (dateInput: any) => {
-        if (!dateInput) return "—";
-        const d = new Date(dateInput);
-        return isNaN(d.getTime()) ? "—" : d.toISOString().slice(0, 10);
-      };
-
-      const firstStart = formatDate(firstPeriod[0]?.reviewDate);
-      const firstEnd = formatDate(
-        firstPeriod[firstPeriod.length - 1]?.reviewDate,
-      );
-      const secondStart = formatDate(secondPeriod[0]?.reviewDate);
-      const secondEnd = formatDate(
-        secondPeriod[secondPeriod.length - 1]?.reviewDate,
-      );
-
-      let trend = "stable";
-      let label = "Stabil";
-      let message = "Sentimen pelanggan relatif konsisten antar periode";
-
+      const midpoint = Math.floor(allReviews.length / 2);
+      const first = allReviews.slice(0, midpoint);
+      const second = allReviews.slice(midpoint);
+      const positiveRate = (items: typeof allReviews) =>
+        items.length ? Math.round((items.filter((item) => item.sentiment === "positive").length / items.length) * 1000) / 10 : 0;
+      const firstPositive = positiveRate(first);
+      const secondPositive = positiveRate(second);
+      const delta = Math.round((secondPositive - firstPositive) * 10) / 10;
+      const dateLabel = (value?: Date) => value ? new Date(value).toISOString().slice(0, 10) : "—";
+      let trend = "stable", label = "Stabil", message = "Sentimen pelanggan relatif konsisten antar periode";
       if (delta > 5) {
-        trend = "improving";
-        label = "Membaik";
+        trend = "improving"; label = "Membaik";
         message = `Sentimen positif naik ${delta.toFixed(1)}% pada periode akhir`;
       } else if (delta < -5) {
-        trend = "declining";
-        label = "Menurun";
+        trend = "declining"; label = "Menurun";
         message = `Sentimen positif turun ${Math.abs(delta).toFixed(1)}% pada periode akhir`;
       }
-
       sentimentTrendResponse = {
-        status: "ok",
-        trend,
-        label,
-        message,
-        delta,
-        first_period_positive: firstPos,
-        second_period_positive: secondPos,
-        first_period_range: `${firstStart} — ${firstEnd}`,
-        second_period_range: `${secondStart} — ${secondEnd}`,
-        first_period_count: firstPeriod.length,
-        second_period_count: secondPeriod.length,
+        status: "ok", trend, label, message, delta,
+        first_period_positive: firstPositive,
+        second_period_positive: secondPositive,
+        first_period_range: `${dateLabel(first[0]?.reviewDate)} — ${dateLabel(first[first.length - 1]?.reviewDate)}`,
+        second_period_range: `${dateLabel(second[0]?.reviewDate)} — ${dateLabel(second[second.length - 1]?.reviewDate)}`,
+        first_period_count: first.length,
+        second_period_count: second.length,
       };
     }
 
-    // 6. Siapkan forecastSummary dari prediksi
-    const forecastSummary =
-      predictions.length > 0
-        ? {
-            avg: Math.round(
-              predictions.reduce((s, p) => s + p.predictedSales, 0) /
-                predictions.length,
-            ),
-            min: Math.min(...predictions.map((p) => p.predictedSales)),
-            max: Math.max(...predictions.map((p) => p.predictedSales)),
-            lower: Math.min(
-              ...predictions.map(
-                (p) => (p as any).lowerBound ?? p.predictedSales,
-              ),
-            ),
-            upper: Math.max(
-              ...predictions.map(
-                (p) => (p as any).upperBound ?? p.predictedSales,
-              ),
-            ),
-          }
-        : null;
+    const forecastSummary = predictions.length ? {
+      avg: Math.round(predictions.reduce((sum, item) => sum + item.predictedSales, 0) / predictions.length * 100) / 100,
+      min: Math.min(...predictions.map((item) => item.predictedSales)),
+      max: Math.max(...predictions.map((item) => item.predictedSales)),
+    } : null;
 
-    // ── HITUNG GROWTH DAN DETEKSI LOW-VOLUME ──────────────────────────────
     const rawGrowth = Number(insight.demandGrowthPct ?? 0);
-    const avgPred = forecastSummary?.avg ?? 0;
-    const isLowVolume = avgPred < 10 && Math.abs(rawGrowth) > 50;
-
+    const averageForecast = forecastSummary?.avg ?? 0;
+    const lowVolume = averageForecast < 10 && Math.abs(rawGrowth) > 50;
     let growthPercentage = rawGrowth;
     let forecastTrend = insight.demandTrend ?? "stable";
-
-    if (isLowVolume) {
-      // Set growth ke 0 agar rekomendasi tidak menulis angka gila
+    if (lowVolume) {
       growthPercentage = 0;
-      // Tapi trend tetap mengikuti arah asli
-      if (rawGrowth > 0) forecastTrend = "up";
-      else if (rawGrowth < 0) forecastTrend = "down";
-      else forecastTrend = "stable";
+      forecastTrend = rawGrowth > 0 ? "up" : rawGrowth < 0 ? "down" : "stable";
     }
 
-    // 7. Return JSON lengkap
+    // Nilai 0 adalah confidence valid; hanya null berarti belum tersedia.
+    const confidence = insight.confidence == null ? null : Number(insight.confidence);
+    const confidenceAvailable = confidence !== null && Number.isFinite(confidence);
+    const confidenceColor = ["green", "yellow", "red", "gray"].includes(insight.confidenceColor ?? "")
+      ? insight.confidenceColor!
+      : confidenceAvailable ? "red" : "gray";
+
     return NextResponse.json({
       executive_summary: insight.executiveSummary ?? "",
       summary: insight.summary ?? "",
@@ -204,36 +131,40 @@ export async function GET(
       dominant_issue: insight.dominantIssue ?? "—",
       risk_level: insight.riskLevel ?? "low",
       llm_used: insight.llmUsed ?? false,
-      freq: insight.freq ?? "D", // default "D"
-      modelVersion: insight.modelVersion ?? "prophet",
+      freq,
+      modelVersion: insight.modelVersion ?? "unavailable",
       metrics: {
-        positive_percentage: Math.round(positivePercentage * 10) / 10,
-        negative_percentage: Math.round(negativePercentage * 10) / 10,
-        neutral_percentage: Math.round(neutralPercentage * 10) / 10,
+        positive_percentage: percentage(positiveCount),
+        negative_percentage: percentage(negativeCount),
+        neutral_percentage: percentage(neutralCount),
         total_reviews: totalReviews,
         growth_percentage: growthPercentage,
         forecast_trend: forecastTrend,
         top_keyword: insight.dominantIssue ?? "",
       },
       sentiment_trend: sentimentTrendResponse,
-      confidence: (insight as any).confidence ?? 0,
-      confidence_context: (insight as any).confidence
-        ? {
-            label: (insight as any).confidenceLabel ?? "Akurasi Rendah",
-            message: (insight as any).confidenceMessage ?? "",
-            color:
-              ((insight as any).confidenceColor as "green" | "amber" | "red") ??
-              "red",
-          }
-        : null,
+      confidence,
+      confidence_context: {
+        status: confidenceAvailable ? "available" : "unavailable",
+        reason: confidenceAvailable ? null : "confidence_not_available",
+        label: insight.confidenceLabel ?? (confidenceAvailable ? "Reliabilitas terukur" : "Belum tersedia"),
+        message: insight.confidenceMessage ?? (confidenceAvailable
+          ? "Skor dihitung dari Validation WAPE pada data validasi."
+          : "Confidence belum tersedia karena evaluasi belum memenuhi persyaratan."),
+        color: confidenceColor,
+      },
+      validation: selection ? {
+        wape: selection.validationWape,
+        mae: selection.validationMae,
+        rmse: selection.validationRmse,
+        n_predictions: selection.nPredictions,
+        evaluation_status: selection.evaluationStatus,
+      } : null,
       forecastSummary,
     });
   } catch (error) {
     console.error("Error inside GET insights route:", error);
-    return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -242,4 +173,74 @@ function getHealthLabel(score: number): string {
   if (score >= 55) return "Baik";
   if (score >= 35) return "Perlu Perhatian";
   return "Kritis";
+}
+
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ productId: string }> },
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { productId } = await context.params;
+  const product = await prisma.product.findFirst({
+    where: { id: productId, userId: session.user.id },
+    select: { id: true },
+  });
+  if (!product) {
+    return NextResponse.json({ error: "Produk tidak ditemukan" }, { status: 404 });
+  }
+
+  const internalSecret = process.env.INTERNAL_API_SECRET;
+  if (!internalSecret) {
+    return NextResponse.json(
+      { error: "INTERNAL_API_SECRET belum dikonfigurasi" },
+      { status: 503 },
+    );
+  }
+
+  let body: { frequency?: "D" | "W" } = {};
+  try {
+    body = await request.json();
+  } catch {
+    body = {};
+  }
+  const frequency = body.frequency ?? "D";
+  if (frequency !== "D" && frequency !== "W") {
+    return NextResponse.json({ error: "frequency harus D atau W" }, { status: 400 });
+  }
+
+  const aiServiceUrl =
+    process.env.AI_SERVICE_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "http://localhost:8000";
+
+  try {
+    const response = await fetch(
+      `${aiServiceUrl}/generate-insight/${encodeURIComponent(productId)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-api-secret": internalSecret,
+        },
+        body: JSON.stringify({ frequency }),
+        cache: "no-store",
+      },
+    );
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: payload?.detail || payload?.error || "Gagal membuat Insight", detail: payload },
+        { status: response.status === 409 ? 409 : response.status === 422 ? 422 : 502 },
+      );
+    }
+    return NextResponse.json(payload);
+  } catch (error) {
+    console.error("AI Service Insight tidak dapat dijangkau:", error);
+    return NextResponse.json({ error: "AI service tidak dapat dijangkau" }, { status: 503 });
+  }
 }

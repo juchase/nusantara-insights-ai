@@ -50,8 +50,8 @@ export default function InsightPage() {
           risk_level: "low",
           llm_used: false,
           metrics: undefined,
-          confidence: 0,
-          confidence_context: null,
+          confidence: null,
+          confidence_context: { status: "unavailable", reason: "not_generated", label: "Belum tersedia", message: "Generate insight untuk menghitung confidence dari Validation WAPE.", color: "gray" },
           modelVersion: "prophet",
           freq: "D",
         },
@@ -64,35 +64,21 @@ export default function InsightPage() {
     }
   }, []);
 
-  // ── Generate ulang insight (panggil FastAPI) ──
+  // ── Generate ulang Insight dari hasil Forecasting V2 yang sudah tersimpan ──
   const regenerateInsight = useCallback(
     async (productId: string) => {
       if (!productId) return;
       setGenerating(true);
-
-      const ai_url =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
       try {
-        await safeFetch<InsightResponse>(
-          `${ai_url}/generate-insight/${productId}`,
-          {
-            executive_summary: "",
-            summary: "",
-            health_score: 0,
-            health_label: "",
-            insights: [],
-            recommendations: [],
-            dominant_issue: "",
-            risk_level: "low",
-            llm_used: false,
-            metrics: undefined,
-            confidence: 0,
-            confidence_context: null,
-            modelVersion: "prophet",
-            freq: "D",
-          },
-          { method: "GET" },
-        );
+        const response = await fetch(`/api/insights/${encodeURIComponent(productId)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ frequency: "D" }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.error || "Gagal membuat Insight");
+        }
         await fetchInsightFromDB(productId);
       } catch (error) {
         console.error("Gagal generate insight:", error);
@@ -106,15 +92,23 @@ export default function InsightPage() {
   // ── Initial load data ──
   useEffect(() => {
     const loadInitialData = async () => {
-      const [productData, analytics] = await Promise.all([
-        safeFetch<Product[]>("/api/products", []),
-        safeFetch<DashboardAnalyticsResponse>("/api/dashboard-analytics", {
-          totalReviews: 0,
-          totalProducts: 0,
-          avgRating: 0,
-          sentimentStats: { positive: 0, neutral: 0, negative: 0 },
-        }),
-      ]);
+      const productData = await safeFetch<Product[]>("/api/products", []);
+      const analytics = productData.length > 0
+        ? await safeFetch<DashboardAnalyticsResponse>(
+            `/api/dashboard-analytics?productId=${encodeURIComponent(productData[0].id)}`,
+            {
+              totalReviews: 0,
+              totalProducts: productData.length,
+              avgRating: 0,
+              sentimentStats: { positive: 0, neutral: 0, negative: 0 },
+            },
+          )
+        : {
+            totalReviews: 0,
+            totalProducts: 0,
+            avgRating: 0,
+            sentimentStats: { positive: 0, neutral: 0, negative: 0 },
+          };
 
       setProducts(productData);
       if (productData.length > 0) setSelectedProduct(productData[0].id);

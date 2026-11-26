@@ -1,7 +1,9 @@
 
 import logging
+import os
+import hmac
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Header
 
 from app.services.forecasting_v2.forecast_service import (
     run_forecast_v2,
@@ -19,6 +21,7 @@ router = APIRouter(
 def generate_forecast_v2(
     product_id: str,
     frequency: str = Query(default="D"),
+    x_internal_api_secret: str | None = Header(default=None),
 ):
     """
     Generate demand forecast menggunakan Forecasting V2.
@@ -26,6 +29,12 @@ def generate_forecast_v2(
     D = Daily, horizon 7 hari.
     W = Weekly, horizon 4 minggu.
     """
+
+    expected_secret = os.getenv("INTERNAL_API_SECRET")
+    if not expected_secret or not x_internal_api_secret or not hmac.compare_digest(
+        expected_secret, x_internal_api_secret
+    ):
+        raise HTTPException(status_code=401, detail="Unauthorized internal request")
 
     if frequency not in {"D", "W"}:
         raise HTTPException(

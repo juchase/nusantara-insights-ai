@@ -1,11 +1,12 @@
 import uuid
 import json
 import requests
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
 import os
+import hmac
 
 from database import get_db
 from app.services.aggregation_service import aggregate_product_metrics, calculate_sentiment_trend
@@ -14,44 +15,70 @@ from app.services.prompt_builder import build_prompt
 from app.services.llm_service import safe_generate
 from app.services.insight_engine import generate_structured_insights, generate_executive_summary
 from app.services.keyword_service import NEGATIVE_STANDALONE
-from app.services.demand_service import predict_and_save
+from app.services.forecasting_v2.saved_forecast_context import load_saved_forecast_context
 
 router = APIRouter()
 
 @router.get("/generate-insight/{product_id}")
-def generate_insight(product_id: str, db: Session = Depends(get_db)):
+def generate_insight_get_deprecated(product_id: str):
+    """GET no longer generates data; use authenticated server-side POST."""
+    raise HTTPException(
+        status_code=405,
+        detail="Gunakan POST /generate-insight/{product_id} setelah Forecasting V2 selesai.",
+    )
+
+
+@router.post("/generate-insight/{product_id}")
+def generate_insight_from_saved_forecast(
+    product_id: str,
+    payload: dict = Body(default={}),
+    x_internal_api_secret: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    """Generate Insight from persisted Forecasting V2 output; never runs forecasting."""
+    expected_secret = os.getenv("INTERNAL_API_SECRET")
+    if not expected_secret or not x_internal_api_secret or not hmac.compare_digest(
+        expected_secret, x_internal_api_secret
+    ):
+        raise HTTPException(status_code=401, detail="Unauthorized internal request")
+
+    product = db.execute(
+        text('SELECT id FROM "Product" WHERE id = :pid'),
+        {"pid": product_id},
+    ).fetchone()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    frequency = str((payload or {}).get("frequency", "D")).upper()
+    try:
+        forecast_result = load_saved_forecast_context(db, product_id, frequency)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except LookupError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    return _generate_insight(product_id, db, forecast_result)
+
+
+def _generate_insight(product_id: str, db: Session, forecast_result: dict):
     current_time = datetime.now()
 
-    # ── 1. Forecasting ──────────────────────────────────────────────────────
-    forecast_result = predict_and_save(product_id)
+    confidence_data = forecast_result.get("confidence") or {}
+    confidence = confidence_data.get("score")
+    confidence_context = {
+        "status": confidence_data.get("status", "unavailable"),
+        "reason": confidence_data.get("reason"),
+        "label": confidence_data.get("label", "Belum tersedia"),
+        "message": confidence_data.get("message", "Confidence belum tersedia."),
+        "color": confidence_data.get("color", "gray"),
+    }
+    growth = float(forecast_result.get("growth", 0.0))
+    growth_display = forecast_result.get("growth_display", "stabil")
+    forecast_summary = forecast_result.get("forecast_summary", {})
+    model_used = forecast_result.get("model_used", "unavailable")
+    freq = forecast_result.get("freq", "D")
 
-    # ── Ambil data dari forecasting ──────────────────────────────────────────
-    if forecast_result.get("status") == "success":
-        growth = float(forecast_result.get("growth", 0))
-        growth_display = forecast_result.get("growth_display", "meningkat")
-        confidence = float(forecast_result.get("confidence", 0))
-        confidence_context = forecast_result.get("confidence_context", {
-            "label": "Akurasi Rendah",
-            "message": "Data tidak cukup",
-            "color": "red"
-        })
-        forecast_summary = forecast_result.get("forecast_summary", {})
-        model_used = forecast_result.get("model_used", "prophet")
-        freq = forecast_result.get("freq", "D")
-    else:
-        growth = 0.0
-        growth_display = "meningkat"
-        confidence = 0.0
-        confidence_context = {
-            "label": "Gagal Prediksi",
-            "message": "Terjadi kesalahan pada forecasting.",
-            "color": "red"
-        }
-        forecast_summary = {}
-        model_used = "prophet"
-        freq = "D"
-
-    # ── 2. Ambil data produk ────────────────────────────────────────────────
+    # ── 1. Ambil dan validasi produk sebelum proses insight ─────────────────
     product_row = db.execute(text("""
         SELECT name, "userId" FROM "Product" WHERE id = :pid
     """), {"pid": product_id}).fetchone()
@@ -170,10 +197,10 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "health_score": float(score),
         "llm_used": llm_used,
         "model": "qwen2.5" if llm_used else None,
-        "confidence": float(confidence),
-        "confidence_label": confidence_context.get("label", "Akurasi Rendah"),
+        "confidence": float(confidence) if confidence is not None else None,
+        "confidence_label": confidence_context.get("label", "Belum tersedia"),
         "confidence_message": confidence_context.get("message", ""),
-        "confidence_color": confidence_context.get("color", "red"),
+        "confidence_color": confidence_context.get("color", "gray"),
         "freq": freq,
         "model_version": model_used,
         "created_at": current_time,
@@ -221,7 +248,9 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
             "type": "info"
         }
         try:
-            requests.post(notif_url, json=payload)
+            internal_secret = os.getenv("INTERNAL_API_SECRET")
+            headers = {"x-internal-api-secret": internal_secret} if internal_secret else {}
+            requests.post(notif_url, json=payload, headers=headers, timeout=5)
         except Exception as e:
             print(f"⚠️ Gagal kirim notifikasi insight: {e}")
 
@@ -234,11 +263,13 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
                 "type": "warning"
             }
             try:
-                requests.post(notif_url, json=payload_risk)
+                internal_secret = os.getenv("INTERNAL_API_SECRET")
+                headers = {"x-internal-api-secret": internal_secret} if internal_secret else {}
+                requests.post(notif_url, json=payload_risk, headers=headers, timeout=5)
             except Exception as e:
                 print(f"⚠️ Gagal kirim notifikasi risiko tinggi: {e}")
                 
-        print(f"✅ Insight saved — {product_name} | confidence: {confidence}% | LLM Used: {llm_used}")
+        print(f"✅ Insight saved — {product_name} | confidence: {confidence if confidence is not None else 'unavailable'} | LLM Used: {llm_used}")
 
     except Exception as e:
         db.rollback()
@@ -262,4 +293,9 @@ def generate_insight(product_id: str, db: Session = Depends(get_db)):
         "confidence":         confidence,
         "confidence_context": confidence_context,
         "forecast_summary":   forecast_summary,
+        "forecast_model": model_used,
+        "forecast_frequency": freq,
+        "forecast_validation": forecast_result.get("validation") if "forecast_result" in locals() else None,
+        "forecast_strategy": forecast_result.get("strategy") if "forecast_result" in locals() else "unavailable",
+        "forecast_fallback_used": forecast_result.get("fallback_used") if "forecast_result" in locals() else True,
     }

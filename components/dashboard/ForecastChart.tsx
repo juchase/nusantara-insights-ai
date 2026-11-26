@@ -12,9 +12,16 @@ type ForecastPoint = {
 };
 
 type ConfidenceContext = {
+  status?: "available" | "unavailable";
+  reason?: string | null;
   label: string;
   message: string;
-  color: "green" | "amber" | "red";
+  color: "green" | "yellow" | "red" | "gray";
+};
+
+type ValidationMetrics = {
+  wape: number | null;
+  n_predictions: number;
 };
 
 type ForecastSummary = {
@@ -83,7 +90,7 @@ function IntervalBar({
       </div>
 
       <p className="text-[10px] text-muted text-center mt-1.5">
-        Rentang prediksi 80% (uncertainty interval Prophet)
+        Rentang estimasi model
       </p>
     </div>
   );
@@ -94,6 +101,8 @@ export default function ForecastChart({
   growth,
   confidence,
   confidenceContext,
+  validation,
+  fallbackUsed = false,
   modelUsed,
   forecastSummary,
   freq = "D",
@@ -101,8 +110,10 @@ export default function ForecastChart({
 }: {
   data: ForecastPoint[];
   growth: number;
-  confidence: number;
+  confidence: number | null;
   confidenceContext?: ConfidenceContext | null;
+  validation?: ValidationMetrics | null;
+  fallbackUsed?: boolean;
   modelUsed?: string;
   forecastSummary?: ForecastSummary | null;
   freq?: "D" | "W";
@@ -128,8 +139,6 @@ export default function ForecastChart({
   const alert = getDemandAlert(growth);
   const unitLabel = freq === "W" ? "minggu" : "hari";
   const period = freq === "W" ? 4 : 7;
-
-  const ctxMessage = confidenceContext?.message ?? "";
 
   const shouldShowAbsUnit = (latestActual ?? 0) < 10 || avgPredicted < 10;
   let growthDisplay = "";
@@ -162,7 +171,7 @@ export default function ForecastChart({
 
   if (modelUsed === "moving_average") {
     return (
-      <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between border border-border">
+      <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-105 flex flex-col justify-between border border-border">
         <div className="flex flex-col gap-6">
           <div>
             <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
@@ -288,7 +297,7 @@ export default function ForecastChart({
   }
 
   return (
-    <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-[420px] flex flex-col justify-between border border-border">
+    <div className="glass-card-lg p-5 sm:p-6 lg:p-7 min-h-105 flex flex-col justify-between border border-border">
       <div className="flex flex-col gap-6">
         <div>
           <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
@@ -337,75 +346,55 @@ export default function ForecastChart({
           </div>
         </div>
 
-        {/* METRIK ACCURACY / CONFIDENCE DENGAN PENJELASAN MENDALAM */}
+        {/* Confidence berbasis Validation WAPE Forecasting V2 */}
         <div className="bg-card/60 rounded-xl p-4 border border-border">
           <div className="flex items-center gap-1.5 group cursor-help w-fit mb-1 relative">
-            <p className="text-[10px] text-muted">Tingkat Kepercayaan Model</p>
+            <p className="text-[10px] text-muted">Reliabilitas Forecast</p>
             <Info size={11} className="text-muted" />
             <div className="absolute left-0 top-full mt-2 w-72 p-3 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-30 pointer-events-none">
               <p className="text-[11px] text-foreground font-semibold mb-1">
-                Bagaimana skor ini dihitung?
+                Bagaimana skor dihitung?
               </p>
-              <p className="text-[10px] text-muted font-normal normal-case tracking-normal leading-relaxed mb-2">
-                Persentase ini dihitung secara matematis berdasarkan{" "}
-                <span className="text-amber-400 font-medium">
-                  "volume kecukupan data historis"
-                </span>
-                ,{" "}
-                <span className="text-amber-400 font-medium">
-                  "keteraturan pola musiman"
-                </span>
-                , dan{" "}
-                <span className="text-amber-400 font-medium">
-                  "tingkat fluktuasi acak (noise)"
-                </span>{" "}
-                pada transaksi produk Anda.
-              </p>
-              <p className="text-[10px] text-muted font-normal normal-case tracking-normal leading-relaxed border-t border-border/60 pt-1.5">
-                <strong className="text-amber-400 font-medium">Catatan:</strong>{" "}
-                Jika persentase ini rendah, hal tersebut{" "}
-                <span className="text-foreground font-medium">
-                  BUKAN berarti model rusak/salah
-                </span>
-                , melainkan karena data riwayat penjualan Anda terlalu minim,
-                polanya acak, atau kurang informatif bagi AI untuk menemukan
-                tren yang stabil.
+              <p className="text-[10px] text-muted font-normal leading-relaxed">
+                Skor dihitung dari hasil validasi model menggunakan rumus max(0,
+                100 - Validation WAPE). Ini adalah indikator kesalahan relatif
+                pada data validasi, bukan probabilitas bahwa prediksi pasti
+                benar.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-2xl font-bold text-foreground">
-              {confidence.toFixed(1)}%
+              {confidence == null
+                ? "Belum tersedia"
+                : `${confidence.toFixed(1)}%`}
             </span>
-            {confidence >= 70 ? (
-              <span className="text-xs font-semibold text-secondary">
-                Akurasi Tinggi
-              </span>
-            ) : confidence >= 40 ? (
-              <span className="text-xs font-semibold text-primary">
-                Akurasi Sedang
-              </span>
-            ) : confidence >= 20 ? (
-              <span className="text-xs font-semibold text-danger">
-                Akurasi Rendah
-              </span>
-            ) : (
-              <span className="text-xs font-semibold text-muted border border-muted/30 px-2 py-0.5 rounded">
-                Data Terbatas
+            {confidenceContext?.label && (
+              <span
+                className={`text-xs font-semibold ${confidenceContext.color === "green" ? "text-secondary" : confidenceContext.color === "yellow" ? "text-primary" : confidenceContext.color === "red" ? "text-danger" : "text-muted"}`}
+              >
+                {confidenceContext.label}
               </span>
             )}
           </div>
 
-          {ctxMessage && (
-            <p className="text-[10px] text-muted mt-2 leading-relaxed">
-              {ctxMessage}
+          <p className="text-[10px] text-muted mt-2 leading-relaxed">
+            {confidenceContext?.message ??
+              "Jalankan Forecasting V2 untuk memperoleh metrik validasi."}
+          </p>
+          {validation && (
+            <p className="text-[10px] text-muted mt-2">
+              {validation.wape == null
+                ? "Validation WAPE tidak tersedia"
+                : `Validation WAPE: ${validation.wape.toFixed(2)}%`}
+              {` · ${validation.n_predictions} titik validasi`}
             </p>
           )}
-
           {modelUsed && (
-            <p className="text-[10px] text-muted mt-2">
-              Model: {modelUsed.replace(/_/g, " ")}
+            <p className="text-[10px] text-muted mt-1">
+              Model digunakan: {modelUsed.replace(/_/g, " ")}
+              {fallbackUsed ? " (fallback)" : ""}
             </p>
           )}
         </div>
@@ -493,7 +482,7 @@ export default function ForecastChart({
           ? modelUsed.replace(/_/g, " ") === "moving average"
             ? "rata-rata tertimbang (Moving Average)"
             : modelUsed.replace(/_/g, " ")
-          : "Prophet"}{" "}
+          : "Forecasting V2"}{" "}
         berdasarkan data historis penjualan produk ini
       </p>
     </div>

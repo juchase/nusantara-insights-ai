@@ -42,11 +42,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
-  const { reviewText, rating, productId, aspect, reviewDate } = body;
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { reviewText, rating, productId, aspect, reviewDate } = body ?? {};
 
-  // Validasi input dasar
-  if (!reviewText || !productId || rating === undefined) {
+  if (
+    typeof reviewText !== "string" || !reviewText.trim() || reviewText.length > 10000 ||
+    typeof productId !== "string" || !productId ||
+    !Number.isInteger(Number(rating)) || Number(rating) < 1 || Number(rating) > 5 ||
+    (reviewDate !== undefined && Number.isNaN(new Date(reviewDate).getTime()))
+  ) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 },
@@ -54,16 +63,24 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // 🔌 call FastAPI backend untuk prediksi sentimen Linear SVC
+    const product = await prisma.product.findFirst({
+      where: { id: productId, userId: session.user.id },
+      select: { id: true },
+    });
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const aiBaseUrl = process.env.AI_SERVICE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
     const aiRes = await fetch(
-      process.env.NEXT_PUBLIC_API_BASE_URL + "/analyze" ||
-        "http://127.0.0.1:8000/analyze",
+      `${aiBaseUrl.replace(/\/$/, "")}/analyze`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: reviewText }),
+        body: JSON.stringify({ text: reviewText.trim() }),
+        signal: AbortSignal.timeout(15000),
       },
     );
 
@@ -76,8 +93,8 @@ export async function POST(request: NextRequest) {
     // 💾 simpan ke DB PostgreSQL lewat Prisma
     const review = await prisma.review.create({
       data: {
-        reviewText,
-        rating: parseInt(rating),
+        reviewText: reviewText.trim(),
+        rating: Number(rating),
         productId,
         // ✅ PERBAIKAN: Hapus properti 'id: userPayload.userId' agar ID Review digenerate otomatis berupa UUID baru
         sentiment: aiData.sentiment, // Mengambil string: 'positive' / 'negative' / 'netral'

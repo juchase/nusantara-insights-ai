@@ -42,19 +42,7 @@ type ForecastPoint = {
   predicted?: number | null;
 };
 
-type PredictDemandResponse = {
-  confidence: number;
-  growth?: number;
-  forecast_summary?: {
-    avg: number;
-    min: number;
-    max: number;
-    lower: number;
-    upper: number;
-  };
-  model_used?: string;
-  freq?: "D" | "W";
-};
+
 
 // Fallback linear forecast
 function linearForecast(values: number[], forecastMonths = 3): number[] {
@@ -215,33 +203,35 @@ export default function ReportPage() {
       // 2. Ambil data forecasting dari API
       const forecastPromises = productReports.map(async (p) => {
         try {
-          // a. Ambil metrik AI (confidence, growth, forecast_summary)
-          const ai_url =
-            process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-          const aiRes = await fetch(`${ai_url}/predict-demand/${p.id}`, {
-            method: "POST",
-          });
-          let aiData: PredictDemandResponse | null = null;
-          if (aiRes.ok) {
-            aiData = await aiRes.json();
-          }
-
-          // b. Ambil data penjualan & prediksi
+          // a. Ambil metrik validasi yang sudah tersimpan; jangan jalankan ulang forecasting.
+          // b. Ambil histori dan prediksi Daily yang sudah tersimpan.
           const salesData = await safeFetch<{
             sales: SalesPoint[];
             predictions: PredictionPoint[];
-          }>(`/api/predictions/${p.id}`, { sales: [], predictions: [] });
+          }>(`/api/predictions/${encodeURIComponent(p.id)}?freq=D`, {
+            sales: [],
+            predictions: [],
+          });
 
-          // c. Gabungkan data
+          // c. Gabungkan data yang benar-benar tersimpan.
           const merged = mergeForecastData(
             salesData.sales,
             salesData.predictions,
           ) as ForecastPoint[];
 
-          // d. Hitung growth (jika tidak dari AI, hitung sendiri)
-          let growth = aiData?.growth ?? calculateGrowth(merged);
-          let confidence = aiData?.confidence ?? 0;
-          let forecastSummary = aiData?.forecast_summary ?? null;
+          const forecastValues = salesData.predictions.map((item) => Number(item.predictedSales));
+          const growth = calculateGrowth(merged);
+          const confidence =
+            p.insightData?.freq === "D" && Number.isFinite(p.insightData?.confidence)
+              ? Number(p.insightData.confidence)
+              : null;
+          const forecastSummary = forecastValues.length
+            ? {
+                avg: forecastValues.reduce((sum, value) => sum + value, 0) / forecastValues.length,
+                min: Math.min(...forecastValues),
+                max: Math.max(...forecastValues),
+              }
+            : null;
 
           // e. Ekstrak historis (actual) dan prediksi dari merged
           const historical = merged
@@ -259,28 +249,20 @@ export default function ReportPage() {
             growth,
             confidence,
             forecastSummary,
+            forecastUnavailable: salesData.predictions.length === 0,
           };
         } catch (err) {
-          console.warn(`Fallback untuk ${p.name}:`, err);
-          // Fallback: gunakan simulated historical + linear forecast
-          const currentScore = p.insightData?.health_score ?? 50;
-          const months = 6;
-          const hist: number[] = [];
-          for (let i = months - 1; i >= 0; i--) {
-            const variation = Math.floor(Math.random() * 6) - 3;
-            hist.push(
-              Math.max(0, Math.min(100, currentScore - i * 1.5 + variation)),
-            );
-          }
-          const forecast = linearForecast(hist, 3);
+          console.warn(`Forecast tidak tersedia untuk ${p.name}:`, err);
+          // Jangan membuat angka sintetis pada laporan bisnis.
           return {
             productId: p.id,
-            merged: [], // tidak digunakan untuk fallback
-            historical: hist,
-            forecast,
-            growth: 0,
-            confidence: 0,
+            merged: [],
+            historical: [],
+            forecast: [],
+            growth: null,
+            confidence: null,
             forecastSummary: null,
+            forecastUnavailable: true,
           };
         }
       });
@@ -421,8 +403,8 @@ export default function ReportPage() {
       for (let i = 0; i < productReports.length; i++) {
         const p = productReports[i];
         const result = forecastResults[i];
-        const growth = result?.growth ?? 0;
-        const confidence = result?.confidence ?? 0;
+        const growth = result?.growth;
+        const confidence = result?.confidence;
         const color = i === 0 ? "#009B77" : "#F59E0B";
 
         // Siapkan data grafik dari merged (jika ada) atau fallback
@@ -453,7 +435,7 @@ export default function ReportPage() {
         pdfHtml += `
           <div class="page-break" style="margin-top: 30px;">
             <h3>${p.name}</h3>
-            <p><strong>Pertumbuhan (Growth):</strong> ${growth}% &nbsp;|&nbsp; <strong>Keyakinan (Confidence):</strong> ${confidence.toFixed(0)}%</p>
+            <p><strong>Pertumbuhan (Growth):</strong> ${result?.forecastUnavailable || growth == null ? "Belum tersedia" : `${growth}%`} &nbsp;|&nbsp; <strong>Keyakinan (Confidence):</strong> ${result?.forecastUnavailable || confidence == null ? "Belum tersedia" : `${confidence.toFixed(0)}%`}</p>
             <div class="chart-container">
               <img src="${chartImage}" alt="Grafik ${p.name}" style="max-width:100%; height:auto;" />
             </div>
@@ -527,12 +509,12 @@ export default function ReportPage() {
       for (let i = 0; i < productReports.length; i++) {
         const p = productReports[i];
         const result = forecastResults[i];
-        const growth = result?.growth ?? 0;
-        const confidence = result?.confidence ?? 0;
+        const growth = result?.growth;
+        const confidence = result?.confidence;
         wordHtml += `
           <div style="margin-top: 30px;">
             <h3>${p.name}</h3>
-            <p><strong>Pertumbuhan (Growth):</strong> ${growth}% &nbsp;|&nbsp; <strong>Keyakinan (Confidence):</strong> ${confidence.toFixed(0)}%</p>
+            <p><strong>Pertumbuhan (Growth):</strong> ${result?.forecastUnavailable || growth == null ? "Belum tersedia" : `${growth}%`} &nbsp;|&nbsp; <strong>Keyakinan (Confidence):</strong> ${result?.forecastUnavailable || confidence == null ? "Belum tersedia" : `${confidence.toFixed(0)}%`}</p>
             <p><em>Grafik tidak dapat ditampilkan di Word. Silakan lihat versi PDF untuk grafik.</em></p>
             ${buildForecastTable(result)}
           </div>
@@ -620,8 +602,8 @@ export default function ReportPage() {
         ];
         for (let i = 0; i < productReports.length; i++) {
           const result = forecastResults[i];
-          const growth = result?.growth ?? 0;
-          const confidence = result?.confidence ?? 0;
+          const growth = result?.growth;
+          const confidence = result?.confidence;
           let rows: any[][] = [];
 
           if (result.merged && result.merged.length > 0) {
@@ -634,12 +616,12 @@ export default function ReportPage() {
               const growthDisplay =
                 isPred &&
                 idx === merged.findIndex((m: any) => m.predicted !== null)
-                  ? `${growth}%`
+                  ? (result?.forecastUnavailable || growth == null ? "Belum tersedia" : `${growth}%`)
                   : "";
               const confDisplay =
                 isPred &&
                 idx === merged.findIndex((m: any) => m.predicted !== null)
-                  ? `${confidence.toFixed(0)}%`
+                  ? (result?.forecastUnavailable || confidence == null ? "Belum tersedia" : `${confidence.toFixed(0)}%`)
                   : "";
               rows.push([
                 productReports[i].name,
@@ -667,7 +649,7 @@ export default function ReportPage() {
                 isForecast && idx === hist.length ? `${growth}%` : "";
               const confDisplay =
                 isForecast && idx === hist.length
-                  ? `${confidence.toFixed(0)}%`
+                  ? (result?.forecastUnavailable || confidence == null ? "Belum tersedia" : `${confidence.toFixed(0)}%`)
                   : "";
               rows.push([
                 productReports[i].name,

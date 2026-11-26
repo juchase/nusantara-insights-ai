@@ -1,164 +1,49 @@
-
 import logging
 from dataclasses import dataclass
-
 import numpy as np
-
-from app.services.forecasting_v2.policy import (
-    resolve_forecast_model,
-)
-
-from app.services.forecasting_v2.model_runner import (
-    run_forecast_model,
-)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-)
+from app.services.forecasting_v2.model_runner import run_forecast_model
+from app.services.forecasting_v2.model_registry import ModelSelection
+from app.services.forecasting_v2.policy import resolve_forecast_model
 
 logger = logging.getLogger(__name__)
-
-
-HORIZONS = {
-    "D": 7,
-    "W": 4,
-}
-
+HORIZONS = {"D": 7, "W": 4}
 
 @dataclass(frozen=True)
 class ForecastResult:
     product_id: str
     frequency: str
+    model_selected: str
     model_used: str
     strategy: str
     fallback_used: bool
     forecast: tuple[float, ...]
+    selection_reason: str
+    evaluation_status: str
+    validation_mae: float | None
+    validation_rmse: float | None
+    validation_wape: float | None
+    n_predictions: int
 
-
-def _validate_history(history) -> np.ndarray:
+def _validate_history(history):
     values = np.asarray(history, dtype=float)
-
-    if values.ndim != 1:
-        raise ValueError(
-            "History harus berupa array satu dimensi."
-        )
-
-    if len(values) == 0:
-        raise ValueError(
-            "History tidak boleh kosong."
-        )
-
-    if not np.isfinite(values).all():
-        raise ValueError(
-            "History mengandung NaN atau infinity."
-        )
-
-    if (values < 0).any():
-        raise ValueError(
-            "Demand tidak boleh negatif."
-        )
-
+    if values.ndim != 1 or len(values) == 0: raise ValueError("History harus berupa array satu dimensi dan tidak kosong.")
+    if not np.isfinite(values).all(): raise ValueError("History mengandung NaN atau infinity.")
+    if (values < 0).any(): raise ValueError("Demand tidak boleh negatif.")
     return values
 
-
-def generate_forecast(
-    product_id: str,
-    frequency: str,
-    history,
-) -> ForecastResult:
-
-    if not product_id or not product_id.strip():
-        raise ValueError(
-            "product_id tidak boleh kosong."
-        )
-
-    if frequency not in HORIZONS:
-        raise ValueError(
-            f"Frequency tidak didukung: {frequency}"
-        )
-
+def generate_forecast(product_id: str, frequency: str, history, selection: ModelSelection | None = None, strategy: str | None = None, fallback_required: bool = False, evaluation_status: str = "success") -> ForecastResult:
+    if frequency not in HORIZONS: raise ValueError(f"Frequency tidak didukung: {frequency}")
     values = _validate_history(history)
-    horizon = HORIZONS[frequency]
-
-    decision = resolve_forecast_model(
-        product_id=product_id,
-        frequency=frequency,
-    )
-
-    logger.info(
-        "Forecast started. product_id=%s frequency=%s "
-        "selected_model=%s strategy=%s",
-        product_id,
-        frequency,
-        decision.model_name,
-        decision.strategy,
-    )
-
+    decision = resolve_forecast_model(product_id, frequency, selection, strategy, fallback_required, evaluation_status)
+    model_selected = decision.model_name
+    model_used = model_selected
+    fallback_used = decision.fallback_required
+    final_strategy = decision.strategy
     try:
-        forecast = run_forecast_model(
-            model_name=decision.model_name,
-            y_train=values,
-            horizon=horizon,
-            frequency=frequency,
-        )
-
-        model_used = decision.model_name
-        fallback_used = decision.fallback_required
-        strategy = decision.strategy
-
-        logger.info(
-            "Forecast model executed successfully. "
-            "product_id=%s frequency=%s model=%s",
-            product_id,
-            frequency,
-            model_used,
-        )
-
+        forecast = run_forecast_model(model_used, values, HORIZONS[frequency], frequency)
     except Exception:
-        logger.exception(
-            "Forecast model execution failed. "
-            "product_id=%s frequency=%s selected_model=%s",
-            product_id,
-            frequency,
-            decision.model_name,
-        )
-
-        if decision.model_name == "naive":
-            raise
-
-        logger.warning(
-            "Attempting Naive fallback. "
-            "product_id=%s frequency=%s",
-            product_id,
-            frequency,
-        )
-
-        forecast = run_forecast_model(
-            model_name="naive",
-            y_train=values,
-            horizon=horizon,
-            frequency=frequency,
-        )
-
-        model_used = "naive"
-        fallback_used = True
-        strategy = "naive_fallback"
-
-        logger.info(
-            "Naive fallback executed successfully. "
-            "product_id=%s frequency=%s",
-            product_id,
-            frequency,
-        )
-
-    return ForecastResult(
-        product_id=product_id,
-        frequency=frequency,
-        model_used=model_used,
-        strategy=strategy,
-        fallback_used=fallback_used,
-        forecast=tuple(
-            float(value) for value in forecast
-        ),
-    )
+        logger.exception("Selected model failed; trying Naive fallback. product_id=%s frequency=%s model=%s", product_id, frequency, model_selected)
+        if model_selected == "naive": raise
+        forecast = run_forecast_model("naive", values, HORIZONS[frequency], frequency)
+        model_used, fallback_used, final_strategy = "naive", True, "runtime_fallback"
+    return ForecastResult(product_id, frequency, model_selected, model_used, final_strategy, fallback_used, tuple(float(v) for v in forecast), decision.selection_reason, decision.evaluation_status, decision.validation_mae, decision.validation_rmse, decision.validation_wape, decision.n_predictions)

@@ -266,18 +266,24 @@ export default function InsightCard({
             </div>
           </div>
 
-          {insight?.confidence !== undefined && insight.confidence > 0 && (
+          {insight && (
             <div className="group relative cursor-help flex items-center">
               <span className="text-[10px] font-medium text-muted flex items-center gap-1 bg-card px-3 py-1 rounded-full border border-border">
-                Confidence: {insight.confidence.toFixed(1)}%
+                {insight.confidence == null
+                  ? "Confidence: Belum tersedia"
+                  : `Confidence: ${insight.confidence.toFixed(1)}%`}
                 <Info size={10} className="text-muted ml-0.5" />
               </span>
-              <div className="absolute left-0 bottom-full mb-2 w-48 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
+              <div className="absolute left-0 bottom-full mb-2 w-64 p-2.5 bg-background border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 pointer-events-none">
                 <p className="text-[11px] text-muted font-normal leading-relaxed">
-                  Tingkat keyakinan model terhadap prediksi dan sentimen ini.
-                  Dipengaruhi oleh kualitas dan jumlah data historis yang
-                  tersedia.
+                  {insight.confidence_context?.message ??
+                    "Confidence dihitung dari Validation WAPE. Nilai 0% berarti hasil validasi menunjukkan reliabilitas rendah; nilai null berarti confidence belum tersedia."}
                 </p>
+                {insight.validation?.wape != null && (
+                  <p className="text-[10px] text-muted mt-1">
+                    Validation WAPE: {insight.validation.wape.toFixed(2)}% · {insight.validation.n_predictions} titik validasi
+                  </p>
+                )}
               </div>
             </div>
           )}

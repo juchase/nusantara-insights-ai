@@ -80,6 +80,8 @@ model Product {
   predictions    Prediction[]
   insights       Insight[]
   KeywordSummary KeywordSummary[]
+
+  forecastModelSelections ForecastModelSelection[]
 }
 
 model Review {
@@ -129,6 +131,35 @@ model Prediction {
   @@index([productId, freq, predictionDate])
 }
 
+
+model ForecastModelSelection {
+  id                String   @id @default(uuid())
+  productId         String
+  frequency         String   // D atau W
+
+  selectedModel     String
+  selectionReason   String
+  strategy          String   @default("adaptive_selection")
+
+  validationMae     Float?
+  validationRmse    Float?
+  validationWape    Float?
+  nPredictions      Int      @default(0)
+
+  evaluationStatus  String   @default("success")
+  evaluationVersion String   @default("v1")
+
+  dataPoints        Int
+  dataVersion       String?
+  evaluatedAt       DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, frequency])
+  @@index([productId, frequency, evaluatedAt])
+}
 
  model Insight {
   id         String  @id @default(uuid())

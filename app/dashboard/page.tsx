@@ -52,21 +52,21 @@ export default function DashboardPage() {
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  const [chartData, setChartData] = useState<SentimentTimelinePoint[]>([]);
+  const [, setChartData] = useState<SentimentTimelinePoint[]>([]);
   const [forecastData, setForecastData] = useState<ForecastPoint[]>([]);
   const [growth, setGrowth] = useState<number>(0);
-  const [topKeywords, setTopKeywords] = useState<[string, number][]>([]);
+  const [, setTopKeywords] = useState<[string, number][]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [insight, setInsight] = useState<InsightResponse | null>(null);
 
-  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [, setAnalyticsLoading] = useState(true);
   const [forecastLoading, setForecastLoading] = useState(true);
   const [insightLoading, setInsightLoading] = useState(true);
   const [complaintsLoading, setComplaintsLoading] = useState(true);
 
-  const [confidence, setConfidence] = useState(0);
+  const [confidence, setConfidence] = useState<number | null>(null);
   const [forecastSummary, setForecastSummary] =
     useState<ForecastSummary | null>(null);
   const [stats, setStats] = useState({
@@ -78,7 +78,7 @@ export default function DashboardPage() {
   const [confidenceContext, setConfidenceContext] = useState<{
     label: string;
     message: string;
-    color: "green" | "amber" | "red";
+    color: "green" | "yellow" | "red" | "gray";
   } | null>(null);
   const [modelUsed, setModelUsed] = useState<string>("");
   const [freq, setFreq] = useState<"D" | "W">("D");
@@ -178,7 +178,7 @@ export default function DashboardPage() {
           llm_used: insightData.llm_used ?? false,
           metrics: insightData.metrics,
           sentiment_trend: insightData.sentiment_trend,
-          confidence: insightData.confidence ?? 0,
+          confidence: insightData.confidence ?? null,
           confidence_context: insightData.confidence_context ?? null,
           modelVersion: insightData.modelVersion || "prophet",
           freq: insightData.freq || "D",
@@ -188,7 +188,7 @@ export default function DashboardPage() {
         }
         const growthPct = insightData.metrics?.growth_percentage ?? 0;
         setGrowth(growthPct);
-        setConfidence(insightData.confidence ?? 0);
+        setConfidence(insightData.confidence ?? null);
         setConfidenceContext(insightData.confidence_context ?? null);
         setModelUsed(insightData.modelVersion || "prophet");
         setFreq(insightData.freq || "D");
@@ -207,7 +207,7 @@ export default function DashboardPage() {
       try {
         setForecastLoading(true);
         const forecast = await safeFetch(
-          `/api/predictions/${selectedProduct}?freq=D`,
+          `/api/predictions/${selectedProduct}?freq=${freq}`,
           { sales: [], predictions: [] },
         );
         setForecastData(
@@ -222,7 +222,7 @@ export default function DashboardPage() {
       }
     };
     loadForecast();
-  }, [selectedProduct, modelUsed, session]);
+  }, [selectedProduct, modelUsed, freq, session]);
 
   // ── COMPLAINTS ────────────────────────────────────────────────────────────
   useEffect(() => {

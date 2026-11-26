@@ -8,9 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ productId: string }> },
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { productId } = await params;
   const requestedFreq = req.nextUrl.searchParams.get("freq");
@@ -22,21 +20,14 @@ export async function GET(
     where: { id: productId, userId: session.user.id },
     select: { id: true },
   });
-  if (!product) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!product) return NextResponse.json({ error: "Produk tidak ditemukan" }, { status: 404 });
 
   const [sales, predictions] = await Promise.all([
-    prisma.sales.findMany({
-      where: { productId },
-      orderBy: { date: "asc" },
-      select: { date: true, quantity: true },
-    }),
+    prisma.sales.findMany({ where: { productId }, orderBy: { date: "asc" }, select: { date: true, quantity: true } }),
     prisma.prediction.findMany({
       where: { productId, ...(requestedFreq ? { freq: requestedFreq } : {}) },
       orderBy: { predictionDate: "asc" },
     }),
   ]);
-
   return NextResponse.json({ sales, predictions });
 }

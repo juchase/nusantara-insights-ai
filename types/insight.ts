@@ -19,7 +19,22 @@ export interface SentimentTrend {
   second_period_count?: number;
 }
 
-// types/insight.ts
+export interface ForecastValidation {
+  wape: number | null;
+  mae?: number | null;
+  rmse?: number | null;
+  n_predictions: number;
+  evaluation_status?: string;
+}
+
+export interface ConfidenceContext {
+  status: "available" | "unavailable";
+  reason?: string | null;
+  label: string;
+  message: string;
+  color: "green" | "yellow" | "red" | "gray";
+}
+
 export interface InsightResponse {
   executive_summary: string;
   summary: string;
@@ -40,16 +55,15 @@ export interface InsightResponse {
     positive_percentage: number;
     negative_percentage: number;
     neutral_percentage: number;
+    total_reviews?: number;
     growth_percentage: number;
     forecast_trend: "up" | "down" | "stable";
     top_keyword: string;
   };
-  confidence: number;
-  confidence_context: {
-    label: string;
-    message: string;
-    color: "green" | "amber" | "red";
-  } | null;
+  confidence: number | null;
+  confidence_context: ConfidenceContext | null;
+  validation?: ForecastValidation | null;
   modelVersion: string;
   freq: "D" | "W";
+  forecastSummary?: { avg: number; min: number; max: number } | null;
 }

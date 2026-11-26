@@ -7,7 +7,8 @@ import { extractAspect } from "@/lib/aspect-extractor";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 
-const AI_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+const AI_URL = process.env.AI_SERVICE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+const INTERNAL_API_SECRET = process.env.INTERNAL_API_SECRET;
 
 function parseDateOnly(value: unknown): Date | null {
   if (value === null || value === undefined) {
@@ -342,78 +343,115 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── TRIGGER PROPHET + INSIGHT ────────────────────────────────────────────
+    // ── TRIGGER FORECASTING V2 + INSIGHT ───────────────────────────────────
+    // Satu pipeline resmi: V2 Daily -> V2 Weekly -> Insight dari hasil V2 Daily.
+    // Tidak memanggil endpoint legacy /predict-demand atau GET /generate-insight.
     const products = Array.from(productCache.entries()).filter(
       ([, productId]) => salesProductIds.has(productId),
     );
 
-    // Prophet paralel
-    console.log(
-      `📈 [1/2] Prophet untuk ${products.length} produk secara paralel...`,
-    );
-    const forecastResults = await Promise.allSettled(
-      products.map(async ([productName, productId]) => {
-        try {
-          const forecastRes = await fetch(
-            `${AI_URL}/predict-demand/${productId}`,
-            { method: "POST" },
-          );
-          if (!forecastRes.ok) {
-            console.warn(
-              `⚠️ Prophet gagal: ${productName} (${forecastRes.status})`,
-            );
-            return { productId, productName, status: "error" };
-          }
-          const fd = await forecastRes.json();
-          console.log(
-            `✅ Prophet: ${productName} | confidence: ${fd.confidence}%`,
-          );
-          return { productId, productName, status: "success" };
-        } catch (err) {
-          console.error(`❌ Prophet error: ${productName}`, err);
-          return { productId, productName, status: "error" };
-        }
-      }),
-    );
-
-    // Insight sequential
-    console.log(
-      `💡 [2/2] Insight bergiliran untuk ${products.length} produk...`,
-    );
+    let forecastSuccess = 0;
     let insightSuccess = 0;
-    let insightFail = 0;
+    let pipelineSuccess = 0;
+    const pipelineResults: Array<{
+      productId: string;
+      productName: string;
+      daily: "success" | "error";
+      weekly: "success" | "error";
+      insight: "success" | "error" | "skipped";
+    }> = [];
 
-    for (const [productName, productId] of products) {
-      try {
-        console.log(
-          `💡 [${insightSuccess + insightFail + 1}/${products.length}] ${productName}`,
-        );
-        const insightRes = await fetch(
-          `${AI_URL}/generate-insight/${productId}`,
-          { method: "GET" },
-        );
-        if (!insightRes.ok) {
-          console.warn(
-            `⚠️ Insight gagal: ${productName} (${insightRes.status})`,
-          );
-          insightFail++;
-        } else {
-          console.log(`✅ Insight selesai: ${productName}`);
-          insightSuccess++;
+    if (!INTERNAL_API_SECRET) {
+      console.error("INTERNAL_API_SECRET belum dikonfigurasi; pipeline AI dilewati.");
+    } else {
+      // Proses per produk secara berurutan untuk menghindari lonjakan komputasi Prophet.
+      for (const [productName, productId] of products) {
+        const result: {
+          productId: string;
+          productName: string;
+          daily: "success" | "error";
+          weekly: "success" | "error";
+          insight: "success" | "error" | "skipped";
+        } = {
+          productId,
+          productName,
+          daily: "error",
+          weekly: "error",
+          insight: "skipped",
+        };
+
+        for (const frequency of ["D", "W"] as const) {
+          try {
+            const forecastRes = await fetch(
+              `${AI_URL}/forecast/v2/${encodeURIComponent(productId)}?frequency=${frequency}`,
+              {
+                method: "POST",
+                headers: { "x-internal-api-secret": INTERNAL_API_SECRET },
+                cache: "no-store",
+              },
+            );
+
+            if (!forecastRes.ok) {
+              const detail = await forecastRes.text();
+              console.warn(
+                `Forecasting V2 ${frequency} gagal untuk ${productName} (${forecastRes.status}): ${detail}`,
+              );
+              result[frequency === "D" ? "daily" : "weekly"] = "error";
+              continue;
+            }
+
+            result[frequency === "D" ? "daily" : "weekly"] = "success";
+            console.log(`✅ Forecasting V2 ${frequency}: ${productName}`);
+          } catch (error) {
+            console.error(`❌ Forecasting V2 ${frequency} error untuk ${productName}:`, error);
+          }
         }
-      } catch (err) {
-        console.error(`❌ Insight error: ${productName}`, err);
-        insightFail++;
+
+        if (result.daily === "success") {
+          forecastSuccess++;
+          try {
+            const insightRes = await fetch(
+              `${AI_URL}/generate-insight/${encodeURIComponent(productId)}`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-internal-api-secret": INTERNAL_API_SECRET,
+                },
+                body: JSON.stringify({ frequency: "D" }),
+                cache: "no-store",
+              },
+            );
+
+            if (insightRes.ok) {
+              result.insight = "success";
+              insightSuccess++;
+              console.log(`✅ Insight dari Forecasting V2 selesai: ${productName}`);
+            } else {
+              result.insight = "error";
+              console.warn(
+                `⚠️ Insight gagal untuk ${productName} (${insightRes.status}): ${await insightRes.text()}`,
+              );
+            }
+          } catch (error) {
+            result.insight = "error";
+            console.error(`❌ Insight error untuk ${productName}:`, error);
+          }
+        }
+
+        if (
+          result.daily === "success" &&
+          result.weekly === "success" &&
+          result.insight === "success"
+        ) {
+          pipelineSuccess++;
+        }
+        pipelineResults.push(result);
       }
     }
 
-    const prophetSuccess = forecastResults.filter(
-      (r) => r.status === "fulfilled" && (r.value as any).status === "success",
-    ).length;
-    const aiSuccess = Math.min(prophetSuccess, insightSuccess);
-
     console.log(
-      `🎉 Pipeline selesai — Prophet: ${prophetSuccess}/${products.length} | Insight: ${insightSuccess}/${products.length}`,
+      `🎉 Pipeline V2 selesai — Daily: ${forecastSuccess}/${products.length} | Insight: ${insightSuccess}/${products.length} | Lengkap: ${pipelineSuccess}/${products.length}`,
     );
 
     // ── KIRIM NOTIFIKASI KE USER ──────────────────────────────────────────
@@ -431,8 +469,11 @@ export async function POST(req: NextRequest) {
       success,
       skipped,
       aiPipeline: {
-        total: productCache.size,
-        success: aiSuccess,
+        total: products.length,
+        forecastDailySuccess: forecastSuccess,
+        insightSuccess,
+        completeSuccess: pipelineSuccess,
+        results: pipelineResults,
       },
     });
   } catch (globalError: any) {
