@@ -6,6 +6,7 @@ import ForecastChart from "@/components/dashboard/ForecastChart";
 import SalesChart from "@/components/dashboard/SalesChart";
 import { mergeForecastData } from "@/lib/mergeForecastData";
 import { safeFetch } from "@/lib/safe-fetch";
+import { getSelectedProductId, setSelectedProductId } from "@/lib/product-selection";
 
 type Product = { id: string; name: string };
 type ForecastPoint = { date: string; actual?: number | null; predicted?: number | null };
@@ -20,29 +21,35 @@ type ForecastResponse = {
   forecast_summary: { avg: number; min: number; max: number };
 };
 
-function weekEndingMonday(value: string): string {
+function weekStartingMonday(value: string): string {
   const date = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
-  const daysUntilMonday = (8 - date.getUTCDay()) % 7;
-  date.setUTCDate(date.getUTCDate() + daysUntilMonday);
+  const daysSinceMonday = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - daysSinceMonday);
   return date.toISOString().slice(0, 10);
 }
 
 function aggregateWeeklySales(sales: SalesPoint[]): SalesPoint[] {
   const totals = new Map<string, number>();
   for (const sale of sales) {
-    const monday = weekEndingMonday(sale.date);
+    const monday = weekStartingMonday(sale.date);
     totals.set(monday, (totals.get(monday) ?? 0) + sale.quantity);
   }
   return Array.from(totals, ([date, quantity]) => ({ date, quantity })).sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function calculateGrowth(data: ForecastPoint[]): number {
-  const actual = data.filter((point) => point.actual != null).map((point) => point.actual ?? 0);
-  const predicted = data.filter((point) => point.predicted != null).map((point) => point.predicted ?? 0);
+function calculateGrowth(data: ForecastPoint[], frequency: "D" | "W"): number {
+  const actual = data
+    .filter((point) => point.actual != null)
+    .map((point) => Number(point.actual))
+    .slice(-(frequency === "W" ? 4 : 7));
+  const predicted = data
+    .filter((point) => point.predicted != null)
+    .map((point) => Number(point.predicted));
   if (!actual.length || !predicted.length) return 0;
-  const lastActual = actual[actual.length - 1];
-  const averagePredicted = predicted.reduce((sum, value) => sum + value, 0) / predicted.length;
-  return lastActual === 0 ? 0 : Number((((averagePredicted - lastActual) / lastActual) * 100).toFixed(1));
+  const baseline = actual.reduce((sum, value) => sum + value, 0) / actual.length;
+  const forecastAverage = predicted.reduce((sum, value) => sum + value, 0) / predicted.length;
+  if (baseline <= 0) return forecastAverage <= 0 ? 0 : 100;
+  return Number((((forecastAverage - baseline) / baseline) * 100).toFixed(2));
 }
 
 const unavailableConfidence: Confidence = {
@@ -59,6 +66,7 @@ export default function ForecastPage() {
   const [strategy, setStrategy] = useState("");
   const [fallbackUsed, setFallbackUsed] = useState(false);
   const [dataPoints, setDataPoints] = useState(0);
+  const [lastActualDate, setLastActualDate] = useState<string | null>(null);
   const [confidence, setConfidence] = useState<Confidence>(unavailableConfidence);
   const [validation, setValidation] = useState<Validation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +79,11 @@ export default function ForecastPage() {
       const data = await safeFetch<Product[]>("/api/products", []);
       if (!active) return;
       setProducts(data);
-      if (data.length) setSelectedProduct(data[0].id);
+      if (data.length) {
+        const savedProductId = getSelectedProductId();
+        const initialProduct = data.find((item) => item.id === savedProductId) ?? data[0];
+        setSelectedProduct(initialProduct.id);
+      }
       else setLoading(false);
     };
     void loadProducts();
@@ -81,14 +93,15 @@ export default function ForecastPage() {
   const fetchForecastData = useCallback(async (productId: string, frequency: "D" | "W") => {
     const response = await fetch(`/api/predictions/${encodeURIComponent(productId)}?freq=${frequency}`, { cache: "no-store" });
     if (!response.ok) throw new Error("Gagal mengambil histori dan prediksi dari database.");
-    const result = await response.json() as { sales: SalesPoint[]; predictions: PredictionPoint[] };
+    const result = await response.json() as { sales: SalesPoint[]; predictions: PredictionPoint[]; lastActualDate?: string | null };
+    setLastActualDate(result.lastActualDate ?? (result.sales.length ? result.sales[result.sales.length - 1].date.slice(0, 10) : null));
     const sales = frequency === "W" ? aggregateWeeklySales(result.sales) : result.sales;
     const predictions = result.predictions.filter((point) => !point.freq || point.freq === frequency);
     const latestModel = [...predictions].reverse().find((point) => point.modelVersion)?.modelVersion;
     if (latestModel) setModelUsed(latestModel.split(":").pop() ?? latestModel);
     const merged = mergeForecastData(sales, predictions) as ForecastPoint[];
     setForecastData(merged);
-    setGrowth(calculateGrowth(merged));
+    setGrowth(calculateGrowth(merged, frequency));
   }, []);
 
   const fetchSavedSelection = useCallback(async (productId: string, frequency: "D" | "W") => {
@@ -134,6 +147,13 @@ export default function ForecastPage() {
     }
   };
 
+  useEffect(() => {
+    if (selectedProduct) setSelectedProductId(selectedProduct);
+  }, [selectedProduct]);
+
+  const dataAgeDays = lastActualDate
+    ? Math.floor((Date.now() - new Date(`${lastActualDate}T00:00:00`).getTime()) / 86400000)
+    : null;
   const selectedName = products.find((product) => product.id === selectedProduct)?.name ?? "-";
   const horizonLabel = freq === "W" ? "4 minggu" : "7 hari";
 
@@ -164,6 +184,12 @@ export default function ForecastPage() {
           </button>
         </div>
       </div>
+
+      {dataAgeDays !== null && dataAgeDays > 30 && (
+        <div role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          Data penjualan terakhir {lastActualDate} (sekitar {dataAgeDays.toLocaleString("id-ID")} hari lalu). Tanggal forecast mengikuti tanggal histori terakhir, bukan tanggal hari ini. Perbarui dataset untuk prediksi operasional terkini.
+        </div>
+      )}
 
       <div className="glass-card border border-border p-5">
         <p className="text-sm font-medium text-foreground">{selectedName}</p>

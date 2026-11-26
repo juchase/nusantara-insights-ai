@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { safeFetch } from "@/lib/safe-fetch";
+import { getSelectedProductId, setSelectedProductId } from "@/lib/product-selection";
 
 type Review = {
   id: string;
@@ -74,6 +75,9 @@ export default function ReviewsPage() {
           [],
         );
         setProducts(productsRes);
+        const savedProductId = getSelectedProductId();
+        const initialProduct = productsRes.find((item) => item.id === savedProductId) ?? productsRes[0];
+        if (initialProduct) setProductFilter(initialProduct.id);
       } catch (err) {
         console.error("Error loading data:", err);
       } finally {
@@ -83,6 +87,10 @@ export default function ReviewsPage() {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (productFilter !== "all") setSelectedProductId(productFilter);
+  }, [productFilter]);
 
   const filteredReviews = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -110,17 +118,17 @@ export default function ReviewsPage() {
     });
   }, [reviews, query, sentimentFilter, productFilter]);
 
-  const positive = reviews.filter(
+  const positive = filteredReviews.filter(
     (review) => review.sentiment === "positive",
   ).length;
-  const negative = reviews.filter(
+  const negative = filteredReviews.filter(
     (review) => review.sentiment === "negative",
   ).length;
   const avgRating =
-    reviews.length > 0
+    filteredReviews.length > 0
       ? (
-          reviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) /
-          reviews.length
+          filteredReviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) /
+          filteredReviews.length
         ).toFixed(1)
       : "0.0";
 
@@ -182,7 +190,7 @@ export default function ReviewsPage() {
           {
             icon: <MessageSquareText size={20} />,
             label: "Total ulasan",
-            value: reviews.length,
+            value: filteredReviews.length,
             accent: "text-tertiary",
           },
           {

@@ -29,5 +29,12 @@ export async function GET(
       orderBy: { predictionDate: "asc" },
     }),
   ]);
-  return NextResponse.json({ sales, predictions });
+  const lastActualDate = sales.length
+    ? sales[sales.length - 1].date.toISOString().slice(0, 10)
+    : null;
+  const forecastGeneratedAt = predictions.length
+    ? predictions.reduce((latest, item) => item.createdAt > latest ? item.createdAt : latest, predictions[0].createdAt).toISOString()
+    : null;
+
+  return NextResponse.json({ sales, predictions, lastActualDate, forecastGeneratedAt });
 }

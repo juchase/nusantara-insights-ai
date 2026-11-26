@@ -76,10 +76,7 @@ export async function GET(req: NextRequest) {
   const chartMap = new Map<string, number>();
 
   reviews.forEach((r) => {
-    const key = new Date(r.reviewDate).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-    });
+    const key = new Date(r.reviewDate).toISOString().slice(0, 10);
 
     chartMap.set(key, (chartMap.get(key) || 0) + 1);
   });

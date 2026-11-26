@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { InsightResponse } from "@/types/insight";
@@ -16,6 +16,10 @@ import ProductRanking from "@/components/dashboard/ProductRanking";
 import RiskOverview from "@/components/dashboard/RiskOverview";
 import SentimentTrendCard from "@/components/dashboard/SentimentTrendCard";
 import { mergeForecastData } from "@/lib/mergeForecastData";
+import {
+  getSelectedProductId,
+  setSelectedProductId,
+} from "@/lib/product-selection";
 import { Loader2 } from "lucide-react";
 
 type Product = { id: string; name: string };
@@ -99,7 +103,10 @@ export default function DashboardPage() {
         const data = await safeFetch<Product[]>("/api/products", []);
         setProducts(data);
         if (data.length > 0) {
-          setSelectedProduct(data[0].id);
+          const savedProductId = getSelectedProductId();
+          const initialProduct =
+            data.find((item) => item.id === savedProductId) ?? data[0];
+          setSelectedProduct(initialProduct.id);
         } else {
           setAnalyticsLoading(false);
           setForecastLoading(false);
@@ -118,6 +125,10 @@ export default function DashboardPage() {
     };
     if (session) fetchProducts();
   }, [session]);
+
+  useEffect(() => {
+    if (selectedProduct) setSelectedProductId(selectedProduct);
+  }, [selectedProduct]);
 
   // ── ANALYTICS ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -243,6 +254,27 @@ export default function DashboardPage() {
     loadComplaints();
   }, [selectedProduct, session]);
 
+  // ── FORECAST DATA FRESHNESS ──────────────────────────────────────────────
+  const actualDates = forecastData
+    .filter((point) => point.actual != null && Number.isFinite(point.actual))
+    .map((point) => point.date)
+    .filter((date) => !Number.isNaN(Date.parse(date)))
+    .sort();
+
+  const lastActualDate = actualDates.length
+    ? actualDates[actualDates.length - 1]
+    : null;
+
+  const forecastDataAgeDays = lastActualDate
+    ? Math.max(
+        0,
+        Math.floor(
+          (Date.now() - new Date(`${lastActualDate}T00:00:00`).getTime()) /
+            86400000,
+        ),
+      )
+    : null;
+
   // ── LOADING UI ────────────────────────────────────────────────────────────
   if (status === "loading" || isRedirecting) {
     return (
@@ -277,6 +309,18 @@ export default function DashboardPage() {
         totalProducts={stats.totalProducts}
         loading={insightLoading}
       />
+
+      {forecastDataAgeDays !== null && forecastDataAgeDays > 30 && (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+        >
+          Data penjualan terakhir tercatat pada {lastActualDate}. Dataset
+          berusia sekitar {forecastDataAgeDays.toLocaleString("id-ID")} hari;
+          perbarui data sebelum menggunakan prediksi sebagai dasar keputusan
+          operasional.
+        </div>
+      )}
 
       {/* ROW A: Sentiment Distribution + Forecast */}
       <div className="grid grid-cols-1 gap-4">
