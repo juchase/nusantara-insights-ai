@@ -1,0 +1,11 @@
+product_id,frequency,reason
+19c91ef95d509ea33eda93495c4d3481,weekly,Tidak memiliki observasi pada periode train.
+36f60d45225e60c7da4558b070ce4b60,weekly,Train hanya 9 periode; minimum 12.
+3dd2a17168ec895c781a9191c1e95ad7,weekly,Tidak memiliki observasi pada periode train.
+3fbc0ef745950c7932d5f2a446189725,weekly,Tidak memiliki observasi pada periode train.
+437c05a395e9e47f9762e677a7068ce7,weekly,Tidak memiliki observasi pada periode train.
+4fe644d766c7566dbc46fb851363cb3b,weekly,Tidak memiliki observasi pada periode train.
+5a848e4ab52fd5445cdc07aab1c40e48,weekly,Train hanya 8 periode; minimum 12.
+78efe838c04bbc568be034082200ac20,weekly,Train hanya 6 periode; minimum 12.
+7ce94ab189134e2d3c05f496d635419c,weekly,Train hanya 8 periode; minimum 12.
+89321f94e35fc6d7903d36f74e351d40,weekly,Train hanya 4 periode; minimum 12.

@@ -1,0 +1,13 @@
+{
+    "phase": "3.6",
+    "stage": "validation_decision_lock",
+    "locked_at_utc": "2026-11-25T18:25:14.505213+00:00",
+    "daily_selected_products": 35,
+    "weekly_selected_products": 30,
+    "daily_skipped_products": 5,
+    "weekly_skipped_products": 10,
+    "daily_candidate_models": 11,
+    "weekly_candidate_models": 10,
+    "naive_available_for_all_evaluable_products": true,
+    "test_data_used_for_selection": false
+}

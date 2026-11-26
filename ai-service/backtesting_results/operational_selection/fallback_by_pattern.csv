@@ -1,0 +1,7 @@
+frequency,demand_pattern,products,kept_recommended_model,fallback_to_naive,baseline_selected,not_evaluable,evaluated_products,fallback_rate_pct,keep_rate_pct
+daily,intermittent,28,19,7,2,0,28,25.0,67.85714285714286
+daily,lumpy,12,9,2,1,0,12,16.666666666666664,75.0
+weekly,erratic,9,6,1,2,0,9,11.11111111111111,66.66666666666666
+weekly,intermittent,7,7,0,0,0,7,0.0,100.0
+weekly,lumpy,16,14,2,0,0,16,12.5,87.5
+weekly,smooth,8,7,0,1,0,8,0.0,87.5

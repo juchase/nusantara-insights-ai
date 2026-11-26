@@ -1,0 +1,77 @@
+{
+    "daily": {
+        "frequency": "daily",
+        "split": {
+            "total_dates": 590,
+            "train_dates": 354,
+            "validation_dates": 118,
+            "test_dates": 118,
+            "train_start": "2017-01-15 00:00:00",
+            "train_end": "2018-01-03 00:00:00",
+            "validation_start": "2018-01-04 00:00:00",
+            "validation_end": "2018-05-01 00:00:00",
+            "test_start": "2018-05-02 00:00:00",
+            "test_end": "2018-08-27 00:00:00",
+            "train_rows": 7321,
+            "validation_rows": 4570,
+            "test_rows": 3497,
+            "train_ratio": 0.6,
+            "validation_ratio": 0.2,
+            "test_ratio": 0.2
+        },
+        "horizon": 7,
+        "min_train_size": 28,
+        "expected_models": [
+            "naive",
+            "sma",
+            "wma",
+            "ses",
+            "holt",
+            "holt_winters_7",
+            "prophet",
+            "sarima_7",
+            "croston",
+            "sba",
+            "tsb"
+        ],
+        "evaluation_protocol": "expanding_window_rolling_origin",
+        "step_size": 7
+    },
+    "weekly": {
+        "frequency": "weekly",
+        "split": {
+            "total_dates": 85,
+            "train_dates": 51,
+            "validation_dates": 17,
+            "test_dates": 17,
+            "train_start": "2017-01-16 00:00:00",
+            "train_end": "2018-01-01 00:00:00",
+            "validation_start": "2018-01-08 00:00:00",
+            "validation_end": "2018-04-30 00:00:00",
+            "test_start": "2018-05-07 00:00:00",
+            "test_end": "2018-08-27 00:00:00",
+            "train_rows": 1048,
+            "validation_rows": 662,
+            "test_rows": 520,
+            "train_ratio": 0.6,
+            "validation_ratio": 0.2,
+            "test_ratio": 0.2
+        },
+        "horizon": 4,
+        "min_train_size": 12,
+        "expected_models": [
+            "naive",
+            "sma",
+            "wma",
+            "ses",
+            "holt",
+            "prophet",
+            "arima",
+            "croston",
+            "sba",
+            "tsb"
+        ],
+        "evaluation_protocol": "expanding_window_rolling_origin",
+        "step_size": 4
+    }
+}

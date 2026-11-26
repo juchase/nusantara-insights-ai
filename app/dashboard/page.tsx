@@ -207,7 +207,7 @@ export default function DashboardPage() {
       try {
         setForecastLoading(true);
         const forecast = await safeFetch(
-          `/api/predictions/${selectedProduct}`,
+          `/api/predictions/${selectedProduct}?freq=D`,
           { sales: [], predictions: [] },
         );
         setForecastData(

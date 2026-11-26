@@ -110,6 +110,7 @@ model Sales {
   @@unique([productId, date])
 }
 
+
 model Prediction {
   id             String   @id @default(uuid())
   productId      String
@@ -117,13 +118,17 @@ model Prediction {
   predictionDate DateTime
   modelVersion   String?
 
-  upperBound      Int?
-  lowerBound      Int?
+  upperBound Int?
+  lowerBound Int?
 
+  freq      String   @default("D")
   createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId, freq, predictionDate])
 }
+
 
  model Insight {
   id         String  @id @default(uuid())

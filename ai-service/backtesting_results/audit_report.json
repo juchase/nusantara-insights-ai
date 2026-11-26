@@ -1,0 +1,14 @@
+{
+    "total_products": 40,
+    "total_raw_records": 4394,
+    "total_daily_records": 15388,
+    "total_weekly_records": 2230,
+    "raw_quantity": 7455.0,
+    "daily_quantity": 7455.0,
+    "weekly_quantity": 7455.0,
+    "quantity_preserved": true,
+    "daily_duplicates": 0,
+    "weekly_duplicates": 0,
+    "missing_daily_values": 0,
+    "missing_weekly_values": 0
+}

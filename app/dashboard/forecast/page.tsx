@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PackageSearch, RefreshCcw } from "lucide-react";
 
 import ForecastChart from "@/components/dashboard/ForecastChart";
@@ -13,53 +13,60 @@ type ForecastPoint = {
   date: string;
   actual?: number | null;
   predicted?: number | null;
+  upper?: number | null;
+  lower?: number | null;
 };
-type SalesPoint = {
-  date: string;
-  quantity: number;
-};
+type SalesPoint = { date: string; quantity: number };
 type PredictionPoint = {
   predictionDate: string;
   predictedSales: number;
+  freq?: string;
+  modelVersion?: string | null;
+  upperBound?: number | null;
+  lowerBound?: number | null;
 };
-type ConfidenceContext = {
-  label: string;
-  message: string;
-  color: "green" | "amber" | "red";
+type ForecastV2Response = {
+  success: boolean;
+  status: string;
+  product_id: string;
+  freq: "D" | "W";
+  model_used: string;
+  strategy: string;
+  fallback_used: boolean;
+  data_points: number;
+  totalInserted: number;
+  forecast: Array<{ date: string; predicted_sales: number }>;
+  forecast_summary: { avg: number; min: number; max: number };
 };
 
-type PredictDemandResponse = {
-  confidence: number;
-  confidence_context?: ConfidenceContext;
-  model_used?: string;
-  freq?: "D" | "W";
-  forecast_summary?: {
-    avg: number;
-    min: number;
-    max: number;
-    lower: number;
-    upper: number;
-  };
-};
+function weekEndingMonday(dateValue: string): string {
+  // Pandas resample("W-MON") labels each bucket with its ending Monday.
+  const date = new Date(`${dateValue.slice(0, 10)}T00:00:00.000Z`);
+  const day = date.getUTCDay();
+  const daysUntilMonday = (8 - day) % 7;
+  date.setUTCDate(date.getUTCDate() + daysUntilMonday);
+  return date.toISOString().slice(0, 10);
+}
+
+function aggregateWeeklySales(sales: SalesPoint[]): SalesPoint[] {
+  const totals = new Map<string, number>();
+  for (const sale of sales) {
+    const monday = weekEndingMonday(sale.date);
+    totals.set(monday, (totals.get(monday) ?? 0) + sale.quantity);
+  }
+  return Array.from(totals, ([date, quantity]) => ({ date, quantity })).sort(
+    (a, b) => a.date.localeCompare(b.date),
+  );
+}
 
 function calculateGrowth(data: ForecastPoint[]): number {
-  const actual = data
-    .filter((item) => item.actual)
-    .map((item) => item.actual ?? 0);
-  const predicted = data
-    .filter((item) => item.predicted)
-    .map((item) => item.predicted ?? 0);
-
+  const actual = data.filter((item) => item.actual != null).map((item) => item.actual ?? 0);
+  const predicted = data.filter((item) => item.predicted != null).map((item) => item.predicted ?? 0);
   if (!actual.length || !predicted.length) return 0;
-
   const lastActual = actual[actual.length - 1];
-  const avgPredicted =
-    predicted.reduce((total, value) => total + value, 0) / predicted.length;
-
+  const avgPredicted = predicted.reduce((sum, value) => sum + value, 0) / predicted.length;
   if (lastActual === 0) return 0;
-  return parseFloat(
-    (((avgPredicted - lastActual) / lastActual) * 100).toFixed(1),
-  );
+  return Number((((avgPredicted - lastActual) / lastActual) * 100).toFixed(1));
 }
 
 export default function ForecastPage() {
@@ -67,131 +74,115 @@ export default function ForecastPage() {
   const [selectedProduct, setSelectedProduct] = useState("");
   const [forecastData, setForecastData] = useState<ForecastPoint[]>([]);
   const [growth, setGrowth] = useState(0);
-  const [confidence, setConfidence] = useState(0);
-  const [confidenceContext, setConfidenceContext] =
-    useState<ConfidenceContext | null>(null);
   const [modelUsed, setModelUsed] = useState("");
+  const [strategy, setStrategy] = useState("");
+  const [fallbackUsed, setFallbackUsed] = useState(false);
+  const [dataPoints, setDataPoints] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  const [forecastSummary, setForecastSummary] = useState<any>(null);
+  const [error, setError] = useState("");
   const [freq, setFreq] = useState<"D" | "W">("D");
 
-  // Ambil daftar produk saat pertama kali
   useEffect(() => {
+    let active = true;
     const loadProducts = async () => {
       const data = await safeFetch<Product[]>("/api/products", []);
+      if (!active) return;
       setProducts(data);
       if (data.length > 0) setSelectedProduct(data[0].id);
+      else setLoading(false);
     };
-    loadProducts();
+    void loadProducts();
+    return () => { active = false; };
   }, []);
 
-  // Fungsi untuk mengambil data prediksi dari DB (tidak generate)
-  const fetchForecastData = async (productId: string) => {
-    if (!productId) return;
-    try {
-      const result = await safeFetch<{
-        sales: SalesPoint[];
-        predictions: PredictionPoint[];
-      }>(`/api/predictions/${productId}`, { sales: [], predictions: [] });
+  const fetchForecastData = useCallback(async (productId: string, frequency: "D" | "W") => {
+    const response = await fetch(
+      `/api/predictions/${encodeURIComponent(productId)}?freq=${frequency}`,
+      { cache: "no-store" },
+    );
+    if (!response.ok) throw new Error("Gagal mengambil histori dan prediksi dari database.");
+    const result = await response.json() as { sales: SalesPoint[]; predictions: PredictionPoint[] };
+    const sales = frequency === "W" ? aggregateWeeklySales(result.sales) : result.sales;
+    const predictions = result.predictions.filter((point) => !point.freq || point.freq === frequency);
+    const latestModel = [...predictions].reverse().find((point) => point.modelVersion)?.modelVersion;
+    if (latestModel) setModelUsed(latestModel);
+    const merged = mergeForecastData(sales, predictions) as ForecastPoint[];
+    setForecastData(merged);
+    setGrowth(calculateGrowth(merged));
+  }, []);
 
-      const merged = mergeForecastData(
-        result.sales,
-        result.predictions,
-      ) as ForecastPoint[];
-
-      setForecastData(merged);
-      setGrowth(calculateGrowth(merged));
-    } catch (error) {
-      console.error("Gagal load forecast:", error);
-    }
-  };
-
-  // Load initial saat produk dipilih (hanya ambil dari DB)
   useEffect(() => {
-    if (selectedProduct) {
-      setLoading(true);
-      fetchForecastData(selectedProduct).finally(() => setLoading(false));
-    }
-  }, [selectedProduct]);
-
-  // Fungsi refresh: generate baru + ambil data terbaru
-  const handleRefresh = async (productId: string) => {
-    if (!productId) return;
+    if (!selectedProduct) return;
+    let active = true;
     setLoading(true);
+    setError("");
+    fetchForecastData(selectedProduct, freq)
+      .catch((err: unknown) => {
+        if (active) setError(err instanceof Error ? err.message : "Gagal memuat forecast.");
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [selectedProduct, freq, fetchForecastData]);
+
+  const handleRefresh = async () => {
+    if (!selectedProduct || loading) return;
+    setLoading(true);
+    setError("");
     try {
-      // 1. Panggil endpoint untuk generate forecasting baru
-      const ai_url =
-        process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-      const predictData = await safeFetch<PredictDemandResponse>(
-        `${ai_url}/predict-demand/${productId}`,
-        { confidence: 0 },
+      const response = await fetch(
+        `/api/forecast/v2/${encodeURIComponent(selectedProduct)}?frequency=${freq}`,
         { method: "POST" },
       );
-
-      setConfidence(predictData.confidence || 0);
-      setConfidenceContext(predictData.confidence_context || null);
-      setModelUsed(predictData.model_used || "");
-      setFreq(predictData.freq || "D");
-      setForecastSummary(predictData.forecast_summary || null);
-
-      // 2. Tunggu sebentar agar database selesai menulis
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      // 3. Ambil data terbaru dari database
-      await fetchForecastData(productId);
-    } catch (error) {
-      console.error("Gagal refresh forecast:", error);
+      const result = await response.json() as ForecastV2Response & { error?: string; detail?: unknown };
+      if (!response.ok) {
+        throw new Error(result.error || "Forecasting V2 gagal dijalankan.");
+      }
+      setModelUsed(result.model_used);
+      setStrategy(result.strategy);
+      setFallbackUsed(result.fallback_used);
+      setDataPoints(result.data_points);
+      await fetchForecastData(selectedProduct, freq);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menjalankan Forecasting V2.");
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedName =
-    products.find((product) => product.id === selectedProduct)?.name ?? "-";
+  const selectedName = products.find((product) => product.id === selectedProduct)?.name ?? "-";
+  const horizonLabel = freq === "W" ? "4 minggu" : "7 hari";
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-5 pb-8 pt-4 lg:space-y-6 lg:pt-6 bg-background text-foreground">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">
-            Demand Intelligence
-          </p>
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Demand Intelligence</p>
           <h1 className="mt-1 text-2xl font-bold text-foreground">Forecast</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Prediksi permintaan berbasis data penjualan historis untuk produk
-            aktif.
+            Prediksi permintaan dari Forecasting V2 menggunakan keputusan model Phase 3.6.
           </p>
         </div>
-
         <div className="flex flex-col gap-2 sm:flex-row">
           <label className="flex h-10 items-center gap-2 rounded-lg bg-card/60 border border-border px-3 focus-within:border-primary">
             <PackageSearch size={16} className="text-muted" />
-            <select
-              value={selectedProduct}
-              onChange={(event) => setSelectedProduct(event.target.value)}
-              className="w-full min-w-64 bg-transparent text-sm text-foreground outline-none"
-            >
-              {products.length === 0 ? (
-                <option value="">Tidak ada produk</option>
-              ) : (
-                products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name}
-                  </option>
-                ))
-              )}
+            <select value={selectedProduct} onChange={(event) => setSelectedProduct(event.target.value)}
+              className="w-full min-w-64 bg-transparent text-sm text-foreground outline-none">
+              {products.length === 0 ? <option value="">Tidak ada produk</option> :
+                products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
             </select>
           </label>
-
-          <button
-            type="button"
-            onClick={() => handleRefresh(selectedProduct)}
-            disabled={!selectedProduct || loading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-background disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/80 transition-colors"
-          >
+          <div className="inline-flex h-10 rounded-lg border border-border bg-card/60 p-1">
+            {(["D", "W"] as const).map((value) => (
+              <button key={value} type="button" onClick={() => setFreq(value)}
+                className={`rounded-md px-3 text-xs font-semibold transition-colors ${freq === value ? "bg-primary text-background" : "text-muted hover:text-foreground"}`}>
+                {value === "D" ? "Daily" : "Weekly"}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={handleRefresh} disabled={!selectedProduct || loading}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-background disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/80 transition-colors">
             <RefreshCcw size={15} className={loading ? "animate-spin" : ""} />
-            Refresh
+            Generate {freq === "D" ? "Daily" : "Weekly"}
           </button>
         </div>
       </div>
@@ -199,70 +190,47 @@ export default function ForecastPage() {
       <div className="glass-card border border-border p-5">
         <p className="text-sm font-medium text-foreground">{selectedName}</p>
         <p className="mt-1 text-xs text-muted">
-          {loading
-            ? "Memuat prediksi terbaru..."
-            : `${forecastData.length} titik data aktual dan prediksi tersedia`}
+          {loading ? "Memuat prediksi..." : `${forecastData.length} titik data · horizon ${horizonLabel}`}
         </p>
+        {modelUsed && (
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-secondary/15 px-2.5 py-1 text-secondary">Model: {modelUsed}</span>
+            <span className="rounded-full bg-card px-2.5 py-1 text-muted">Strategi: {strategy}</span>
+            <span className={`rounded-full px-2.5 py-1 ${fallbackUsed ? "bg-primary/15 text-primary" : "bg-secondary/15 text-secondary"}`}>
+              {fallbackUsed ? "Fallback digunakan" : "Model selection berhasil"}
+            </span>
+            <span className="rounded-full bg-card px-2.5 py-1 text-muted">{dataPoints} data historis</span>
+          </div>
+        )}
+        {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <ForecastChart
-          data={forecastData}
-          growth={growth}
-          confidence={confidence}
-          confidenceContext={confidenceContext}
-          modelUsed={modelUsed}
-          forecastSummary={forecastSummary}
-          freq={freq}
-          loading={loading}
-        />
-        <SalesChart
-          data={forecastData}
-          modelUsed={modelUsed}
-          loading={loading}
-        />
+        <ForecastChart data={forecastData} growth={growth} confidence={0}
+          confidenceContext={null} modelUsed={modelUsed} forecastSummary={null}
+          freq={freq} loading={loading} />
+        <SalesChart data={forecastData} modelUsed={modelUsed} loading={loading} />
       </div>
 
-      {/* Tabel Detail Prediksi 7 Hari */}
       <div className="glass-card border border-border p-5 mt-4">
-        <p className="text-sm font-medium text-foreground mb-4">
-          Detail Prediksi 7 Hari
-        </p>
+        <p className="text-sm font-medium text-foreground mb-4">Detail Prediksi {freq === "D" ? "7 Hari" : "4 Minggu"}</p>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {["Tanggal", "Prediksi (unit)", "Keterangan"].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] font-medium uppercase tracking-wider text-muted py-2 px-2 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+            <thead><tr>{["Tanggal", "Prediksi (unit)", "Keterangan"].map((heading) => (
+              <th key={heading} className="text-left text-[11px] font-medium uppercase tracking-wider text-muted py-2 px-2 border-b border-border">{heading}</th>
+            ))}</tr></thead>
             <tbody>
-              {forecastData
-                .filter((d) => d.predicted)
-                .map((d, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-border/10 last:border-0"
-                  >
-                    <td className="text-sm text-muted py-3 px-2">{d.date}</td>
-                    <td className="text-sm font-medium text-foreground py-3 px-2">
-                      {Math.round(d.predicted ?? 0)} unit
-                    </td>
-                    <td className="py-3 px-2">
-                      <span className="inline-block text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/20">
-                        Prediksi AI
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+              {forecastData.filter((point) => point.predicted != null).map((point) => (
+                <tr key={point.date} className="border-b border-border/10 last:border-0">
+                  <td className="text-sm text-muted py-3 px-2">{point.date}</td>
+                  <td className="text-sm font-medium text-foreground py-3 px-2">{Number(point.predicted ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 2 })} unit</td>
+                  <td className="py-3 px-2"><span className="inline-block text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-tertiary/15 text-tertiary border border-tertiary/20">Forecasting V2</span></td>
+                </tr>
+              ))}
             </tbody>
           </table>
+          {!loading && forecastData.every((point) => point.predicted == null) &&
+            <p className="py-4 text-center text-sm text-muted">Belum ada prediksi. Klik Generate untuk menjalankan Forecasting V2.</p>}
         </div>
       </div>
     </div>

@@ -9,6 +9,73 @@ def _get_prophet():
     return Prophet
 
 
+def prepare_daily_series(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Menyiapkan deret penjualan harian berdasarkan data Sales.
+
+    Tanggal tanpa transaksi diisi 0 sebagai nol penjualan tercatat.
+    Ini bukan indikator ketersediaan stok.
+    """
+    required_columns = {"ds", "y"}
+
+    if not required_columns.issubset(df.columns):
+        raise ValueError("Data Sales harus memiliki kolom ds dan y")
+
+    if df.empty:
+        return pd.DataFrame(columns=["ds", "y", "promo"])
+
+    data = df.copy()
+
+    data["ds"] = pd.to_datetime(data["ds"], errors="coerce").dt.normalize()
+    data["y"] = pd.to_numeric(data["y"], errors="coerce")
+
+    data = data.dropna(subset=["ds", "y"])
+    data["y"] = data["y"].clip(lower=0)
+
+    if "promo" not in data.columns:
+        data["promo"] = 0
+
+    data["promo"] = pd.to_numeric(
+        data["promo"], errors="coerce"
+    ).fillna(0)
+
+    # Gabungkan jika ada lebih dari satu record pada tanggal yang sama.
+    daily = (
+        data.groupby("ds", as_index=True)
+        .agg({
+            "y": "sum",
+            "promo": "max"
+        })
+        .sort_index()
+    )
+
+    # Buat kalender harian lengkap.
+    calendar = pd.date_range(
+        start=daily.index.min(),
+        end=daily.index.max(),
+        freq="D"
+    )
+
+    daily = daily.reindex(calendar)
+
+    # Nol berarti tidak ada penjualan yang tercatat.
+    daily["y"] = daily["y"].fillna(0)
+    daily["promo"] = daily["promo"].fillna(0)
+
+    daily.index.name = "ds"
+
+    result = daily.reset_index()
+
+    print(
+        f"📅 DAILY PREPROCESSING: "
+        f"{len(result)} hari | "
+        f"{int((result['y'] > 0).sum())} hari ada penjualan | "
+        f"{int((result['y'] == 0).sum())} hari nol penjualan tercatat | "
+        f"Total: {result['y'].sum():.0f} unit"
+    )
+
+    return result
+
 def diagnose_data(df: pd.DataFrame) -> dict:
     y = df["y"].values
     mean    = float(np.mean(y))
@@ -70,9 +137,6 @@ def build_prophet_model(df_train: pd.DataFrame, diagnosis: dict, freq: str = "D"
         interval_width           = 0.80,
     )
 
-    if diagnosis["has_monthly"] and freq == "D":
-        model.add_seasonality(name="monthly", period=30.5, fourier_order=3)
-
     if diagnosis["has_promo"]:
         model.add_regressor("promo", prior_scale=10.0, standardize=False, mode="multiplicative")
         print("📣 Promotion flag diaktifkan sebagai regressor")
@@ -82,13 +146,6 @@ def build_prophet_model(df_train: pd.DataFrame, diagnosis: dict, freq: str = "D"
         print("🇮🇩 Holiday Indonesia ditambahkan")
     except Exception:
         pass
-
-    if "stok_tersedia" in df_train.columns:
-        model.add_regressor("stok_tersedia")
-    if "pos_lag1" in df_train.columns:
-        model.add_regressor("pos_lag1")
-    if "neg_lag1" in df_train.columns:
-        model.add_regressor("neg_lag1")
 
     model.fit(df_train)
     return model
@@ -229,10 +286,15 @@ def _forecast_with_moving_average(df: pd.DataFrame, db, product_id: str, freq: s
     growth = raw_growth if abs(raw_growth) <= 50 else 0
     confidence = 35.0  # WMA fallback confidence
 
-    return _save_forecast(
+    result = _save_forecast(
         forecast_future, db, product_id, "moving_average",
-        growth=growth, confidence=confidence, freq=freq
+        growth=growth,
+        confidence=confidence,
+        freq=freq
     )
+
+    result["data_points"] = len(df)
+    return result
 
 def predict_and_save(product_id: str):
     db = SessionLocal()
@@ -258,10 +320,12 @@ def predict_and_save(product_id: str):
                 pd.DataFrame(columns=["ds", "y", "promo"]), db, product_id, freq="D"
             )
 
-        df_daily = pd.DataFrame(daily_result, columns=["ds", "y", "promo"])
-        df_daily["ds"] = pd.to_datetime(df_daily["ds"])
-        df_daily["y"] = df_daily["y"].astype(float).clip(lower=0)
-        df_daily["promo"] = df_daily["promo"].fillna(0).astype(float)
+        df_daily = pd.DataFrame(
+            daily_result,
+            columns=["ds", "y", "promo"]
+        )
+
+        df_daily = prepare_daily_series(df_daily)
 
         # ── Ambil review harian (untuk regressor) ────────────────────────
         review_daily_query = """
@@ -276,11 +340,24 @@ def predict_and_save(product_id: str):
         """
         review_daily = db.execute(text(review_daily_query), {"product_id": product_id}).fetchall()
         df_rev = pd.DataFrame(review_daily, columns=["ds", "total_reviews", "pos", "neg"])
-        df_daily = df_daily.merge(df_rev, on="ds", how="outer").fillna(0)
+        df_rev["ds"] = pd.to_datetime(
+            df_rev["ds"], errors="coerce"
+        ).dt.normalize()
 
-        df_daily["stok_tersedia"] = np.where((df_daily["y"] == 0) & (df_daily["total_reviews"] == 0), 0, 1)
-        df_daily["pos_lag1"] = df_daily["pos"].shift(1).fillna(0)
-        df_daily["neg_lag1"] = df_daily["neg"].shift(1).fillna(0)
+        df_rev = df_rev.dropna(subset=["ds"])
+
+        df_daily = df_daily.merge(
+            df_rev,
+            on="ds",
+            how="left"
+        )
+
+        review_columns = ["total_reviews", "pos", "neg"]
+
+        df_daily[review_columns] = (
+            df_daily[review_columns].fillna(0)
+        )
+
         df_daily = df_daily.dropna().reset_index(drop=True)
 
         data_points_daily = len(df_daily)
@@ -294,11 +371,17 @@ def predict_and_save(product_id: str):
         print("🤖 Pass 1: Forecast harian...")
         model_daily = build_prophet_model(df_daily, diagnosis_daily, freq="D")
 
-        future_daily = model_daily.make_future_dataframe(periods=7, freq="D")
-        future_daily["stok_tersedia"] = 1
-        future_daily["pos_lag1"] = 0
-        future_daily["neg_lag1"] = 0
-        future_daily = future_daily.merge(df_daily[["ds", "promo"]], on="ds", how="left")
+        future_daily = model_daily.make_future_dataframe(
+            periods=7,
+            freq="D"
+        )
+
+        future_daily = future_daily.merge(
+            df_daily[["ds", "promo"]],
+            on="ds",
+            how="left"
+        )
+
         future_daily["promo"] = future_daily["promo"].fillna(0)
 
         forecast_daily = model_daily.predict(future_daily)
@@ -398,9 +481,6 @@ def _forecast_weekly_fallback(db, product_id: str, df_daily: pd.DataFrame):
     df_weekly.reset_index(inplace=True)
     df_weekly["promo"] = df_weekly["promo"].fillna(0)
     df_weekly["total_reviews"] = df_weekly["total_reviews"].fillna(0)
-    df_weekly["stok_tersedia"] = np.where((df_weekly["y"] == 0) & (df_weekly["total_reviews"] == 0), 0, 1)
-    df_weekly["pos_lag1"] = df_weekly["pos"].shift(1).fillna(0)
-    df_weekly["neg_lag1"] = df_weekly["neg"].shift(1).fillna(0)
     df_weekly = df_weekly.dropna().reset_index(drop=True)
 
     if len(df_weekly) < 4:
@@ -416,11 +496,17 @@ def _forecast_weekly_fallback(db, product_id: str, df_daily: pd.DataFrame):
     print("🤖 PASS 2: Forecast mingguan dengan Prophet...")
     model_weekly = build_prophet_model(df_weekly, diagnosis_weekly, freq="W")
 
-    future_weekly = model_weekly.make_future_dataframe(periods=4, freq="W-MON")
-    future_weekly["stok_tersedia"] = 1
-    future_weekly["pos_lag1"] = 0
-    future_weekly["neg_lag1"] = 0
-    future_weekly = future_weekly.merge(df_weekly[["ds", "promo"]], on="ds", how="left")
+    future_weekly = model_weekly.make_future_dataframe(
+        periods=4,
+        freq="W-MON"
+    )
+
+    future_weekly = future_weekly.merge(
+        df_weekly[["ds", "promo"]],
+        on="ds",
+        how="left"
+    )
+
     future_weekly["promo"] = future_weekly["promo"].fillna(0)
 
     forecast_weekly = model_weekly.predict(future_weekly)

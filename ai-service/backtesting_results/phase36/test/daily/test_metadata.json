@@ -1,0 +1,18 @@
+{
+    "frequency": "daily",
+    "horizon": 7,
+    "min_train_size": 28,
+    "step_size": 7,
+    "initial_history": "train + validation",
+    "evaluation_period": "test",
+    "protocol": "expanding_window_rolling_origin",
+    "selection_source": "backtesting_results\\phase36\\decision_lock\\daily\\validation_model_selection.csv",
+    "selection_changed_using_test": false,
+    "selected_products_in_lock": 35,
+    "evaluated_products": 31,
+    "skipped_products": 4,
+    "test_start": "2018-05-02 00:00:00",
+    "test_end": "2018-08-27 00:00:00",
+    "test_dates": 118,
+    "trailing_test_observations_ignored": 100
+}

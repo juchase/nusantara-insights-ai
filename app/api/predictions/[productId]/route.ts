@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
 
@@ -9,35 +8,35 @@ export async function GET(
   { params }: { params: Promise<{ productId: string }> },
 ) {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { productId } = await params;
+  const requestedFreq = req.nextUrl.searchParams.get("freq");
+  if (requestedFreq && requestedFreq !== "D" && requestedFreq !== "W") {
+    return NextResponse.json({ error: "freq harus D atau W" }, { status: 400 });
+  }
 
   const product = await prisma.product.findFirst({
-    where: {
-      id: productId,
-      userId: session.user.id,
-    },
+    where: { id: productId, userId: session.user.id },
+    select: { id: true },
   });
-
   if (!product) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const sales = await prisma.sales.findMany({
-    where: { productId },
-    orderBy: { date: "asc" },
-  });
+  const [sales, predictions] = await Promise.all([
+    prisma.sales.findMany({
+      where: { productId },
+      orderBy: { date: "asc" },
+      select: { date: true, quantity: true },
+    }),
+    prisma.prediction.findMany({
+      where: { productId, ...(requestedFreq ? { freq: requestedFreq } : {}) },
+      orderBy: { predictionDate: "asc" },
+    }),
+  ]);
 
-  const predictions = await prisma.prediction.findMany({
-    where: { productId },
-    orderBy: { predictionDate: "asc" },
-  });
-
-  return NextResponse.json({
-    sales,
-    predictions,
-  });
+  return NextResponse.json({ sales, predictions });
 }
